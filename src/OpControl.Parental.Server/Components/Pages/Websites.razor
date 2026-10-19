@@ -450,7 +450,7 @@ else
     {
         await RunAsync(async (db, rules, parentId) =>
         {
-            await rules.ToggleCategoryAsync(_familyId, _childId, key, enabled);
+            await rules.ToggleCategoryAsync(_familyId, _childId, parentId, key, enabled);
             await db.SaveChangesAsync();
         });
     }

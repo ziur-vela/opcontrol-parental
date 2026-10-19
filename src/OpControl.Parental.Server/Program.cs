@@ -475,7 +475,7 @@ app.MapPost("/api/children/{childId:guid}/categories/{key}", async (Guid childId
     await family.RequireAsync(ParentPermissions.WebsiteRules, ct);
     try
     {
-        await rules.ToggleCategoryAsync(family.FamilyId, childId, key, request.Enabled, ct);
+        await rules.ToggleCategoryAsync(family.FamilyId, childId, family.ParentId, key, request.Enabled, ct);
         await locks.PublishDeviceStateAsync(family.FamilyId, childId, ct);
         return Results.Ok(new { ok = true });
     }

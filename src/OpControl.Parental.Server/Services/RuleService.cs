@@ -244,7 +244,7 @@ public sealed class RuleService
         await _db.SaveChangesAsync(ct);
     }
 
-    public async Task ToggleCategoryAsync(Guid familyId, Guid childId, string key, bool enabled, CancellationToken ct = default)
+    public async Task ToggleCategoryAsync(Guid familyId, Guid childId, Guid? parentId, string key, bool enabled, CancellationToken ct = default)
     {
         await EnsureChildAsync(familyId, childId, ct);
         var category = await _db.Categories.FirstOrDefaultAsync(c => c.Key == key, ct)
@@ -260,6 +260,15 @@ public sealed class RuleService
             toggle.Enabled = enabled;
             toggle.UpdatedUtc = DateTime.UtcNow;
         }
+        _db.OverrideEvents.Add(new OverrideEvent
+        {
+            FamilyId = familyId,
+            ChildId = childId,
+            CreatedByParentId = parentId,
+            Option = "category-toggled",
+            Detail = $"{category.Name} {(enabled ? "blocked" : "allowed")}",
+            CreatedUtc = DateTime.UtcNow
+        });
         await _db.SaveChangesAsync(ct);
     }
 
@@ -436,6 +445,16 @@ public sealed class RuleService
             if (!rule.IsBlocked && rule.Mode == RuleMode.Always)
                 _db.AppRules.Remove(rule);
             await _db.SaveChangesAsync(ct);
+            _db.OverrideEvents.Add(new OverrideEvent
+            {
+                FamilyId = familyId,
+                ChildId = childId,
+                CreatedByParentId = parentId,
+                Option = "app-limit-removed",
+                Detail = rule.DisplayName,
+                CreatedUtc = DateTime.UtcNow
+            });
+            await _db.SaveChangesAsync(ct);
             if (!rule.IsBlocked)
             {
                 AddHistory(familyId, childId, "app", rule.Id, rule.AppIdentity, rule.DisplayName, RuleAction.Removed, RuleMode.Always, null, parentId);
@@ -479,6 +498,16 @@ public sealed class RuleService
         }
         rule.UpdatedUtc = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
+        _db.OverrideEvents.Add(new OverrideEvent
+        {
+            FamilyId = familyId,
+            ChildId = childId,
+            CreatedByParentId = parentId,
+            Option = alwaysAllowed ? "app-always-allowed" : "app-limit-set",
+            Detail = rule.DisplayName + (minutes is { } value ? $" · {value} min" : ""),
+            Minutes = minutes,
+            CreatedUtc = DateTime.UtcNow
+        });
         AddHistory(familyId, childId, "app", rule.Id, rule.AppIdentity, rule.DisplayName, RuleAction.Allowed, rule.Mode, rule.ScheduleId, parentId);
         await _db.SaveChangesAsync(ct);
     }

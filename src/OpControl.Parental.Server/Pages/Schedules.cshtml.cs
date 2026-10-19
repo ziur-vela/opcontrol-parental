@@ -70,6 +70,15 @@ public class SchedulesModel : PageModel
             EndMinutes = endMinutes,
             IsEnabled = true
         });
+        _db.OverrideEvents.Add(new OverrideEvent
+        {
+            FamilyId = _family.FamilyId,
+            ChildId = ChildId,
+            CreatedByParentId = _family.ParentId,
+            Option = "schedule-added",
+            Detail = NewName.Trim(),
+            CreatedUtc = DateTime.UtcNow
+        });
         await _db.SaveChangesAsync();
         await _locks.PublishDeviceStateAsync(_family.FamilyId, ChildId);
         return RedirectToPage("/Schedules");
@@ -82,6 +91,15 @@ public class SchedulesModel : PageModel
         if (schedule is not null)
         {
             schedule.IsEnabled = !schedule.IsEnabled;
+            _db.OverrideEvents.Add(new OverrideEvent
+            {
+                FamilyId = _family.FamilyId,
+                ChildId = schedule.ChildId,
+                CreatedByParentId = _family.ParentId,
+                Option = "schedule-toggled",
+                Detail = $"{schedule.Name} {(schedule.IsEnabled ? "enabled" : "disabled")}",
+                CreatedUtc = DateTime.UtcNow
+            });
             await _db.SaveChangesAsync();
             await _locks.PublishDeviceStateAsync(_family.FamilyId, schedule.ChildId);
         }
@@ -95,6 +113,15 @@ public class SchedulesModel : PageModel
         if (schedule is not null)
         {
             _db.Schedules.Remove(schedule);
+            _db.OverrideEvents.Add(new OverrideEvent
+            {
+                FamilyId = _family.FamilyId,
+                ChildId = schedule.ChildId,
+                CreatedByParentId = _family.ParentId,
+                Option = "schedule-removed",
+                Detail = schedule.Name,
+                CreatedUtc = DateTime.UtcNow
+            });
             await _db.SaveChangesAsync();
             await _locks.PublishDeviceStateAsync(_family.FamilyId, schedule.ChildId);
         }

@@ -78,6 +78,15 @@ public sealed class UsageService
         limit.SundayMinutes = Clamp(sunday);
         limit.UpdatedByParentId = parentId;
         limit.UpdatedUtc = DateTime.UtcNow;
+        _db.OverrideEvents.Add(new OverrideEvent
+        {
+            FamilyId = familyId,
+            ChildId = childId,
+            CreatedByParentId = parentId,
+            Option = enabled ? "screen-time-limit-set" : "screen-time-limit-disabled",
+            Detail = enabled ? $"{monday}/{tuesday}/{wednesday}/{thursday}/{friday}/{saturday}/{sunday} minutes" : null,
+            CreatedUtc = DateTime.UtcNow
+        });
         await _db.SaveChangesAsync(ct);
         return limit;
     }
