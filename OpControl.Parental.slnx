@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OpControl.Parental.Client.Windows.Helper/OpControl.Parental.Client.Windows.Helper.csproj" />
+    <Project Path="src/OpControl.Parental.Client.Windows/OpControl.Parental.Client.Windows.csproj" />
+    <Project Path="src/OpControl.Parental.Contracts/OpControl.Parental.Contracts.csproj" />
+    <Project Path="src/OpControl.Parental.Server/OpControl.Parental.Server.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OpControl.Parental.Tests/OpControl.Parental.Tests.csproj" />
+  </Folder>
+</Solution>

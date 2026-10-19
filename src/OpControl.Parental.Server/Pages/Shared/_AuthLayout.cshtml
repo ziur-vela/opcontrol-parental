@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] · Parental OpControl</title>
+    <link rel="icon" type="image/x-icon" href="/brand/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" />
+    <link rel="stylesheet" href="/css/parental.css" />
+</head>
+<body class="t-dark">
+    <div class="auth-wrap">
+        <div class="auth-brand">
+            <img src="/brand/lockup-ondark.svg" alt="Parental OpControl" class="brand-logo brand-dark" />
+            <img src="/brand/lockup-color.svg" alt="Parental OpControl" class="brand-logo brand-light" />
+        </div>
+        <div class="auth-card">
+            @RenderBody()
+        </div>
+        <div class="auth-foot muted tiny">OpControl IT Solutions</div>
+    </div>
+    <script src="/js/app.js"></script>
+</body>
+</html>

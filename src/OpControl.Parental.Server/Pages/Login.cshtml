@@ -1,0 +1,33 @@
+@page "/login"
+@model LoginModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Sign in";
+}
+<h1 class="auth-title">Sign in</h1>
+<p class="muted auth-sub">Manage your family’s devices.</p>
+
+@if (!string.IsNullOrEmpty(Model.Error))
+{
+    <div class="alert danger">@Model.Error</div>
+}
+
+<form method="post" class="stack">
+    <label class="field">
+        <span>Email</span>
+        <input asp-for="Input.Email" type="email" autocomplete="username" />
+    </label>
+    <label class="field">
+        <span>Password</span>
+        <input asp-for="Input.Password" type="password" autocomplete="current-password" />
+    </label>
+    <label class="check">
+        <input asp-for="Input.RememberMe" /> Keep me signed in
+    </label>
+    <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+</form>
+
+<div class="auth-divider"><span>OR</span></div>
+<button type="button" class="btn btn-ghost btn-block" disabled title="OAuth is off by default in Job 1">Continue with Google</button>
+<button type="button" class="btn btn-ghost btn-block" disabled title="OAuth is off by default in Job 1">Continue with Microsoft</button>
+<p class="muted tiny auth-note">New families join by invitation from the server owner.</p>

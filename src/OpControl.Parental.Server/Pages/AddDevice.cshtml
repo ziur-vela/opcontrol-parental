@@ -1,0 +1,56 @@
+@page "/add-device"
+@model AddDeviceModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Add device";
+}
+<div class="page-head">
+    <div>
+        <div class="eyebrow">Enrollment</div>
+        <h1>Add device</h1>
+        <p class="muted">Create a one-time code, then enter it on the device. Codes expire after 15 minutes and can be used once.</p>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <h2>Create an enrollment code</h2>
+        @if (Model.Children.Count == 0)
+        {
+            <p class="muted">Add a child profile first.</p>
+        }
+        else
+        {
+            <form method="post" class="stack">
+                <label class="field">
+                    <span>Assign to child</span>
+                    <select asp-for="ChildId">
+                        @foreach (var child in Model.Children)
+                        {
+                            <option value="@child.Id">@child.Name</option>
+                        }
+                    </select>
+                </label>
+                <button type="submit" class="btn btn-primary">Generate code</button>
+            </form>
+        }
+        @if (!string.IsNullOrEmpty(Model.Error))
+        {
+            <div class="alert danger">@Model.Error</div>
+        }
+    </div>
+
+    <div class="card">
+        <h2>Code</h2>
+        @if (Model.Code is null)
+        {
+            <p class="muted">No code generated yet.</p>
+        }
+        else
+        {
+            <div class="enroll-code">@Model.Code</div>
+            <p class="muted small">Expires @Model.ExpiresUtc?.ToLocalTime().ToString("MMM d, HH:mm") (server local).</p>
+            <p class="muted small">On the device: run the client installer with this code and the server URL <code>https://parental.opcontrol.net</code>.</p>
+        }
+    </div>
+</div>

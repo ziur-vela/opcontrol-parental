@@ -1,0 +1,75 @@
+@page "/devices"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using OpControl.Parental.Server.Data
+@inject AuthenticationStateProvider AuthState
+@inject IServiceScopeFactory Scopes
+@inject DevicePresenceService Presence
+@inject DashboardEventBus Events
+
+<PageTitle>Devices · Parental OpControl</PageTitle>
+
+<div class="page-head">
+    <div>
+        <div class="eyebrow">Family</div>
+        <h1>Devices</h1>
+        <p class="muted">Every enrolled device, with live connection status.</p>
+    </div>
+    <a class="btn btn-primary" href="/add-device">Add device</a>
+</div>
+
+<div class="card">
+    @if (_devices.Count == 0)
+    {
+        <p class="muted">No devices enrolled yet. Use Add device to create a one-time enrollment code.</p>
+    }
+    else
+    {
+        <div class="device-list">
+            @foreach (var device in _devices)
+            {
+                <div class="device-row">
+                    <span class="status-dot @(device.Online ? "online" : "offline")"></span>
+                    <div class="device-main">
+                        <div class="device-name">@device.Name</div>
+                        <div class="muted tiny">@device.Platform · @(device.TimeZoneId ?? "UTC")</div>
+                    </div>
+                    <div class="device-meta">
+                        <div class="small">@(device.Online ? "Online" : "Offline")</div>
+                        <div class="muted tiny">@(device.LastSeenUtc?.ToLocalTime().ToString("MMM d, HH:mm") ?? "never")</div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private Guid _familyId;
+    private List<DeviceStatusDto> _devices = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        Guid.TryParse(auth.User.FindFirst("family_id")?.Value, out _familyId);
+        Events.DeviceStatusChanged += OnStatus;
+        await RefreshAsync();
+    }
+
+    private void OnStatus(DeviceStatusDto status) => _ = InvokeAsync(async () => { await RefreshAsync(); StateHasChanged(); });
+
+    private async Task RefreshAsync()
+    {
+        using var scope = Scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
+        var devices = await db.Devices.AsNoTracking().Where(d => d.FamilyId == _familyId).OrderBy(d => d.Name).ToListAsync();
+        _devices = devices.Select(d => new DeviceStatusDto(d.Id, d.ChildId, d.Name, d.Platform, Presence.IsOnline(d.Id), d.LastSeenUtc, d.TimeZoneId)).ToList();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        Events.DeviceStatusChanged -= OnStatus;
+        return ValueTask.CompletedTask;
+    }
+}

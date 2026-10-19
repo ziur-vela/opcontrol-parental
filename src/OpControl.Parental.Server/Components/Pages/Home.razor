@@ -1,0 +1,235 @@
+@page "/"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using OpControl.Parental.Server.Data
+@using OpControl.Parental.Server.Services
+@inject AuthenticationStateProvider AuthState
+@inject IServiceScopeFactory Scopes
+@inject DevicePresenceService Presence
+@inject DashboardEventBus Events
+
+<PageTitle>Home · Parental OpControl</PageTitle>
+
+@if (_loading)
+{
+    <div class="card"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>
+}
+else if (_childId == Guid.Empty)
+{
+    <div class="card">
+        <h1>No child yet</h1>
+        <p class="muted">Create a child profile to start managing devices.</p>
+    </div>
+}
+else
+{
+    <div class="page-head">
+        <div>
+            <div class="eyebrow">@_familyName</div>
+            <h1>@_childName</h1>
+            <p class="muted">Lock state applies to every device assigned to this child.</p>
+        </div>
+        <a class="btn btn-ghost" href="/add-device">Add device</a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="alert danger">@_error</div>
+    }
+
+    <section class="grid-2">
+        <div class="card hero-card">
+            <div class="hero-top">
+                <div class="shield">🛡</div>
+                <div>
+                    <div class="eyebrow">Device lock</div>
+                    <div class="lock-status @(_state?.IsLocked == true ? "locked" : "unlocked")">
+                        @(_state?.IsLocked == true ? "Locked" : "Unlocked")
+                    </div>
+                    <div class="muted small">@ReasonText</div>
+                </div>
+            </div>
+            @if (CountdownText is not null)
+            {
+                <div class="countdown">@CountdownText</div>
+            }
+            <div class="button-row">
+                <button class="btn btn-danger" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Lock)">Lock</button>
+                <button class="btn btn-primary" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Unlock)">Unlock</button>
+                <button class="btn btn-accent" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Bonus)">+15 min</button>
+            </div>
+            <div class="muted tiny">Server time @DateTime.UtcNow.ToString("u")</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title-row">
+                <h2>Devices</h2>
+                <span class="pill-soft">@_devices.Count(d => d.Online) online</span>
+            </div>
+            @if (_devices.Count == 0)
+            {
+                <p class="muted">No devices enrolled yet.</p>
+            }
+            else
+            {
+                <div class="device-list">
+                    @foreach (var device in _devices)
+                    {
+                        <div class="device-row">
+                            <span class="status-dot @(device.Online ? "online" : "offline")"></span>
+                            <div class="device-main">
+                                <div class="device-name">@device.Name</div>
+                                <div class="muted tiny">@device.Platform · @(device.TimeZoneId ?? "UTC")</div>
+                            </div>
+                            <div class="device-meta">
+                                <div class="small">@(device.Online ? "Online" : "Offline")</div>
+                                <div class="muted tiny">@LastSeen(device.LastSeenUtc)</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </section>
+}
+
+@code {
+    private Guid _familyId;
+    private Guid _childId;
+    private string _familyName = "";
+    private string _childName = "";
+    private LockStateDto? _state;
+    private List<DeviceStatusDto> _devices = [];
+    private bool _loading = true;
+    private bool _busy;
+    private string? _error;
+    private Timer? _timer;
+    private int _ticks;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        var value = auth.User.FindFirst("family_id")?.Value;
+        if (!Guid.TryParse(value, out _familyId))
+        {
+            _loading = false;
+            _error = "Family scope is missing from the session.";
+            return;
+        }
+
+        Events.DeviceStatusChanged += OnDeviceStatus;
+        Events.LockStateChanged += OnLockState;
+        _timer = new Timer(_ => _ = TickAsync(), null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+        await RefreshAsync();
+        _loading = false;
+    }
+
+    private void OnDeviceStatus(DeviceStatusDto status) =>
+        _ = InvokeAsync(async () => { await RefreshAsync(); StateHasChanged(); });
+
+    private void OnLockState(LockStateDto state) =>
+        _ = InvokeAsync(async () => { await RefreshAsync(); StateHasChanged(); });
+
+    private async Task TickAsync()
+    {
+        _ticks++;
+        var expired = (_state?.BonusUntilUtc is { } bonus && bonus <= DateTime.UtcNow)
+            || (_state?.UnlockUntilUtc is { } unlock && unlock <= DateTime.UtcNow);
+        if (expired || _ticks % 15 == 0)
+            await InvokeAsync(async () => { await RefreshAsync(); StateHasChanged(); });
+        else
+            await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RefreshAsync()
+    {
+        using var scope = Scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
+        var family = await db.Families.AsNoTracking().FirstOrDefaultAsync(f => f.Id == _familyId);
+        var child = await db.Children.AsNoTracking()
+            .Where(c => c.FamilyId == _familyId)
+            .OrderBy(c => c.CreatedUtc)
+            .FirstOrDefaultAsync();
+        if (child is null)
+        {
+            _childId = Guid.Empty;
+            _familyName = family?.Name ?? "";
+            return;
+        }
+
+        _childId = child.Id;
+        _childName = child.Name;
+        _familyName = family?.Name ?? "";
+
+        var locks = scope.ServiceProvider.GetRequiredService<LockService>();
+        _state = await locks.GetStateAsync(_familyId, _childId, null);
+
+        var devices = await db.Devices.AsNoTracking()
+            .Where(d => d.FamilyId == _familyId && d.ChildId == _childId)
+            .OrderBy(d => d.Name)
+            .ToListAsync();
+        _devices = devices.Select(d => new DeviceStatusDto(
+            d.Id, d.ChildId, d.Name, d.Platform,
+            Presence.IsOnline(d.Id), d.LastSeenUtc, d.TimeZoneId)).ToList();
+    }
+
+    private async Task ApplyAsync(LockAction action)
+    {
+        _busy = true;
+        _error = null;
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var locks = scope.ServiceProvider.GetRequiredService<LockService>();
+            var auth = await AuthState.GetAuthenticationStateAsync();
+            var parentId = Guid.TryParse(auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id) ? id : (Guid?)null;
+            _state = await locks.ApplyAsync(_familyId, _childId, parentId, action, action == LockAction.Bonus ? 15 : null);
+            await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private string ReasonText => _state?.Reason switch
+    {
+        "bonus" => "Bonus time is active.",
+        "override" => "Unlocked by a parent until the next lock cycle.",
+        "manual" => "Locked from the dashboard.",
+        "schedule" => "Inside a lock schedule.",
+        _ => "No lock is active."
+    };
+
+    private string? CountdownText
+    {
+        get
+        {
+            var now = DateTime.UtcNow;
+            if (_state?.BonusUntilUtc is { } bonus && bonus > now)
+                return $"Bonus time ends in {Format(bonus - now)}";
+            if (_state?.UnlockUntilUtc is { } unlock && unlock > now)
+                return $"Unlock ends in {Format(unlock - now)}";
+            return null;
+        }
+    }
+
+    private static string Format(TimeSpan span) =>
+        $"{(int)span.TotalHours:00}:{span.Minutes:00}:{span.Seconds:00}";
+
+    private static string LastSeen(DateTime? utc) =>
+        utc is null ? "never" : utc.Value.ToLocalTime().ToString("MMM d, HH:mm");
+
+    public ValueTask DisposeAsync()
+    {
+        Events.DeviceStatusChanged -= OnDeviceStatus;
+        Events.LockStateChanged -= OnLockState;
+        _timer?.Dispose();
+        return ValueTask.CompletedTask;
+    }
+}

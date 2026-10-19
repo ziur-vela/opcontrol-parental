@@ -1,0 +1,48 @@
+@page "/setup"
+@model SetupModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "First-run setup";
+}
+<h1 class="auth-title">First-run setup</h1>
+<p class="muted auth-sub">Create the owner account and the first child profile. Signup closes after this step.</p>
+
+@if (Model.Errors.Count > 0)
+{
+    <div class="alert danger">
+        @foreach (var error in Model.Errors)
+        {
+            <div>@error</div>
+        }
+    </div>
+}
+
+<form method="post" class="stack">
+    <label class="field">
+        <span>Family name</span>
+        <input asp-for="Input.FamilyName" placeholder="Our family" />
+    </label>
+    <label class="field">
+        <span>Your name</span>
+        <input asp-for="Input.DisplayName" placeholder="Parent name" />
+    </label>
+    <label class="field">
+        <span>Child’s name</span>
+        <input asp-for="Input.ChildName" placeholder="Child name" />
+    </label>
+    <label class="field">
+        <span>Email</span>
+        <input asp-for="Input.Email" type="email" autocomplete="username" />
+    </label>
+    <label class="field">
+        <span>Password</span>
+        <input asp-for="Input.Password" type="password" autocomplete="new-password" />
+        <span class="muted tiny">At least 8 characters with upper, lower and a digit.</span>
+    </label>
+    <label class="field">
+        <span>Confirm password</span>
+        <input asp-for="Input.ConfirmPassword" type="password" autocomplete="new-password" />
+    </label>
+    <button type="submit" class="btn btn-primary btn-block">Create family</button>
+</form>
+<p class="muted tiny auth-note">The owner account is created by the server operator, not by this job’s automated tests.</p>
