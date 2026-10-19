@@ -16,9 +16,10 @@ Start-Sleep -Seconds 2
 sc.exe delete OpControlParental 2>$null | Out-Null
 Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -like "OpControl *" -or $_.TaskPath -like "*OpControl*" } | Unregister-ScheduledTask -Confirm:$false
 
-New-Item -ItemType Directory -Force -Path "$root\Client", "$root\Helper", $data, "$data\private", "$data\public", "$data\user" | Out-Null
+New-Item -ItemType Directory -Force -Path "$root\Client", "$root\Helper", $data, "$data\private", "$data\public", "$data\user", "$data\install" | Out-Null
 Copy-Item "$stage\client\*" "$root\Client" -Recurse -Force
 Copy-Item "$stage\helper\*" "$root\Helper" -Recurse -Force
+Copy-Item "$stage\install-x1.ps1", "$stage\uninstall-x1.ps1" "$data\install" -Force
 
 $config = [ordered]@{
     ServerUrl        = $ServerUrl
