@@ -81,13 +81,16 @@ public sealed class PinPipeServer : BackgroundService
 
             using var reader = new StreamReader(pipe, leaveOpen: true);
             using var writer = new StreamWriter(pipe, leaveOpen: true) { AutoFlush = true };
-            var line = await reader.ReadLineAsync(ct);
-            if (string.IsNullOrWhiteSpace(line)) return;
-            var request = JsonSerializer.Deserialize<PinPipeRequest>(line, JsonOptions);
-            var response = request is null
-                ? new PinPipeResponse(false, "Invalid request.")
-                : await DispatchAsync(request, ct);
-            await writer.WriteLineAsync(JsonSerializer.Serialize(response, JsonOptions));
+            for (var i = 0; i < 10; i++)
+            {
+                var line = await reader.ReadLineAsync(ct);
+                if (string.IsNullOrWhiteSpace(line)) return;
+                var request = JsonSerializer.Deserialize<PinPipeRequest>(line, JsonOptions);
+                var response = request is null
+                    ? new PinPipeResponse(false, "Invalid request.")
+                    : await DispatchAsync(request, ct);
+                await writer.WriteLineAsync(JsonSerializer.Serialize(response, JsonOptions));
+            }
         }
         catch (Exception ex)
         {

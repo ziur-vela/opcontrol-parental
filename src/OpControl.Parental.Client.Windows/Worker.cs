@@ -11,10 +11,11 @@ public sealed class Worker : BackgroundService
     private readonly DeviceStateStore _deviceStates;
     private readonly LockRuntime _runtime;
     private readonly OverrideSync _overrides;
+    private readonly CategoryCache _categories;
     private readonly ClientSettings _settings;
     private DeviceCredential? _credential;
     private ClientOptions _options = new();
-    private string ClientVersion => typeof(Worker).Assembly.GetName().Version?.ToString() ?? "0.2.0";
+    private string ClientVersion => typeof(Worker).Assembly.GetName().Version?.ToString() ?? "0.3.0";
 
     public Worker(
         ILogger<Worker> logger,
@@ -23,6 +24,7 @@ public sealed class Worker : BackgroundService
         DeviceStateStore deviceStates,
         LockRuntime runtime,
         OverrideSync overrides,
+        CategoryCache categories,
         ClientSettings settings)
     {
         _logger = logger;
@@ -31,6 +33,7 @@ public sealed class Worker : BackgroundService
         _deviceStates = deviceStates;
         _runtime = runtime;
         _overrides = overrides;
+        _categories = categories;
         _settings = settings;
     }
 
@@ -131,8 +134,10 @@ public sealed class Worker : BackgroundService
             _runtime.ApplyServerState(state);
             if (_overrides.HasPending && _overrides.LastPending is { } pending)
                 _runtime.ApplyLocalOverride(pending.Option, pending.Minutes);
-            _logger.LogInformation("Device state: manual={Manual} unlock={Unlock} bonus={Bonus} schedules={Schedules}",
-                state.ManualLock, state.UnlockUntilUtc, state.BonusUntilUtc, state.Schedules.Count);
+            _ = _categories.UpdateAsync(state.Categories, CancellationToken.None);
+            _logger.LogInformation("Device state: manual={Manual} unlock={Unlock} bonus={Bonus} schedules={Schedules} sites={Sites} apps={Apps} categories={Categories}",
+                state.ManualLock, state.UnlockUntilUtc, state.BonusUntilUtc, state.Schedules.Count,
+                state.WebsiteRules.Count, state.AppRules.Count, state.Categories.Count);
         });
 
         connection.Reconnecting += error =>

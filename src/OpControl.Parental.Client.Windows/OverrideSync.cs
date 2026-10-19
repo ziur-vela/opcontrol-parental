@@ -50,7 +50,7 @@ public sealed class OverrideSync
         {
             Directory.CreateDirectory(ClientPaths.PrivateDirectory);
             File.AppendAllText(ClientPaths.OverrideQueueFile,
-                JsonSerializer.Serialize(new DeviceOverrideRequest(option, minutes), QueueJson) + Environment.NewLine);
+                JsonSerializer.Serialize(new DeviceOverrideRequest(option, minutes, DateTime.UtcNow), QueueJson) + Environment.NewLine);
         }
         await SyncPendingAsync(options, ct);
     }

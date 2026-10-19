@@ -22,7 +22,14 @@ public enum RuleMode
 public enum RuleAction
 {
     Blocked = 0,
-    Allowed = 1
+    Allowed = 1,
+    Removed = 2
+}
+
+public enum ItemRuleType
+{
+    Website = 0,
+    App = 1
 }
 
 public sealed record ScheduleDto(
@@ -43,7 +50,94 @@ public sealed record DeviceStateDto(
     int? BonusMinutes,
     string? OverridePinHash,
     IReadOnlyList<ScheduleDto> Schedules,
+    IReadOnlyList<WebsiteRuleDto> WebsiteRules,
+    IReadOnlyList<AppRuleDto> AppRules,
+    IReadOnlyList<ItemBonusDto> ItemBonuses,
+    IReadOnlyList<CategoryToggleDto> Categories,
     DateTime ServerUtc);
+
+public sealed record WebsiteRuleDto(
+    Guid Id,
+    string Domain,
+    bool IsBlocked,
+    RuleMode Mode,
+    Guid? ScheduleId,
+    DateTime UpdatedUtc);
+
+public sealed record AppRuleDto(
+    Guid Id,
+    string AppIdentity,
+    string DisplayName,
+    string? Publisher,
+    bool IsBlocked,
+    RuleMode Mode,
+    Guid? ScheduleId,
+    DateTime UpdatedUtc);
+
+public sealed record ItemBonusDto(
+    string RuleType,
+    string Identity,
+    DateTime UntilUtc,
+    int Minutes);
+
+public sealed record CategoryToggleDto(
+    string Key,
+    string Name,
+    bool Enabled,
+    int Version);
+
+public sealed record CategoryDeltaDto(
+    string Key,
+    string Name,
+    int Version,
+    int PreviousVersion,
+    IReadOnlyList<string> Added,
+    IReadOnlyList<string> Removed,
+    bool Reset);
+
+public sealed record VisitEventDto(
+    string Domain,
+    DateTime VisitedUtc,
+    bool Blocked);
+
+public sealed record VisitBatchRequest(
+    IReadOnlyList<VisitEventDto> Visits);
+
+public sealed record AppInventoryItemDto(
+    string Identity,
+    string DisplayName,
+    string? Publisher,
+    string? Path,
+    string Source,
+    string? Version);
+
+public sealed record AppInventoryRequest(
+    IReadOnlyList<AppInventoryItemDto> Apps,
+    DateTime CollectedUtc);
+
+public sealed record BlockEventDto(
+    string RuleType,
+    string Identity,
+    string DisplayName,
+    DateTime OccurredUtc);
+
+public sealed record BlockEventRequest(
+    IReadOnlyList<BlockEventDto> Events);
+
+public sealed record ItemBonusRequest(
+    string RuleType,
+    string Identity,
+    int Minutes,
+    DateTime? AppliedUtc);
+
+public sealed record RuleHistoryDto(
+    Guid Id,
+    string RuleType,
+    string Identity,
+    string DisplayName,
+    string Action,
+    string Mode,
+    DateTime ChangedUtc);
 
 public sealed record LockStateDto(
     Guid ChildId,
@@ -107,13 +201,15 @@ public sealed record HeartbeatRequest(
 
 public sealed record DeviceOverrideRequest(
     string Option,
-    int? Minutes);
+    int? Minutes,
+    DateTime? AppliedUtc = null);
 
 public sealed record OverrideEventDto(
     Guid Id,
     string Option,
     int? Minutes,
-    DateTime CreatedUtc);
+    DateTime CreatedUtc,
+    string? Detail = null);
 
 public static class DeviceGroups
 {

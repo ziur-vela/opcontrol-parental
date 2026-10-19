@@ -1,0 +1,506 @@
+@page "/websites"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using OpControl.Parental.Contracts
+@using OpControl.Parental.Server.Data
+@using OpControl.Parental.Server.Services
+@inject AuthenticationStateProvider AuthState
+@inject IServiceScopeFactory Scopes
+
+<PageTitle>Websites · Parental OpControl</PageTitle>
+
+@if (_loading)
+{
+    <div class="card"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>
+}
+else if (_childId == Guid.Empty)
+{
+    <div class="card"><h1>No child yet</h1><p class="muted">Create a child profile first.</p></div>
+}
+else
+{
+    <div class="page-head">
+        <div>
+            <div class="eyebrow">@_childName</div>
+            <h1>Websites</h1>
+            <p class="muted">Visited sites, block rules and curated categories. Domain and time only.</p>
+        </div>
+        <div class="button-row">
+            <a class="btn btn-ghost" href="/apps">Apps</a>
+            <a class="btn btn-ghost" href="/schedules">Schedules</a>
+        </div>
+    </div>
+
+    @if (_error is not null)
+    {
+        <div class="alert danger">@_error</div>
+    }
+
+    <div class="grid-2">
+        <section class="card">
+            <div class="card-title-row">
+                <h2>Visited sites</h2>
+                <div class="date-nav">
+                    <button class="icon-btn" @onclick="() => ShiftDate(-1)" title="Previous day">‹</button>
+                    <input type="date" class="mini-input" @bind="_date" @bind:after="RefreshAsync" />
+                    <button class="icon-btn" @onclick="() => ShiftDate(1)" title="Next day">›</button>
+                </div>
+            </div>
+
+            <div class="chip-row">
+                @foreach (var filter in Filters)
+                {
+                    <button class="chip @(_filter == filter.Key ? "active" : "")" @onclick="() => SetFilter(filter.Key)">@filter.Label</button>
+                }
+            </div>
+
+            <form class="inline-add" @onsubmit="AddSiteAsync" @onsubmit:preventDefault>
+                <input class="mini-input grow" placeholder="Block a website, e.g. youtube.com" @bind="_newDomain" />
+                <select class="mini-input" @bind="_newMode">
+                    <option value="always">Always</option>
+                    <option value="scheduled">During schedule</option>
+                </select>
+                <select class="mini-input" @bind="_newScheduleId" disabled="@(_newMode != "scheduled")">
+                    <option value="">Schedule…</option>
+                    @foreach (var schedule in _schedules)
+                    {
+                        <option value="@schedule.Id">@schedule.Name</option>
+                    }
+                </select>
+                <button class="btn btn-primary" type="submit">Block</button>
+            </form>
+
+            @if (FilteredSites.Count == 0)
+            {
+                <p class="muted">No visits recorded for this day.</p>
+            }
+            else
+            {
+                <div class="rule-list">
+                    @foreach (var site in FilteredSites)
+                    {
+                        <div class="rule-row">
+                            <div class="rule-main">
+                                <div class="rule-title">@site.Domain</div>
+                                <div class="muted tiny">
+                                    @site.Count visit@(site.Count == 1 ? "" : "s") · last @FormatLocal(site.LastUtc)
+                                    @if (site.BlockedAttempts > 0)
+                                    {
+                                        <span> · @site.BlockedAttempts blocked attempt@(site.BlockedAttempts == 1 ? "" : "s")</span>
+                                    }
+                                    @if (site.IsNewThisWeek)
+                                    {
+                                        <span class="pill-soft tiny-pill">New this week</span>
+                                    }
+                                </div>
+                            </div>
+                            <div class="rule-actions">
+                                @if (site.IsBlocked)
+                                {
+                                    <span class="state-pill blocked">Blocked</span>
+                                    <button class="ghost-btn" @onclick="() => RemoveRuleAsync(site.RuleId)">Unblock</button>
+                                }
+                                else if (site.IsAllowed)
+                                {
+                                    <span class="state-pill allowed">Allowed</span>
+                                    <button class="ghost-btn" @onclick="() => BlockSiteAsync(site.Domain, RuleMode.Always, null)">Block</button>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-accent" @onclick="() => BlockSiteAsync(site.Domain, RuleMode.Always, null)">Block</button>
+                                    <button class="ghost-btn" @onclick="() => AllowSiteAsync(site.Domain)">Allow</button>
+                                }
+                                @if (site.IsBlocked)
+                                {
+                                    <button class="ghost-btn" @onclick="() => BonusAsync(site.Domain, 15)">+15 min</button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+
+        <section class="card">
+            <div class="card-title-row">
+                <h2>Website rules</h2>
+                <span class="pill-soft">@_rules.Count(r => r.IsBlocked) blocked · @_rules.Count(r => !r.IsBlocked) allowed</span>
+            </div>
+
+            <div class="rule-section">
+                <div class="eyebrow">Blocked always</div>
+                @foreach (var rule in _rules.Where(r => r.IsBlocked && r.Mode == RuleMode.Always))
+                {
+                    <div class="rule-row compact">
+                        <div class="rule-main">
+                            <div class="rule-title">@rule.Domain</div>
+                            <div class="muted tiny">Since @FormatLocal(rule.UpdatedUtc)</div>
+                        </div>
+                        <div class="rule-actions">
+                            <button class="ghost-btn" @onclick="() => BonusAsync(rule.Domain, 15)">+15 min</button>
+                            <button class="ghost-btn" @onclick="() => RemoveRuleAsync(rule.Id)">Unblock</button>
+                        </div>
+                    </div>
+                }
+                @if (!_rules.Any(r => r.IsBlocked && r.Mode == RuleMode.Always))
+                {
+                    <p class="muted tiny">No always-blocked sites.</p>
+                }
+            </div>
+
+            <div class="rule-section">
+                <div class="eyebrow">Blocked during schedule</div>
+                @foreach (var rule in _rules.Where(r => r.IsBlocked && r.Mode == RuleMode.Scheduled))
+                {
+                    <div class="rule-row compact">
+                        <div class="rule-main">
+                            <div class="rule-title">@rule.Domain</div>
+                            <div class="muted tiny">@ScheduleName(rule.ScheduleId)</div>
+                        </div>
+                        <div class="rule-actions">
+                            <button class="ghost-btn" @onclick="() => RemoveRuleAsync(rule.Id)">Unblock</button>
+                        </div>
+                    </div>
+                }
+                @if (!_rules.Any(r => r.IsBlocked && r.Mode == RuleMode.Scheduled))
+                {
+                    <p class="muted tiny">No scheduled site rules.</p>
+                }
+            </div>
+
+            <div class="rule-section">
+                <div class="eyebrow">Allowed always</div>
+                @foreach (var rule in _rules.Where(r => !r.IsBlocked))
+                {
+                    <div class="rule-row compact">
+                        <div class="rule-main">
+                            <div class="rule-title">@rule.Domain</div>
+                            <div class="muted tiny">Overrides categories and schedules</div>
+                        </div>
+                        <div class="rule-actions">
+                            <button class="ghost-btn" @onclick="() => BlockSiteAsync(rule.Domain, RuleMode.Always, null)">Block</button>
+                        </div>
+                    </div>
+                }
+                @if (!_rules.Any(r => !r.IsBlocked))
+                {
+                    <p class="muted tiny">No always-allowed sites.</p>
+                }
+            </div>
+
+            <div class="rule-section">
+                <div class="eyebrow">Categories</div>
+                @foreach (var category in _categories)
+                {
+                    <div class="toggle-row">
+                        <div>
+                            <div class="rule-title">@category.Name</div>
+                            <div class="muted tiny">v@category.Version</div>
+                        </div>
+                        <button class="toggle @(category.Enabled ? "on" : "")" @onclick="() => ToggleCategoryAsync(category.Key, !category.Enabled)">
+                            <span></span>
+                        </button>
+                    </div>
+                }
+            </div>
+        </section>
+    </div>
+
+    <section class="card">
+        <div class="card-title-row">
+            <h2>Previously blocked or allowed</h2>
+            <span class="pill-soft">Latest @Math.Min(_history.Count, 20)</span>
+        </div>
+        @if (_history.Count == 0)
+        {
+            <p class="muted">No website rule changes recorded yet.</p>
+        }
+        else
+        {
+            <div class="rule-list">
+                @foreach (var item in _history.Where(h => h.RuleType == "site").Take(20))
+                {
+                    <div class="rule-row compact">
+                        <div class="rule-main">
+                            <div class="rule-title">@item.Identity</div>
+                            <div class="muted tiny">@ActionLabel(item.Action) · @FormatLocal(item.ChangedUtc)</div>
+                        </div>
+                        <div class="rule-actions">
+                            <button class="ghost-btn" @onclick="() => BlockSiteAsync(item.Identity, RuleMode.Always, null)">Block again</button>
+                            <button class="ghost-btn" @onclick="() => AllowSiteAsync(item.Identity)">Allow again</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+}
+
+@code {
+    private static readonly (string Key, string Label)[] Filters =
+    [
+        ("all", "All visits"),
+        ("notblocked", "Not blocked"),
+        ("blocked", "Blocked attempts"),
+        ("new", "New this week")
+    ];
+
+    private sealed class SiteRow
+    {
+        public string Domain { get; init; } = "";
+        public int Count { get; init; }
+        public DateTime LastUtc { get; init; }
+        public int BlockedAttempts { get; init; }
+        public bool IsBlocked { get; init; }
+        public bool IsAllowed { get; init; }
+        public Guid RuleId { get; init; }
+        public bool IsNewThisWeek { get; init; }
+    }
+
+    private Guid _familyId;
+    private Guid _childId;
+    private string _childName = "";
+    private string _timeZoneId = "UTC";
+    private bool _loading = true;
+    private string? _error;
+    private string _filter = "all";
+    private DateTime _date = DateTime.Today;
+    private string _newDomain = "";
+    private string _newMode = "always";
+    private string _newScheduleId = "";
+    private List<Schedule> _schedules = [];
+    private List<WebsiteRule> _rules = [];
+    private List<CategoryToggleDto> _categories = [];
+    private List<RuleHistoryDto> _history = [];
+    private List<SiteRow> _allSites = [];
+    private List<SiteRow> _filteredSites = [];
+
+    private List<SiteRow> FilteredSites => _filteredSites;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        if (!Guid.TryParse(auth.User.FindFirst("family_id")?.Value, out _familyId))
+        {
+            _loading = false;
+            _error = "Family scope is missing from the session.";
+            return;
+        }
+        _date = DateTime.Today;
+        await RefreshAsync();
+        _loading = false;
+    }
+
+    private void SetFilter(string key)
+    {
+        _filter = key;
+        ApplyFilter();
+    }
+
+    private void ShiftDate(int days)
+    {
+        _date = _date.AddDays(days);
+        _ = RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        using var scope = Scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
+        var child = await db.Children.AsNoTracking().Where(c => c.FamilyId == _familyId).OrderBy(c => c.CreatedUtc).FirstOrDefaultAsync();
+        if (child is null) { _childId = Guid.Empty; return; }
+        _childId = child.Id;
+        _childName = child.Name;
+        _timeZoneId = await db.Devices.AsNoTracking().Where(d => d.ChildId == child.Id).Select(d => d.TimeZoneId).FirstOrDefaultAsync() ?? "UTC";
+
+        _rules = await db.WebsiteRules.AsNoTracking()
+            .Where(r => r.FamilyId == _familyId && r.ChildId == child.Id)
+            .OrderBy(r => r.Domain)
+            .ToListAsync();
+        _schedules = await db.Schedules.AsNoTracking()
+            .Where(s => s.FamilyId == _familyId && s.ChildId == child.Id)
+            .OrderBy(s => s.Name)
+            .ToListAsync();
+
+        var rulesService = scope.ServiceProvider.GetRequiredService<RuleService>();
+        var policy = await rulesService.GetDevicePolicyAsync(_familyId, child.Id);
+        _categories = policy.Categories.ToList();
+        _history = await rulesService.GetHistoryAsync(_familyId, child.Id, 60);
+
+        var tz = ResolveTimeZone(_timeZoneId);
+        var date = DateOnly.FromDateTime(_date);
+        var startUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(date.ToDateTime(TimeOnly.MinValue), DateTimeKind.Unspecified), tz);
+        var endUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(date.AddDays(1).ToDateTime(TimeOnly.MinValue), DateTimeKind.Unspecified), tz);
+        var weekStart = DateTime.UtcNow.AddDays(-7);
+
+        var visits = await db.VisitRecords.AsNoTracking()
+            .Where(v => v.FamilyId == _familyId && v.ChildId == child.Id && v.VisitedUtc >= startUtc && v.VisitedUtc < endUtc)
+            .ToListAsync();
+        var firstSeen = await db.VisitRecords.AsNoTracking()
+            .Where(v => v.FamilyId == _familyId && v.ChildId == child.Id)
+            .GroupBy(v => v.Domain)
+            .Select(g => new { Domain = g.Key, First = g.Min(v => v.VisitedUtc) })
+            .ToDictionaryAsync(x => x.Domain, x => x.First);
+
+        var enabledCategories = _categories.Where(c => c.Enabled).Select(c => c.Key).ToList();
+        var candidates = visits.Select(v => v.Domain).Distinct().SelectMany(Parents).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var categoryDomains = enabledCategories.Count == 0
+            ? new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            : (await db.CategoryDomains.AsNoTracking()
+                .Where(d => enabledCategories.Contains(d.CategoryKey) && d.RemovedVersion == null && candidates.Contains(d.Domain))
+                .Select(d => d.Domain)
+                .ToListAsync()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var rows = new List<SiteRow>();
+        foreach (var group in visits.GroupBy(v => v.Domain))
+        {
+            var domain = group.Key;
+            var rule = _rules.FirstOrDefault(r => r.Domain == domain);
+            var blocked = rule is { IsBlocked: true };
+            var allowed = rule is { IsBlocked: false };
+            if (!blocked && !allowed)
+            {
+                foreach (var parent in Parents(domain))
+                {
+                    var parentRule = _rules.FirstOrDefault(r => r.Domain == parent);
+                    if (parentRule is { IsBlocked: true }) { blocked = true; rule = parentRule; break; }
+                    if (parentRule is { IsBlocked: false }) { allowed = true; rule = parentRule; break; }
+                }
+            }
+            if (!blocked && !allowed)
+                blocked = Parents(domain).Any(p => categoryDomains.Contains(p));
+
+            rows.Add(new SiteRow
+            {
+                Domain = domain,
+                Count = group.Count(),
+                LastUtc = group.Max(v => v.VisitedUtc),
+                BlockedAttempts = group.Count(v => v.Blocked),
+                IsBlocked = blocked,
+                IsAllowed = allowed,
+                RuleId = rule?.Id ?? Guid.Empty,
+                IsNewThisWeek = firstSeen.TryGetValue(domain, out var first) && first >= weekStart
+            });
+        }
+
+        _allSites = rows.OrderByDescending(r => r.LastUtc).ToList();
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        _filteredSites = _filter switch
+        {
+            "blocked" => _allSites.Where(s => s.BlockedAttempts > 0).ToList(),
+            "notblocked" => _allSites.Where(s => !s.IsBlocked).ToList(),
+            "new" => _allSites.Where(s => s.IsNewThisWeek).ToList(),
+            _ => _allSites
+        };
+    }
+
+    private async Task AddSiteAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_newDomain)) return;
+        var mode = _newMode == "scheduled" ? RuleMode.Scheduled : RuleMode.Always;
+        Guid? scheduleId = Guid.TryParse(_newScheduleId, out var id) ? id : null;
+        await BlockSiteAsync(_newDomain, mode, scheduleId);
+        _newDomain = "";
+    }
+
+    private async Task BlockSiteAsync(string domain, RuleMode mode, Guid? scheduleId)
+    {
+        await RunAsync(async (db, rules, parentId) =>
+        {
+            await rules.UpsertWebsiteRuleAsync(_familyId, _childId, parentId, domain, blocked: true, mode, scheduleId);
+            await db.SaveChangesAsync();
+        });
+    }
+
+    private async Task AllowSiteAsync(string domain)
+    {
+        await RunAsync(async (db, rules, parentId) =>
+        {
+            await rules.UpsertWebsiteRuleAsync(_familyId, _childId, parentId, domain, blocked: false, RuleMode.Always, null);
+            await db.SaveChangesAsync();
+        });
+    }
+
+    private async Task RemoveRuleAsync(Guid ruleId)
+    {
+        if (ruleId == Guid.Empty) return;
+        await RunAsync(async (db, rules, parentId) =>
+        {
+            await rules.RemoveWebsiteRuleAsync(_familyId, _childId, parentId, ruleId);
+            await db.SaveChangesAsync();
+        });
+    }
+
+    private async Task BonusAsync(string domain, int minutes)
+    {
+        await RunAsync(async (db, rules, parentId) =>
+        {
+            await rules.AddItemBonusAsync(_familyId, _childId, parentId, "site", domain, minutes);
+            await db.SaveChangesAsync();
+        });
+    }
+
+    private async Task ToggleCategoryAsync(string key, bool enabled)
+    {
+        await RunAsync(async (db, rules, parentId) =>
+        {
+            await rules.ToggleCategoryAsync(_familyId, _childId, key, enabled);
+            await db.SaveChangesAsync();
+        });
+    }
+
+    private async Task RunAsync(Func<ParentalDbContext, RuleService, Guid?, Task> action)
+    {
+        _error = null;
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
+            var rules = scope.ServiceProvider.GetRequiredService<RuleService>();
+            var locks = scope.ServiceProvider.GetRequiredService<LockService>();
+            var auth = await AuthState.GetAuthenticationStateAsync();
+            Guid? parentId = Guid.TryParse(auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id) ? id : null;
+            await action(db, rules, parentId);
+            await locks.PublishDeviceStateAsync(_familyId, _childId);
+            await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+        }
+    }
+
+    private static IEnumerable<string> Parents(string domain)
+    {
+        var value = domain.Trim().TrimEnd('.').ToLowerInvariant();
+        while (value.Length > 0)
+        {
+            yield return value;
+            var dot = value.IndexOf('.');
+            if (dot < 0) break;
+            value = value[(dot + 1)..];
+        }
+    }
+
+    private string ScheduleName(Guid? id) => id is { } value ? _schedules.FirstOrDefault(s => s.Id == value)?.Name ?? "Schedule" : "No schedule";
+
+    private string FormatLocal(DateTime utc) => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), ResolveTimeZone(_timeZoneId)).ToString("MMM d, HH:mm");
+
+    private static TimeZoneInfo ResolveTimeZone(string? id) => TimeZoneResolver.Resolve(id);
+
+    private static string ActionLabel(string action) => action switch
+    {
+        "Blocked" => "Blocked",
+        "Allowed" => "Allowed",
+        "Removed" => "Rule removed",
+        _ => action
+    };
+}

@@ -10,6 +10,9 @@ $stage = Split-Path -Parent $MyInvocation.MyCommand.Path
 $root = "C:\Program Files\OpControlParental"
 $data = "C:\ProgramData\OpControlParental"
 
+if (Test-Path "$root\Client\OpControl.Parental.Client.exe") {
+    & "$root\Client\OpControl.Parental.Client.exe" --restore-dns
+}
 Get-Process "OpControl.Parental.Helper" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 sc.exe stop OpControlParental 2>$null | Out-Null
 Start-Sleep -Seconds 2

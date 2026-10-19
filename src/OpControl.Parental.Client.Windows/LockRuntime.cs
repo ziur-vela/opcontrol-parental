@@ -16,6 +16,7 @@ public sealed class LockRuntime
     private readonly ILogger<LockRuntime> _logger;
     private DeviceStateDto? _state;
     private RuntimeLockStateDto? _runtime;
+    private string _policyFingerprint = "";
 
     public LockRuntime(DeviceStateStore store, StateStore writer, ILogger<LockRuntime> logger)
     {
@@ -47,10 +48,24 @@ public sealed class LockRuntime
     {
         lock (_gate)
         {
+            var fingerprint = PolicyFingerprint(state);
+            var policyChanged = _policyFingerprint.Length > 0 && fingerprint != _policyFingerprint;
+            _policyFingerprint = fingerprint;
             _state = state;
             _store.Save(state);
             ComputeAndWriteLocked();
+            if (policyChanged) DnsCache.Flush(_logger);
         }
+    }
+
+    private static string PolicyFingerprint(DeviceStateDto state)
+    {
+        var parts = state.WebsiteRules.Select(r => $"s|{r.Domain}|{r.IsBlocked}|{r.Mode}|{r.ScheduleId}")
+            .Concat(state.AppRules.Select(r => $"a|{r.AppIdentity}|{r.IsBlocked}|{r.Mode}|{r.ScheduleId}"))
+            .Concat(state.ItemBonuses.Select(b => $"b|{b.RuleType}|{b.Identity}|{b.UntilUtc.Ticks}"))
+            .Concat(state.Categories.Select(c => $"c|{c.Key}|{c.Enabled}|{c.Version}"))
+            .OrderBy(s => s, StringComparer.Ordinal);
+        return string.Join('\n', parts);
     }
 
     public void ApplyLocalOverride(string option, int? minutes)

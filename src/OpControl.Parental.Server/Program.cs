@@ -100,9 +100,13 @@ builder.Services.AddScoped<FamilyScope>();
 builder.Services.AddScoped<DeviceAuthService>();
 builder.Services.AddScoped<EnrollmentService>();
 builder.Services.AddScoped<LockService>();
+builder.Services.AddScoped<RuleService>();
+builder.Services.AddHttpClient();
 builder.Services.AddSingleton<DashboardEventBus>();
 builder.Services.AddSingleton<DevicePresenceService>();
 builder.Services.AddHostedService<LockExpiryService>();
+builder.Services.AddHostedService<CategoryRefreshService>();
+builder.Services.AddHostedService<ScheduleTransitionService>();
 
 var app = builder.Build();
 
@@ -239,6 +243,109 @@ app.MapPost("/api/device/override", async (DeviceOverrideRequest request, Claims
     }
 }).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
 
+app.MapPost("/api/children/{childId:guid}/websites", async (Guid childId, WebsiteRuleRequest request, HttpContext context, IAntiforgery antiforgery, FamilyScope family, RuleService rules, LockService locks, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    try
+    {
+        var rule = await rules.UpsertWebsiteRuleAsync(family.FamilyId, childId, family.ParentId, request.Domain, request.Blocked, request.Mode, request.ScheduleId, ct);
+        await locks.PublishDeviceStateAsync(family.FamilyId, childId, ct);
+        return Results.Ok(new { id = rule.Id });
+    }
+    catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/children/{childId:guid}/websites/{ruleId:guid}/delete", async (Guid childId, Guid ruleId, HttpContext context, IAntiforgery antiforgery, FamilyScope family, RuleService rules, LockService locks, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    await rules.RemoveWebsiteRuleAsync(family.FamilyId, childId, family.ParentId, ruleId, ct);
+    await locks.PublishDeviceStateAsync(family.FamilyId, childId, ct);
+    return Results.Ok(new { ok = true });
+}).RequireAuthorization();
+
+app.MapPost("/api/children/{childId:guid}/apps", async (Guid childId, AppRuleRequest request, HttpContext context, IAntiforgery antiforgery, FamilyScope family, RuleService rules, LockService locks, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    try
+    {
+        var rule = await rules.UpsertAppRuleAsync(family.FamilyId, childId, family.ParentId, request.Identity, request.DisplayName, request.Publisher, request.Blocked, request.Mode, request.ScheduleId, ct);
+        await locks.PublishDeviceStateAsync(family.FamilyId, childId, ct);
+        return Results.Ok(new { id = rule.Id });
+    }
+    catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/children/{childId:guid}/apps/{ruleId:guid}/delete", async (Guid childId, Guid ruleId, HttpContext context, IAntiforgery antiforgery, FamilyScope family, RuleService rules, LockService locks, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    await rules.RemoveAppRuleAsync(family.FamilyId, childId, family.ParentId, ruleId, ct);
+    await locks.PublishDeviceStateAsync(family.FamilyId, childId, ct);
+    return Results.Ok(new { ok = true });
+}).RequireAuthorization();
+
+app.MapPost("/api/children/{childId:guid}/item-bonus", async (Guid childId, ItemBonusRequest request, HttpContext context, IAntiforgery antiforgery, FamilyScope family, RuleService rules, LockService locks, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    try
+    {
+        await rules.AddItemBonusAsync(family.FamilyId, childId, family.ParentId, request.RuleType, request.Identity, request.Minutes, request.AppliedUtc, ct);
+        await locks.PublishDeviceStateAsync(family.FamilyId, childId, ct);
+        return Results.Ok(new { ok = true });
+    }
+    catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/children/{childId:guid}/categories/{key}", async (Guid childId, string key, CategoryToggleRequest request, HttpContext context, IAntiforgery antiforgery, FamilyScope family, RuleService rules, LockService locks, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    try
+    {
+        await rules.ToggleCategoryAsync(family.FamilyId, childId, key, request.Enabled, ct);
+        await locks.PublishDeviceStateAsync(family.FamilyId, childId, ct);
+        return Results.Ok(new { ok = true });
+    }
+    catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/device/visits", async (VisitBatchRequest request, ClaimsPrincipal user, ParentalDbContext db, RuleService rules, CancellationToken ct) =>
+{
+    var device = await DeviceFromClaimsAsync(user, db, ct);
+    if (device is null) return Results.Unauthorized();
+    await rules.SyncVisitsAsync(device, request, ct);
+    return Results.Ok(new { ok = true });
+}).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
+
+app.MapPost("/api/device/apps/inventory", async (AppInventoryRequest request, ClaimsPrincipal user, ParentalDbContext db, RuleService rules, CancellationToken ct) =>
+{
+    var device = await DeviceFromClaimsAsync(user, db, ct);
+    if (device is null) return Results.Unauthorized();
+    await rules.SyncAppInventoryAsync(device, request, ct);
+    return Results.Ok(new { ok = true });
+}).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
+
+app.MapPost("/api/device/block-events", async (BlockEventRequest request, ClaimsPrincipal user, ParentalDbContext db, RuleService rules, CancellationToken ct) =>
+{
+    var device = await DeviceFromClaimsAsync(user, db, ct);
+    if (device is null) return Results.Unauthorized();
+    await rules.SyncBlockEventsAsync(device, request, ct);
+    return Results.Ok(new { ok = true });
+}).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
+
+app.MapGet("/api/device/categories/{key}", async (string key, int? since, ClaimsPrincipal user, ParentalDbContext db, RuleService rules, CancellationToken ct) =>
+{
+    var device = await DeviceFromClaimsAsync(user, db, ct);
+    if (device is null) return Results.Unauthorized();
+    try
+    {
+        var delta = await rules.GetCategoryDeltaAsync(key, since ?? 0, device.FamilyId, device.ChildId, ct);
+        return Results.Ok(delta);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.NotFound(new { error = ex.Message });
+    }
+}).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
+
 app.MapPost("/api/enrollment-codes", async (EnrollmentCodeRequest request, HttpContext context, IAntiforgery antiforgery, FamilyScope family, EnrollmentService enrollment, CancellationToken ct) =>
 {
     await antiforgery.ValidateRequestAsync(context);
@@ -255,6 +362,16 @@ app.MapPost("/api/enrollment-codes", async (EnrollmentCodeRequest request, HttpC
 
 app.Run();
 
+static async Task<Device?> DeviceFromClaimsAsync(ClaimsPrincipal user, ParentalDbContext db, CancellationToken ct)
+{
+    var value = user.FindFirstValue(ParentalClaims.DeviceId);
+    if (!Guid.TryParse(value, out var deviceId)) return null;
+    return await db.Devices.FirstOrDefaultAsync(d => d.Id == deviceId && !d.IsRevoked, ct);
+}
+
 public sealed record BonusRequest(int Minutes);
+public sealed record WebsiteRuleRequest(string Domain, bool Blocked, RuleMode Mode, Guid? ScheduleId);
+public sealed record AppRuleRequest(string Identity, string DisplayName, string? Publisher, bool Blocked, RuleMode Mode, Guid? ScheduleId);
+public sealed record CategoryToggleRequest(bool Enabled);
 public sealed record EnrollmentCodeRequest(Guid ChildId);
 public sealed record PinRequest(string Pin);

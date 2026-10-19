@@ -18,13 +18,15 @@ public sealed class LockService
     private readonly ParentalDbContext _db;
     private readonly IHubContext<ParentalHub> _hub;
     private readonly DashboardEventBus _events;
+    private readonly RuleService _rules;
     private readonly ILogger<LockService> _logger;
 
-    public LockService(ParentalDbContext db, IHubContext<ParentalHub> hub, DashboardEventBus events, ILogger<LockService> logger)
+    public LockService(ParentalDbContext db, IHubContext<ParentalHub> hub, DashboardEventBus events, RuleService rules, ILogger<LockService> logger)
     {
         _db = db;
         _hub = hub;
         _events = events;
+        _rules = rules;
         _logger = logger;
     }
 
@@ -57,9 +59,11 @@ public sealed class LockService
         var state = await EnsureLockStateAsync(familyId, childId, ct);
         var schedules = await LoadScheduleDtosAsync(familyId, childId, ct);
         var parentName = await ParentDisplayNameAsync(familyId, ct);
+        var policy = await _rules.GetDevicePolicyAsync(familyId, childId, ct);
         return new DeviceStateDto(
             childId, child.Name, parentName, state.ManualLock, state.UnlockUntilUtc, state.BonusUntilUtc,
-            state.BonusMinutes, state.OverridePinHash, schedules, DateTime.UtcNow);
+            state.BonusMinutes, state.OverridePinHash, schedules, policy.Sites, policy.Apps, policy.Bonuses,
+            policy.Categories, DateTime.UtcNow);
     }
 
     public async Task<LockStateDto> ApplyAsync(Guid familyId, Guid childId, Guid? parentId, LockAction action, int? minutes = null, CancellationToken ct = default)
@@ -129,6 +133,11 @@ public sealed class LockService
     {
         var state = await EnsureLockStateAsync(device.FamilyId, device.ChildId, ct);
         var now = DateTime.UtcNow;
+        var applied = request.AppliedUtc is { } requested
+            && requested <= now.AddMinutes(1)
+            && requested > now.AddHours(-24)
+                ? (requested.Kind == DateTimeKind.Utc ? requested : requested.ToUniversalTime())
+                : now;
         var schedules = await LoadScheduleDtosAsync(device.FamilyId, device.ChildId, ct);
         var zone = ResolveTimeZone(device.TimeZoneId);
         var option = request.Option switch
@@ -143,14 +152,14 @@ public sealed class LockService
             state.ManualLock = false;
             state.BonusUntilUtc = null;
             state.BonusMinutes = null;
-            state.UnlockUntilUtc = LockRules.NextLockCycleUtc(schedules, zone, now);
+            state.UnlockUntilUtc = LockRules.NextLockCycleUtc(schedules, zone, applied);
         }
         else
         {
             var bonusMinutes = Math.Clamp(request.Minutes ?? 15, 1, 1440);
             state.ManualLock = true;
             state.UnlockUntilUtc = null;
-            state.BonusUntilUtc = now.AddMinutes(bonusMinutes);
+            state.BonusUntilUtc = applied.AddMinutes(bonusMinutes);
             state.BonusMinutes = bonusMinutes;
         }
 
@@ -162,7 +171,8 @@ public sealed class LockService
             DeviceId = device.Id,
             Option = option,
             Minutes = request.Option == "bonus" ? Math.Clamp(request.Minutes ?? 15, 1, 1440) : null,
-            CreatedUtc = now
+            CreatedUtc = now,
+            Detail = applied == now ? null : $"applied {applied:o}"
         });
         await _db.SaveChangesAsync(ct);
 
@@ -205,7 +215,7 @@ public sealed class LockService
             .Where(e => e.FamilyId == familyId && e.ChildId == childId)
             .OrderByDescending(e => e.CreatedUtc)
             .Take(50)
-            .Select(e => new OverrideEventDto(e.Id, e.Option, e.Minutes, e.CreatedUtc))
+            .Select(e => new OverrideEventDto(e.Id, e.Option, e.Minutes, e.CreatedUtc, e.Detail))
             .ToListAsync(ct);
     }
 
@@ -265,10 +275,5 @@ public sealed class LockService
             evaluation.ScheduleName);
     }
 
-    private static TimeZoneInfo ResolveTimeZone(string? id)
-    {
-        if (string.IsNullOrWhiteSpace(id)) return TimeZoneInfo.Utc;
-        try { return TimeZoneInfo.FindSystemTimeZoneById(id); }
-        catch { return TimeZoneInfo.Utc; }
-    }
+    private static TimeZoneInfo ResolveTimeZone(string? id) => TimeZoneResolver.Resolve(id);
 }

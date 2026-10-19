@@ -120,7 +120,11 @@ public class RuleHistory
     public Guid ChildId { get; set; }
     public string RuleType { get; set; } = "";
     public Guid RuleId { get; set; }
+    public string Identity { get; set; } = "";
+    public string DisplayName { get; set; } = "";
     public RuleAction Action { get; set; }
+    public RuleMode Mode { get; set; }
+    public Guid? ScheduleId { get; set; }
     public Guid? ChangedByParentId { get; set; }
     public DateTime ChangedUtc { get; set; } = DateTime.UtcNow;
 }
@@ -146,6 +150,7 @@ public class OverrideEvent
     public Guid ChildId { get; set; }
     public Guid? DeviceId { get; set; }
     public string Option { get; set; } = "";
+    public string? Detail { get; set; }
     public int? Minutes { get; set; }
     public Guid? CreatedByParentId { get; set; }
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
@@ -158,7 +163,91 @@ public class VisitRecord
     public Guid ChildId { get; set; }
     public Guid DeviceId { get; set; }
     public string Domain { get; set; } = "";
+    public bool Blocked { get; set; }
     public DateTime VisitedUtc { get; set; } = DateTime.UtcNow;
+}
+
+public class ItemBonus
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid FamilyId { get; set; }
+    public Guid ChildId { get; set; }
+    public string RuleType { get; set; } = "";
+    public string Identity { get; set; } = "";
+    public int Minutes { get; set; }
+    public DateTime UntilUtc { get; set; }
+    public Guid? CreatedByParentId { get; set; }
+    public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
+}
+
+public class InstalledApp
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid FamilyId { get; set; }
+    public Guid ChildId { get; set; }
+    public Guid DeviceId { get; set; }
+    public string Identity { get; set; } = "";
+    public string DisplayName { get; set; } = "";
+    public string? Publisher { get; set; }
+    public string? Path { get; set; }
+    public string Source { get; set; } = "win32";
+    public string? Version { get; set; }
+    public bool IsNew { get; set; } = true;
+    public DateTime FirstSeenUtc { get; set; } = DateTime.UtcNow;
+    public DateTime LastSeenUtc { get; set; } = DateTime.UtcNow;
+    public DateTime? RemovedUtc { get; set; }
+    public DateTime? ReviewedUtc { get; set; }
+}
+
+public class ScheduleRuntimeState
+{
+    public Guid ChildId { get; set; }
+    public Guid? ActiveScheduleId { get; set; }
+    public string? ActiveScheduleName { get; set; }
+    public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
+}
+
+public class BlockEvent
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid FamilyId { get; set; }
+    public Guid ChildId { get; set; }
+    public Guid DeviceId { get; set; }
+    public string RuleType { get; set; } = "";
+    public string Identity { get; set; } = "";
+    public string DisplayName { get; set; } = "";
+    public DateTime OccurredUtc { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
+}
+
+public class Category
+{
+    public string Key { get; set; } = "";
+    public string Name { get; set; } = "";
+    public int Version { get; set; }
+    public DateTime FetchedUtc { get; set; } = DateTime.UtcNow;
+    public string? SourceUrl { get; set; }
+    public List<CategoryDomain> Domains { get; set; } = [];
+}
+
+public class CategoryDomain
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string CategoryKey { get; set; } = "";
+    public string Domain { get; set; } = "";
+    public int AddedVersion { get; set; }
+    public int? RemovedVersion { get; set; }
+    public Category? Category { get; set; }
+}
+
+public class ChildCategory
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid FamilyId { get; set; }
+    public Guid ChildId { get; set; }
+    public string CategoryKey { get; set; } = "";
+    public bool Enabled { get; set; }
+    public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
 }
 
 public class AppUsageRecord

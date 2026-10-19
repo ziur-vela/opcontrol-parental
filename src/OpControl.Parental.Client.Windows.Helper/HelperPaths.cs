@@ -12,6 +12,7 @@ public static class HelperPaths
     public static string StateFile => Path.Combine(PublicDirectory, "state.json");
     public static string StatusFile => Path.Combine(UserDirectory, "helper-status.json");
     public static string EventsFile => Path.Combine(UserDirectory, "helper-events.log");
+    public static string NotificationFile => Path.Combine(UserDirectory, "notification.json");
 
     public static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -24,7 +25,9 @@ public static class HelperPaths
         try
         {
             if (!File.Exists(StateFile)) return null;
-            return JsonSerializer.Deserialize<RuntimeLockStateDto>(File.ReadAllText(StateFile), JsonOptions);
+            using var stream = new FileStream(StateFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using var reader = new StreamReader(stream);
+            return JsonSerializer.Deserialize<RuntimeLockStateDto>(reader.ReadToEnd(), JsonOptions);
         }
         catch
         {

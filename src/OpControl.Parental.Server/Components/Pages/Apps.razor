@@ -1,0 +1,491 @@
+@page "/apps"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using OpControl.Parental.Contracts
+@using OpControl.Parental.Server.Data
+@using OpControl.Parental.Server.Services
+@inject AuthenticationStateProvider AuthState
+@inject IServiceScopeFactory Scopes
+
+<PageTitle>Apps · Parental OpControl</PageTitle>
+
+@if (_loading)
+{
+    <div class="card"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>
+}
+else if (_childId == Guid.Empty)
+{
+    <div class="card"><h1>No child yet</h1><p class="muted">Create a child profile first.</p></div>
+}
+else
+{
+    <div class="page-head">
+        <div>
+            <div class="eyebrow">@_childName</div>
+            <h1>Apps</h1>
+            <p class="muted">Installed apps, new installs to review, and app rules.</p>
+        </div>
+        <div class="button-row">
+            <a class="btn btn-ghost" href="/websites">Websites</a>
+            <a class="btn btn-ghost" href="/schedules">Schedules</a>
+        </div>
+    </div>
+
+    @if (_error is not null)
+    {
+        <div class="alert danger">@_error</div>
+    }
+
+    <section class="card">
+        <div class="card-title-row">
+            <h2>New apps to review</h2>
+            <span class="pill-soft">@_newApps.Count new</span>
+        </div>
+        @if (_newApps.Count == 0)
+        {
+            <p class="muted">Nothing new since the last review.</p>
+        }
+        else
+        {
+            <div class="app-grid">
+                @foreach (var app in _newApps)
+                {
+                    <div class="app-card">
+                        <div class="app-badge">@Initial(app.DisplayName)</div>
+                        <div class="app-main">
+                            <div class="rule-title">@app.DisplayName <span class="pill-soft tiny-pill">New</span></div>
+                            <div class="muted tiny">@SourceLabel(app.Source) · @(string.IsNullOrWhiteSpace(app.Publisher) ? "unknown publisher" : app.Publisher)</div>
+                            <div class="muted tiny">@app.DeviceName · first seen @FormatLocal(app.FirstSeenUtc)</div>
+                        </div>
+                        <div class="rule-actions">
+                            <button class="btn btn-accent" @onclick="() => BlockAppAsync(app)">Block</button>
+                            <button class="ghost-btn" @onclick="() => AllowAppAsync(app)">Allow</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+
+    <div class="grid-2">
+        <section class="card">
+            <div class="card-title-row">
+                <h2>Installed apps</h2>
+                <span class="pill-soft">@_installed.Count on @_deviceCount device@(_deviceCount == 1 ? "" : "s")</span>
+            </div>
+
+            <form class="inline-add" @onsubmit="AddManualAsync" @onsubmit:preventDefault>
+                <input class="mini-input grow" placeholder="Add by path, e.g. C:\Program Files\App\app.exe" @bind="_manualPath" />
+                <input class="mini-input" placeholder="Display name (optional)" @bind="_manualName" />
+                <button class="btn btn-primary" type="submit">Add</button>
+            </form>
+
+            <div class="chip-row">
+                @foreach (var filter in Filters)
+                {
+                    <button class="chip @(_filter == filter.Key ? "active" : "")" @onclick="() => SetFilter(filter.Key)">@filter.Label</button>
+                }
+            </div>
+            <input class="mini-input" placeholder="Search installed apps" @bind="_search" @bind:after="ApplyFilter" />
+
+            <div class="rule-list">
+                @foreach (var app in _filtered)
+                {
+                    <div class="rule-row">
+                        <div class="app-badge small">@Initial(app.DisplayName)</div>
+                        <div class="rule-main">
+                            <div class="rule-title">@app.DisplayName</div>
+                            <div class="muted tiny">
+                                @SourceLabel(app.Source)
+                                @if (!string.IsNullOrWhiteSpace(app.Version))
+                                {
+                                    <span> · @app.Version</span>
+                                }
+                                @if (app.IsNew)
+                                {
+                                    <span class="pill-soft tiny-pill">New</span>
+                                }
+                            </div>
+                            <div class="muted tiny">@(string.IsNullOrWhiteSpace(app.Publisher) ? "unknown publisher" : app.Publisher)</div>
+                        </div>
+                        <div class="rule-actions">
+                            @if (app.Blocked)
+                            {
+                                <span class="state-pill blocked">Blocked</span>
+                                <button class="ghost-btn" @onclick="() => RemoveRuleAsync(app.RuleId)">Unblock</button>
+                            }
+                            else if (app.Allowed)
+                            {
+                                <span class="state-pill allowed">Allowed</span>
+                                <button class="ghost-btn" @onclick="() => BlockAppAsync(app)">Block</button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-accent" @onclick="() => BlockAppAsync(app)">Block</button>
+                                <button class="ghost-btn" @onclick="() => AllowAppAsync(app)">Allow</button>
+                            }
+                            @if (app.Blocked)
+                            {
+                                <button class="ghost-btn" @onclick="() => BonusAsync(app.Identity, 15)">+15 min</button>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-title-row">
+                <h2>App rules</h2>
+                <span class="pill-soft">@_rules.Count(r => r.IsBlocked) blocked · @_rules.Count(r => !r.IsBlocked) allowed</span>
+            </div>
+
+            <div class="rule-section">
+                <div class="eyebrow">Blocked always</div>
+                @foreach (var rule in _rules.Where(r => r.IsBlocked && r.Mode == RuleMode.Always))
+                {
+                    <div class="rule-row compact">
+                        <div class="rule-main">
+                            <div class="rule-title">@rule.DisplayName</div>
+                            <div class="muted tiny">Since @FormatLocal(rule.UpdatedUtc)</div>
+                        </div>
+                        <div class="rule-actions">
+                            <button class="ghost-btn" @onclick="() => BonusAsync(rule.AppIdentity, 15)">+15 min</button>
+                            <button class="ghost-btn" @onclick="() => RemoveRuleAsync(rule.Id)">Unblock</button>
+                        </div>
+                    </div>
+                }
+                @if (!_rules.Any(r => r.IsBlocked && r.Mode == RuleMode.Always))
+                {
+                    <p class="muted tiny">No always-blocked apps.</p>
+                }
+            </div>
+
+            <div class="rule-section">
+                <div class="eyebrow">Blocked during schedule</div>
+                @foreach (var rule in _rules.Where(r => r.IsBlocked && r.Mode == RuleMode.Scheduled))
+                {
+                    <div class="rule-row compact">
+                        <div class="rule-main">
+                            <div class="rule-title">@rule.DisplayName</div>
+                            <div class="muted tiny">@ScheduleName(rule.ScheduleId)</div>
+                        </div>
+                        <div class="rule-actions">
+                            <button class="ghost-btn" @onclick="() => RemoveRuleAsync(rule.Id)">Unblock</button>
+                        </div>
+                    </div>
+                }
+                @if (!_rules.Any(r => r.IsBlocked && r.Mode == RuleMode.Scheduled))
+                {
+                    <p class="muted tiny">No scheduled app rules.</p>
+                }
+            </div>
+
+            <div class="rule-section">
+                <div class="eyebrow">Allowed always (reviewed)</div>
+                @foreach (var rule in _rules.Where(r => !r.IsBlocked))
+                {
+                    <div class="rule-row compact">
+                        <div class="rule-main">
+                            <div class="rule-title">@rule.DisplayName</div>
+                            <div class="muted tiny">Always allowed</div>
+                        </div>
+                        <div class="rule-actions">
+                            <button class="ghost-btn" @onclick="() => BlockAppRuleAsync(rule)">Block</button>
+                        </div>
+                    </div>
+                }
+                @if (!_rules.Any(r => !r.IsBlocked))
+                {
+                    <p class="muted tiny">No allowed app rules.</p>
+                }
+            </div>
+        </section>
+    </div>
+
+    <section class="card">
+        <div class="card-title-row">
+            <h2>Previously blocked or allowed</h2>
+            <span class="pill-soft">Latest @Math.Min(_history.Count, 20)</span>
+        </div>
+        @if (_history.Count == 0)
+        {
+            <p class="muted">No app rule changes recorded yet.</p>
+        }
+        else
+        {
+            <div class="rule-list">
+                @foreach (var item in _history.Where(h => h.RuleType == "app").Take(20))
+                {
+                    <div class="rule-row compact">
+                        <div class="rule-main">
+                            <div class="rule-title">@item.DisplayName</div>
+                            <div class="muted tiny">@ActionLabel(item.Action) · @FormatLocal(item.ChangedUtc)</div>
+                        </div>
+                        <div class="rule-actions">
+                            <button class="ghost-btn" @onclick="() => BlockIdentityAsync(item.Identity, item.DisplayName, null)">Block again</button>
+                            <button class="ghost-btn" @onclick="() => AllowIdentityAsync(item.Identity, item.DisplayName, null)">Allow again</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+}
+
+@code {
+    private static readonly (string Key, string Label)[] Filters =
+    [
+        ("all", "All"),
+        ("new", "New"),
+        ("store", "Store apps"),
+        ("win32", "Win32"),
+        ("notblocked", "Not blocked"),
+        ("blocked", "Blocked")
+    ];
+
+    private sealed class AppRow
+    {
+        public string Identity { get; init; } = "";
+        public string DisplayName { get; init; } = "";
+        public string? Publisher { get; init; }
+        public string? Version { get; init; }
+        public string Source { get; init; } = "win32";
+        public string DeviceName { get; init; } = "";
+        public DateTime FirstSeenUtc { get; init; }
+        public DateTime LastSeenUtc { get; init; }
+        public bool IsNew { get; init; }
+        public bool Blocked { get; init; }
+        public bool Allowed { get; init; }
+        public Guid RuleId { get; init; }
+    }
+
+    private Guid _familyId;
+    private Guid _childId;
+    private string _childName = "";
+    private string _timeZoneId = "UTC";
+    private int _deviceCount;
+    private bool _loading = true;
+    private string? _error;
+    private string _filter = "all";
+    private string _search = "";
+    private string _manualPath = "";
+    private string _manualName = "";
+    private List<Schedule> _schedules = [];
+    private List<AppRule> _rules = [];
+    private List<RuleHistoryDto> _history = [];
+    private List<AppRow> _installed = [];
+    private List<AppRow> _newApps = [];
+    private List<AppRow> _filtered = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        if (!Guid.TryParse(auth.User.FindFirst("family_id")?.Value, out _familyId))
+        {
+            _loading = false;
+            _error = "Family scope is missing from the session.";
+            return;
+        }
+        await RefreshAsync();
+        _loading = false;
+    }
+
+    private void SetFilter(string key)
+    {
+        _filter = key;
+        ApplyFilter();
+    }
+
+    private async Task RefreshAsync()
+    {
+        using var scope = Scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
+        var child = await db.Children.AsNoTracking().Where(c => c.FamilyId == _familyId).OrderBy(c => c.CreatedUtc).FirstOrDefaultAsync();
+        if (child is null) { _childId = Guid.Empty; return; }
+        _childId = child.Id;
+        _childName = child.Name;
+        _timeZoneId = await db.Devices.AsNoTracking().Where(d => d.ChildId == child.Id).Select(d => d.TimeZoneId).FirstOrDefaultAsync() ?? "UTC";
+        _deviceCount = await db.Devices.AsNoTracking().CountAsync(d => d.ChildId == child.Id);
+
+        _rules = await db.AppRules.AsNoTracking()
+            .Where(r => r.FamilyId == _familyId && r.ChildId == child.Id)
+            .OrderBy(r => r.DisplayName)
+            .ToListAsync();
+        _schedules = await db.Schedules.AsNoTracking()
+            .Where(s => s.FamilyId == _familyId && s.ChildId == child.Id)
+            .OrderBy(s => s.Name)
+            .ToListAsync();
+
+        var rulesService = scope.ServiceProvider.GetRequiredService<RuleService>();
+        _history = await rulesService.GetHistoryAsync(_familyId, child.Id, 80);
+
+        var devices = await db.Devices.AsNoTracking().Where(d => d.ChildId == child.Id).ToDictionaryAsync(d => d.Id, d => d.Name);
+        var rows = await db.InstalledApps.AsNoTracking()
+            .Where(a => a.FamilyId == _familyId && a.ChildId == child.Id && a.RemovedUtc == null)
+            .OrderByDescending(a => a.LastSeenUtc)
+            .ToListAsync();
+
+        var apps = new Dictionary<string, AppRow>(StringComparer.OrdinalIgnoreCase);
+        foreach (var app in rows)
+        {
+            if (apps.ContainsKey(app.Identity)) continue;
+            var rule = _rules.FirstOrDefault(r => r.AppIdentity.Equals(app.Identity, StringComparison.OrdinalIgnoreCase));
+            apps[app.Identity] = new AppRow
+            {
+                Identity = app.Identity,
+                DisplayName = app.DisplayName,
+                Publisher = app.Publisher,
+                Version = app.Version,
+                Source = app.Source,
+                DeviceName = devices.GetValueOrDefault(app.DeviceId, "device"),
+                FirstSeenUtc = app.FirstSeenUtc,
+                LastSeenUtc = app.LastSeenUtc,
+                IsNew = app.IsNew && app.ReviewedUtc is null,
+                Blocked = rule is { IsBlocked: true },
+                Allowed = rule is { IsBlocked: false },
+                RuleId = rule?.Id ?? Guid.Empty
+            };
+        }
+
+        _installed = apps.Values.OrderBy(a => a.DisplayName, StringComparer.OrdinalIgnoreCase).ToList();
+        _newApps = _installed.Where(a => a.IsNew).ToList();
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        var query = _installed.AsEnumerable();
+        query = _filter switch
+        {
+            "new" => query.Where(a => a.IsNew),
+            "store" => query.Where(a => a.Source.Equals("store", StringComparison.OrdinalIgnoreCase)),
+            "win32" => query.Where(a => a.Source.Equals("win32", StringComparison.OrdinalIgnoreCase)),
+            "notblocked" => query.Where(a => !a.Blocked),
+            "blocked" => query.Where(a => a.Blocked),
+            _ => query
+        };
+        if (!string.IsNullOrWhiteSpace(_search))
+            query = query.Where(a => a.DisplayName.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                || (a.Publisher ?? "").Contains(_search, StringComparison.OrdinalIgnoreCase));
+        _filtered = query.ToList();
+    }
+
+    private async Task AddManualAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_manualPath)) return;
+        var identity = AppIdentityPath();
+        if (identity.Length == 0)
+        {
+            _error = "Enter a full path to an executable.";
+            return;
+        }
+        var display = string.IsNullOrWhiteSpace(_manualName) ? Path.GetFileName(_manualPath) : _manualName;
+        await BlockIdentityAsync(identity, display, null);
+        _manualPath = "";
+        _manualName = "";
+    }
+
+    private string AppIdentityPath()
+    {
+        var value = _manualPath.Trim().Trim('"');
+        if (value.Length == 0) return "";
+        return "path:" + value.ToLowerInvariant();
+    }
+
+    private Task BlockAppAsync(AppRow app) => BlockIdentityAsync(app.Identity, app.DisplayName, app.Publisher);
+
+    private Task AllowAppAsync(AppRow app) => AllowIdentityAsync(app.Identity, app.DisplayName, app.Publisher);
+
+    private Task BlockAppRuleAsync(AppRule rule) => BlockIdentityAsync(rule.AppIdentity, rule.DisplayName, rule.Publisher);
+
+    private async Task BlockIdentityAsync(string identity, string display, string? publisher)
+    {
+        await RunAsync(async (db, rules, parentId) =>
+        {
+            await rules.UpsertAppRuleAsync(_familyId, _childId, parentId, identity, display, publisher, blocked: true, RuleMode.Always, null);
+            await MarkReviewedAsync(db, identity);
+        });
+    }
+
+    private async Task AllowIdentityAsync(string identity, string display, string? publisher)
+    {
+        await RunAsync(async (db, rules, parentId) =>
+        {
+            await rules.UpsertAppRuleAsync(_familyId, _childId, parentId, identity, display, publisher, blocked: false, RuleMode.Always, null);
+            await MarkReviewedAsync(db, identity);
+        });
+    }
+
+    private async Task RemoveRuleAsync(Guid ruleId)
+    {
+        if (ruleId == Guid.Empty) return;
+        await RunAsync(async (db, rules, parentId) =>
+        {
+            await rules.RemoveAppRuleAsync(_familyId, _childId, parentId, ruleId);
+            await db.SaveChangesAsync();
+        });
+    }
+
+    private async Task BonusAsync(string identity, int minutes)
+    {
+        await RunAsync(async (db, rules, parentId) =>
+        {
+            await rules.AddItemBonusAsync(_familyId, _childId, parentId, "app", identity, minutes);
+            await db.SaveChangesAsync();
+        });
+    }
+
+    private async Task MarkReviewedAsync(ParentalDbContext db, string identity)
+    {
+        var rows = await db.InstalledApps
+            .Where(a => a.FamilyId == _familyId && a.ChildId == _childId && a.Identity == identity)
+            .ToListAsync();
+        foreach (var row in rows)
+        {
+            row.IsNew = false;
+            row.ReviewedUtc = DateTime.UtcNow;
+        }
+        await db.SaveChangesAsync();
+    }
+
+    private async Task RunAsync(Func<ParentalDbContext, RuleService, Guid?, Task> action)
+    {
+        _error = null;
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
+            var rules = scope.ServiceProvider.GetRequiredService<RuleService>();
+            var locks = scope.ServiceProvider.GetRequiredService<LockService>();
+            var auth = await AuthState.GetAuthenticationStateAsync();
+            Guid? parentId = Guid.TryParse(auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id) ? id : null;
+            await action(db, rules, parentId);
+            await locks.PublishDeviceStateAsync(_familyId, _childId);
+            await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private string ScheduleName(Guid? id) => id is { } value ? _schedules.FirstOrDefault(s => s.Id == value)?.Name ?? "Schedule" : "No schedule";
+
+    private string FormatLocal(DateTime utc) => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), ResolveTimeZone(_timeZoneId)).ToString("MMM d, HH:mm");
+
+    private static TimeZoneInfo ResolveTimeZone(string? id) => TimeZoneResolver.Resolve(id);
+
+    private static string Initial(string name) => string.IsNullOrWhiteSpace(name) ? "?" : name.Trim()[..1].ToUpperInvariant();
+
+    private static string SourceLabel(string source) => source.Equals("store", StringComparison.OrdinalIgnoreCase) ? "Microsoft Store" : "Win32";
+
+    private static string ActionLabel(string action) => action switch
+    {
+        "Blocked" => "Blocked",
+        "Allowed" => "Allowed",
+        "Removed" => "Rule removed",
+        _ => action
+    };
+}

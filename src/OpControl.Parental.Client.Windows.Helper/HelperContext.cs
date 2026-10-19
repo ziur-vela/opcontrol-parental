@@ -10,6 +10,9 @@ public sealed class HelperContext : ApplicationContext
     private readonly KeyboardHook _hook = new();
     private readonly System.Windows.Forms.Timer _timer;
     private PinDialog? _pinDialog;
+    private NotificationForm? _notification;
+    private readonly DateTime _helperStartedUtc = DateTime.UtcNow;
+    private DateTime _lastNotificationUtc = DateTime.MinValue;
     private bool _lastVisible;
     private bool _hookInstalled;
 
@@ -28,6 +31,7 @@ public sealed class HelperContext : ApplicationContext
 
     private void Tick()
     {
+        CheckNotification();
         var state = HelperPaths.ReadState();
         if (state is null)
         {
@@ -83,6 +87,24 @@ public sealed class HelperContext : ApplicationContext
         }
     }
 
+    private void CheckNotification()
+    {
+        var notification = NotificationForm.Read();
+        if (notification is null) return;
+        var (title, message, utc) = notification.Value;
+        if (utc <= _lastNotificationUtc) return;
+        _lastNotificationUtc = utc;
+        if (utc < _helperStartedUtc) return;
+        try
+        {
+            _notification?.Close();
+            _notification = new NotificationForm(title, message);
+            _notification.Show();
+            HelperPaths.LogEvent($"notification-shown {title}: {message}");
+        }
+        catch { }
+    }
+
     private void SetVisible(bool countdown, bool locked, string? reason, string? banner = null)
     {
         if (_lastVisible != countdown)
@@ -127,7 +149,7 @@ public sealed class HelperContext : ApplicationContext
                 menu!.Close();
                 _ = ApplyOverrideAsync(ticket, option, minutes);
             },
-            () => menu.Close());
+            () => menu?.Close());
         menu.Show();
         menu.BringToFront();
         menu.Activate();
@@ -157,6 +179,7 @@ public sealed class HelperContext : ApplicationContext
             _overlays.Dispose();
             _countdown.Dispose();
             _pinDialog?.Dispose();
+            _notification?.Dispose();
         }
         base.Dispose(disposing);
     }

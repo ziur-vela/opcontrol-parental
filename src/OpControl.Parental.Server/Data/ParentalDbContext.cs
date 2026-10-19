@@ -22,6 +22,13 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
     public DbSet<VisitRecord> VisitRecords => Set<VisitRecord>();
     public DbSet<AppUsageRecord> AppUsageRecords => Set<AppUsageRecord>();
     public DbSet<EnrollmentCode> EnrollmentCodes => Set<EnrollmentCode>();
+    public DbSet<ItemBonus> ItemBonuses => Set<ItemBonus>();
+    public DbSet<BlockEvent> BlockEvents => Set<BlockEvent>();
+    public DbSet<ScheduleRuntimeState> ScheduleRuntimeStates => Set<ScheduleRuntimeState>();
+    public DbSet<InstalledApp> InstalledApps => Set<InstalledApp>();
+    public DbSet<Category> Categories => Set<Category>();
+    public DbSet<CategoryDomain> CategoryDomains => Set<CategoryDomain>();
+    public DbSet<ChildCategory> ChildCategories => Set<ChildCategory>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -109,8 +116,12 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
         {
             e.HasKey(x => x.Id);
             e.Property(x => x.RuleType).HasMaxLength(16).IsRequired();
+            e.Property(x => x.Identity).HasMaxLength(255).IsRequired();
+            e.Property(x => x.DisplayName).HasMaxLength(255).IsRequired();
             e.Property(x => x.Action).HasConversion<string>().HasMaxLength(16);
+            e.Property(x => x.Mode).HasConversion<string>().HasMaxLength(16);
             e.HasIndex(x => new { x.FamilyId, x.ChildId, x.ChangedUtc });
+            e.HasIndex(x => new { x.ChildId, x.RuleType, x.Identity, x.ChangedUtc });
         });
 
         builder.Entity<LockState>(e =>
@@ -134,6 +145,71 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
             e.Property(x => x.Domain).HasMaxLength(255).IsRequired();
             e.HasIndex(x => new { x.FamilyId, x.ChildId, x.VisitedUtc });
             e.HasIndex(x => new { x.DeviceId, x.VisitedUtc });
+            e.HasIndex(x => new { x.ChildId, x.Blocked, x.VisitedUtc });
+        });
+
+        builder.Entity<ItemBonus>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.RuleType).HasMaxLength(16).IsRequired();
+            e.Property(x => x.Identity).HasMaxLength(255).IsRequired();
+            e.HasIndex(x => new { x.FamilyId, x.ChildId, x.UntilUtc });
+            e.HasIndex(x => new { x.ChildId, x.RuleType, x.Identity });
+        });
+
+        builder.Entity<ScheduleRuntimeState>(e =>
+        {
+            e.HasKey(x => x.ChildId);
+            e.Property(x => x.ActiveScheduleName).HasMaxLength(120);
+        });
+
+        builder.Entity<BlockEvent>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.RuleType).HasMaxLength(16).IsRequired();
+            e.Property(x => x.Identity).HasMaxLength(255).IsRequired();
+            e.Property(x => x.DisplayName).HasMaxLength(255).IsRequired();
+            e.HasIndex(x => new { x.FamilyId, x.ChildId, x.OccurredUtc });
+        });
+
+        builder.Entity<InstalledApp>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Identity).HasMaxLength(255).IsRequired();
+            e.Property(x => x.DisplayName).HasMaxLength(255).IsRequired();
+            e.Property(x => x.Publisher).HasMaxLength(255);
+            e.Property(x => x.Path).HasMaxLength(1024);
+            e.Property(x => x.Source).HasMaxLength(16).IsRequired();
+            e.Property(x => x.Version).HasMaxLength(80);
+            e.HasIndex(x => new { x.DeviceId, x.Identity }).IsUnique();
+            e.HasIndex(x => new { x.FamilyId, x.ChildId, x.RemovedUtc });
+            e.HasIndex(x => new { x.ChildId, x.IsNew });
+        });
+
+        builder.Entity<Category>(e =>
+        {
+            e.HasKey(x => x.Key);
+            e.Property(x => x.Key).HasMaxLength(32);
+            e.Property(x => x.Name).HasMaxLength(80).IsRequired();
+            e.Property(x => x.SourceUrl).HasMaxLength(512);
+        });
+
+        builder.Entity<CategoryDomain>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.CategoryKey).HasMaxLength(32).IsRequired();
+            e.Property(x => x.Domain).HasMaxLength(255).IsRequired();
+            e.HasIndex(x => new { x.CategoryKey, x.Domain }).IsUnique();
+            e.HasIndex(x => new { x.CategoryKey, x.AddedVersion });
+            e.HasIndex(x => new { x.CategoryKey, x.RemovedVersion });
+            e.HasOne(x => x.Category).WithMany(x => x.Domains).HasForeignKey(x => x.CategoryKey).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ChildCategory>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.CategoryKey).HasMaxLength(32).IsRequired();
+            e.HasIndex(x => new { x.ChildId, x.CategoryKey }).IsUnique();
         });
 
         builder.Entity<AppUsageRecord>(e =>

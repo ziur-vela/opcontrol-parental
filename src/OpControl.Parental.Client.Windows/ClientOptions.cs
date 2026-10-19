@@ -57,6 +57,13 @@ public static class ClientPaths
     public static string LockoutFile => Path.Combine(PrivateDirectory, "lockout.json");
     public static string OverrideQueueFile => Path.Combine(PrivateDirectory, "override-queue.jsonl");
     public static string PolicyStateFile => Path.Combine(PrivateDirectory, "taskmgr-policy.json");
+    public static string DnsStateFile => Path.Combine(PrivateDirectory, "dns-state.json");
+    public static string VisitQueueFile => Path.Combine(PrivateDirectory, "visit-queue.jsonl");
+    public static string BlockEventQueueFile => Path.Combine(PrivateDirectory, "block-event-queue.jsonl");
+    public static string InventorySnapshotFile => Path.Combine(PrivateDirectory, "app-inventory.json");
+    public static string InventoryHashFile => Path.Combine(PrivateDirectory, "app-inventory.hash");
+    public static string CategoryCacheFile => Path.Combine(PrivateDirectory, "categories.json");
+    public static string NotificationFile => Path.Combine(UserDirectory, "notification.json");
     public static string StateFile => Path.Combine(PublicDirectory, "state.json");
     public static string LogFile => Path.Combine(PublicDirectory, "service.log");
     public static string HelperStatusFile => Path.Combine(UserDirectory, "helper-status.json");
@@ -141,7 +148,19 @@ public sealed class DeviceStateStore
         lock (_gate)
         {
             if (!File.Exists(ClientPaths.DeviceStateFile)) return null;
-            try { return JsonSerializer.Deserialize<Contracts.DeviceStateDto>(File.ReadAllText(ClientPaths.DeviceStateFile), JsonOptions); }
+            try
+            {
+                var state = JsonSerializer.Deserialize<Contracts.DeviceStateDto>(File.ReadAllText(ClientPaths.DeviceStateFile), JsonOptions);
+                if (state is null) return null;
+                return state with
+                {
+                    Schedules = state.Schedules ?? [],
+                    WebsiteRules = state.WebsiteRules ?? [],
+                    AppRules = state.AppRules ?? [],
+                    ItemBonuses = state.ItemBonuses ?? [],
+                    Categories = state.Categories ?? []
+                };
+            }
             catch { return null; }
         }
     }
@@ -174,9 +193,30 @@ public sealed class StateStore
         lock (_gate)
         {
             Directory.CreateDirectory(ClientPaths.PublicDirectory);
+            var json = JsonSerializer.Serialize(state, JsonOptions);
             var temp = ClientPaths.StateFile + ".tmp";
-            File.WriteAllText(temp, JsonSerializer.Serialize(state, JsonOptions));
-            File.Move(temp, ClientPaths.StateFile, overwrite: true);
+            File.WriteAllText(temp, json);
+            for (var attempt = 0; attempt < 5; attempt++)
+            {
+                try
+                {
+                    File.Move(temp, ClientPaths.StateFile, overwrite: true);
+                    SecureFile.UsersReadable(ClientPaths.StateFile);
+                    return;
+                }
+                catch (IOException) when (attempt < 4)
+                {
+                    Thread.Sleep(25);
+                }
+                catch (UnauthorizedAccessException) when (attempt < 4)
+                {
+                    Thread.Sleep(25);
+                }
+            }
+
+            using var stream = new FileStream(ClientPaths.StateFile, FileMode.Create, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
+            using var writer = new StreamWriter(stream);
+            writer.Write(json);
             SecureFile.UsersReadable(ClientPaths.StateFile);
         }
     }

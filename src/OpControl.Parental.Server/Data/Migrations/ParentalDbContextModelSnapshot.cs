@@ -241,6 +241,109 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.ToTable("AppUsageRecords");
                 });
 
+            modelBuilder.Entity("OpControl.Parental.Server.Data.BlockEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ChildId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Identity")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("OccurredUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RuleType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FamilyId", "ChildId", "OccurredUtc");
+
+                    b.ToTable("BlockEvents");
+                });
+
+            modelBuilder.Entity("OpControl.Parental.Server.Data.Category", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime>("FetchedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("SourceUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("Categories");
+                });
+
+            modelBuilder.Entity("OpControl.Parental.Server.Data.CategoryDomain", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AddedVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CategoryKey")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Domain")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int?>("RemovedVersion")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryKey", "AddedVersion");
+
+                    b.HasIndex("CategoryKey", "Domain")
+                        .IsUnique();
+
+                    b.HasIndex("CategoryKey", "RemovedVersion");
+
+                    b.ToTable("CategoryDomains");
+                });
+
             modelBuilder.Entity("OpControl.Parental.Server.Data.Child", b =>
                 {
                     b.Property<Guid>("Id")
@@ -266,6 +369,37 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.HasIndex("FamilyId");
 
                     b.ToTable("Children");
+                });
+
+            modelBuilder.Entity("OpControl.Parental.Server.Data.ChildCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CategoryKey")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("ChildId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChildId", "CategoryKey")
+                        .IsUnique();
+
+                    b.ToTable("ChildCategories");
                 });
 
             modelBuilder.Entity("OpControl.Parental.Server.Data.Device", b =>
@@ -426,6 +560,118 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.ToTable("Families");
                 });
 
+            modelBuilder.Entity("OpControl.Parental.Server.Data.InstalledApp", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ChildId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("FirstSeenUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Identity")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<bool>("IsNew")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("LastSeenUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Path")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<string>("Publisher")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime?>("RemovedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ReviewedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Version")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChildId", "IsNew");
+
+                    b.HasIndex("DeviceId", "Identity")
+                        .IsUnique();
+
+                    b.HasIndex("FamilyId", "ChildId", "RemovedUtc");
+
+                    b.ToTable("InstalledApps");
+                });
+
+            modelBuilder.Entity("OpControl.Parental.Server.Data.ItemBonus", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ChildId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CreatedByParentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Identity")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("Minutes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RuleType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTime>("UntilUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChildId", "RuleType", "Identity");
+
+                    b.HasIndex("FamilyId", "ChildId", "UntilUtc");
+
+                    b.ToTable("ItemBonuses");
+                });
+
             modelBuilder.Entity("OpControl.Parental.Server.Data.LockState", b =>
                 {
                     b.Property<Guid>("Id")
@@ -481,6 +727,9 @@ namespace OpControl.Parental.Server.Data.Migrations
 
                     b.Property<DateTime>("CreatedUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Detail")
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("DeviceId")
                         .HasColumnType("uuid");
@@ -606,8 +855,23 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.Property<Guid>("ChildId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<Guid>("FamilyId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Identity")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
 
                     b.Property<Guid>("RuleId")
                         .HasColumnType("uuid");
@@ -617,9 +881,14 @@ namespace OpControl.Parental.Server.Data.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)");
 
+                    b.Property<Guid?>("ScheduleId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("FamilyId", "ChildId", "ChangedUtc");
+
+                    b.HasIndex("ChildId", "RuleType", "Identity", "ChangedUtc");
 
                     b.ToTable("RuleHistory");
                 });
@@ -665,11 +934,35 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.ToTable("Schedules");
                 });
 
+            modelBuilder.Entity("OpControl.Parental.Server.Data.ScheduleRuntimeState", b =>
+                {
+                    b.Property<Guid>("ChildId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ActiveScheduleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActiveScheduleName")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<DateTime>("UpdatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("ChildId");
+
+                    b.ToTable("ScheduleRuntimeStates");
+                });
+
             modelBuilder.Entity("OpControl.Parental.Server.Data.VisitRecord", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<bool>("Blocked")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid>("ChildId")
                         .HasColumnType("uuid");
@@ -691,6 +984,8 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DeviceId", "VisitedUtc");
+
+                    b.HasIndex("ChildId", "Blocked", "VisitedUtc");
 
                     b.HasIndex("FamilyId", "ChildId", "VisitedUtc");
 
@@ -811,6 +1106,17 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.Navigation("Schedule");
                 });
 
+            modelBuilder.Entity("OpControl.Parental.Server.Data.CategoryDomain", b =>
+                {
+                    b.HasOne("OpControl.Parental.Server.Data.Category", "Category")
+                        .WithMany("Domains")
+                        .HasForeignKey("CategoryKey")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+                });
+
             modelBuilder.Entity("OpControl.Parental.Server.Data.Child", b =>
                 {
                     b.HasOne("OpControl.Parental.Server.Data.Family", "Family")
@@ -893,6 +1199,11 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.Navigation("Child");
 
                     b.Navigation("Schedule");
+                });
+
+            modelBuilder.Entity("OpControl.Parental.Server.Data.Category", b =>
+                {
+                    b.Navigation("Domains");
                 });
 
             modelBuilder.Entity("OpControl.Parental.Server.Data.Child", b =>

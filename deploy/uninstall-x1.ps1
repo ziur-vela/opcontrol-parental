@@ -4,6 +4,9 @@ $data = "C:\ProgramData\OpControlParental"
 
 sc.exe stop OpControlParental | Out-Null
 Start-Sleep -Seconds 3
+if (Test-Path "$root\Client\OpControl.Parental.Client.exe") {
+    & "$root\Client\OpControl.Parental.Client.exe" --restore-dns
+}
 Get-Process "OpControl.Parental.Helper" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 sc.exe delete OpControlParental | Out-Null
 Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -like "OpControl *" -or $_.TaskPath -like "*OpControl*" } | Unregister-ScheduledTask -Confirm:$false

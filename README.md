@@ -1,8 +1,11 @@
 # OpControl Parental
 
-Ground-up rebuild of the ArktinMonitor parental control system. Job 1 is the foundation and
-end-to-end proof: identity, family/child/device model, device enrollment, SignalR command path,
-minimal dashboard, and a Windows service + user-session helper.
+Ground-up rebuild of the ArktinMonitor parental control system. Job 1 established the
+foundation (identity, family/child/device model, enrollment, SignalR, dashboard, Windows service
+and user-session helper). Job 2 added the lock overlay, schedules, PIN overrides, bonus time and
+2FA. Job 3 adds website filtering through a local DNS resolver, visited-site history, curated
+categories, app inventory/review, real-time app blocking, per-item bonus unlocks and the
+Websites/Apps dashboard pages.
 
 ## Solution
 

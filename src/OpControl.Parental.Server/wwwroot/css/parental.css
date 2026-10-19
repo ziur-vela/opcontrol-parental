@@ -263,3 +263,49 @@ code { background: var(--surface2); padding: 2px 6px; border-radius: 6px; font-s
 .qr-box img { width: 100%; height: 100%; }
 .key-box { font-family: "Space Grotesk", monospace; letter-spacing: 0.12em; word-break: break-all; background: var(--surface2); border-radius: 10px; padding: 12px; }
 .recovery-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: "Space Grotesk", monospace; font-size: 13px; }
+
+.quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.quick-card { text-decoration: none; color: var(--text); gap: 8px; }
+.quick-card:hover { text-decoration: none; border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+.quick-number { font-family: "Space Grotesk", Manrope, sans-serif; font-size: 36px; font-weight: 700; letter-spacing: -0.04em; color: var(--accent); }
+.quick-link { font-size: 12px; font-weight: 800; color: var(--accent); margin-top: 4px; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border: 1px solid var(--border); background: var(--surface2); color: var(--muted); border-radius: 999px; padding: 7px 13px; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.chip.active { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 45%, transparent); color: var(--accent); }
+.date-nav { display: flex; align-items: center; gap: 6px; }
+.date-nav .mini-input { width: 140px; }
+.inline-add { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.inline-add .mini-input { width: auto; }
+.inline-add .grow { flex: 1; min-width: 180px; }
+.rule-list { display: flex; flex-direction: column; }
+.rule-row { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--border); }
+.rule-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.rule-row.compact { padding: 10px 0; }
+.rule-main { flex: 1; min-width: 0; }
+.rule-title { font-weight: 800; overflow-wrap: anywhere; }
+.rule-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.rule-section { display: flex; flex-direction: column; gap: 2px; border-top: 1px solid var(--border); padding-top: 12px; }
+.rule-section:first-of-type { border-top: 0; padding-top: 0; }
+.state-pill { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 800; }
+.state-pill.blocked { background: var(--danger-soft); color: var(--danger); }
+.state-pill.allowed { background: var(--accent-soft); color: var(--ok); }
+.tiny-pill { margin-left: 6px; font-size: 10px; padding: 2px 8px; }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.toggle-row:last-child { border-bottom: 0; }
+.toggle { width: 48px; height: 28px; border-radius: 999px; background: var(--surface2); border: 1px solid var(--border); position: relative; cursor: pointer; padding: 0; }
+.toggle span { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--muted); transition: left 0.15s ease, background 0.15s ease; }
+.toggle.on { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+.toggle.on span { left: 23px; background: var(--accent); }
+.app-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.app-card { display: flex; align-items: center; gap: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+.app-main { flex: 1; min-width: 0; }
+.app-badge { width: 38px; height: 38px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0; }
+.app-badge.small { width: 30px; height: 30px; border-radius: 8px; font-size: 12px; }
+@media (max-width: 900px) {
+    .quick-grid { grid-template-columns: 1fr; }
+    .app-grid { grid-template-columns: 1fr; }
+    .rule-row { align-items: flex-start; flex-wrap: wrap; }
+    .rule-actions { width: 100%; justify-content: flex-start; }
+    .date-nav { width: 100%; }
+    .date-nav .mini-input { flex: 1; }
+}

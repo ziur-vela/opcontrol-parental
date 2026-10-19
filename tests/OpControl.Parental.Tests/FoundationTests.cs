@@ -155,3 +155,77 @@ public class FoundationTests
         Assert.Null(await auth.ValidateAsync("not-the-token", CancellationToken.None));
     }
 }
+
+public class Job3PolicyTests
+{
+    private static DeviceStateDto State(
+        IReadOnlyList<WebsiteRuleDto>? sites = null,
+        IReadOnlyList<AppRuleDto>? apps = null,
+        IReadOnlyList<ItemBonusDto>? bonuses = null,
+        IReadOnlyList<ScheduleDto>? schedules = null) =>
+        new(Guid.NewGuid(), "Emma", "Hendry", false, null, null, null, null,
+            schedules ?? [], sites ?? [], apps ?? [], bonuses ?? [], [], DateTime.UtcNow);
+
+    private static WebsiteRuleDto Site(string domain, bool blocked, RuleMode mode = RuleMode.Always, Guid? scheduleId = null) =>
+        new(Guid.NewGuid(), domain, blocked, mode, scheduleId, DateTime.UtcNow);
+
+    private static AppRuleDto App(string identity, bool blocked, RuleMode mode = RuleMode.Always, Guid? scheduleId = null) =>
+        new(Guid.NewGuid(), identity, identity, null, blocked, mode, scheduleId, DateTime.UtcNow);
+
+    [Fact]
+    public void Site_rule_blocks_subdomains_and_allow_rule_wins()
+    {
+        var now = new DateTime(2026, 10, 18, 12, 0, 0, DateTimeKind.Utc);
+        var state = State([Site("youtube.com", true), Site("classroom.google.com", false)]);
+        Assert.True(PolicyRules.IsWebsiteBlocked(state, "www.youtube.com", TimeZoneInfo.Utc, now));
+        Assert.True(PolicyRules.IsWebsiteBlocked(state, "m.youtube.com", TimeZoneInfo.Utc, now));
+        Assert.False(PolicyRules.IsWebsiteBlocked(state, "classroom.google.com", TimeZoneInfo.Utc, now));
+        Assert.False(PolicyRules.IsWebsiteBlocked(state, "example.com", TimeZoneInfo.Utc, now));
+    }
+
+    [Fact]
+    public void Allow_rule_overrides_categories()
+    {
+        var now = new DateTime(2026, 10, 18, 12, 0, 0, DateTimeKind.Utc);
+        var state = State([Site("example.com", false)]);
+        Assert.False(PolicyRules.IsWebsiteBlocked(state, "example.com", TimeZoneInfo.Utc, now, _ => true));
+    }
+
+    [Fact]
+    public void Scheduled_site_rule_only_applies_inside_window()
+    {
+        var schedule = new ScheduleDto(Guid.NewGuid(), "Homework", 0x7F, 16 * 60, 18 * 60, true);
+        var state = State([Site("discord.com", true, RuleMode.Scheduled, schedule.Id)], schedules: [schedule]);
+        var inside = new DateTime(2026, 10, 18, 17, 0, 0, DateTimeKind.Utc);
+        var outside = new DateTime(2026, 10, 18, 12, 0, 0, DateTimeKind.Utc);
+        Assert.True(PolicyRules.IsWebsiteBlocked(state, "discord.com", TimeZoneInfo.Utc, inside));
+        Assert.False(PolicyRules.IsWebsiteBlocked(state, "discord.com", TimeZoneInfo.Utc, outside));
+    }
+
+    [Fact]
+    public void Item_bonus_allows_one_site_until_expiry()
+    {
+        var now = new DateTime(2026, 10, 18, 12, 0, 0, DateTimeKind.Utc);
+        var state = State([Site("youtube.com", true)], bonuses: [new ItemBonusDto("site", "youtube.com", now.AddMinutes(15), 15)]);
+        Assert.False(PolicyRules.IsWebsiteBlocked(state, "www.youtube.com", TimeZoneInfo.Utc, now.AddMinutes(5)));
+        Assert.True(PolicyRules.IsWebsiteBlocked(state, "www.youtube.com", TimeZoneInfo.Utc, now.AddMinutes(16)));
+    }
+
+    [Fact]
+    public void App_rules_match_identity_and_path()
+    {
+        var now = new DateTime(2026, 10, 18, 12, 0, 0, DateTimeKind.Utc);
+        var state = State(apps: [App("store:roblox_abc", true), App(@"path:c:\games\steam.exe", true)]);
+        Assert.True(PolicyRules.IsAppBlocked(state, "store:roblox_abc", null, TimeZoneInfo.Utc, now));
+        Assert.False(PolicyRules.IsAppBlocked(state, "store:other_abc", null, TimeZoneInfo.Utc, now));
+        Assert.True(PolicyRules.IsAppBlocked(state, "win32:steam.exe|valve", @"C:\Games\Steam.exe", TimeZoneInfo.Utc, now));
+    }
+
+    [Fact]
+    public void Domain_normalization_strips_scheme_path_port_and_www()
+    {
+        Assert.Equal("youtube.com", RuleService.NormalizeDomain("https://www.youtube.com/watch?v=1"));
+        Assert.Equal("example.com", RuleService.NormalizeDomain("example.com:443/path"));
+        Assert.Throws<InvalidOperationException>(() => RuleService.NormalizeDomain("not a domain"));
+    }
+}

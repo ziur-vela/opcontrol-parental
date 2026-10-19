@@ -38,6 +38,21 @@ else
         <div class="alert danger">@_error</div>
     }
 
+    <section class="quick-grid">
+        <a class="card quick-card" href="/websites">
+            <div class="eyebrow">Sites blocked today</div>
+            <div class="quick-number">@_sitesBlockedToday</div>
+            <div class="muted tiny">Blocked attempts recorded on @_childName's devices today.</div>
+            <span class="quick-link">Open websites →</span>
+        </a>
+        <a class="card quick-card" href="/apps">
+            <div class="eyebrow">New apps to review</div>
+            <div class="quick-number">@_newAppsCount</div>
+            <div class="muted tiny">Installed since the last review across @_childName's devices.</div>
+            <span class="quick-link">Review apps →</span>
+        </a>
+    </section>
+
     <section class="grid-2">
         <div class="card hero-card">
             <div class="hero-top">
@@ -108,24 +123,24 @@ else
 
     <section class="card">
         <div class="card-title-row">
-            <h2>Lock and override history</h2>
-            <span class="pill-soft">Latest 10</span>
+            <h2>Activity history</h2>
+            <span class="pill-soft">Latest 15</span>
         </div>
-        @if (_history.Count == 0)
+        @if (_history.Count == 0 && _blockHistory.Count == 0)
         {
-            <p class="muted">No lock overrides recorded yet.</p>
+            <p class="muted">No activity recorded yet.</p>
         }
         else
         {
             <div class="history-list">
-                @foreach (var item in _history)
+                @foreach (var item in _activity)
                 {
                     <div class="history-row">
                         <div>
-                            <div class="small">@HistoryLabel(item.Option)</div>
-                            <div class="muted tiny">@item.CreatedUtc.ToLocalTime().ToString("MMM d, HH:mm")</div>
+                            <div class="small">@item.Label</div>
+                            <div class="muted tiny">@item.When.ToLocalTime().ToString("MMM d, HH:mm")</div>
                         </div>
-                        <div class="muted small">@(item.Minutes is null ? "" : $"{item.Minutes} min")</div>
+                        <div class="muted small">@item.Detail</div>
                     </div>
                 }
             </div>
@@ -142,9 +157,14 @@ else
     private LockStateDto? _state;
     private List<DeviceStatusDto> _devices = [];
     private List<OverrideEventDto> _history = [];
+    private List<BlockEventDto> _blockHistory = [];
+    private List<ActivityRow> _activity = [];
+    private sealed record ActivityRow(string Label, DateTime When, string Detail);
     private bool _loading = true;
     private bool _busy;
     private bool _hasPin;
+    private int _sitesBlockedToday;
+    private int _newAppsCount;
     private int _customBonus = 20;
     private string? _error;
     private Timer? _timer;
@@ -212,7 +232,34 @@ else
         _state = await locks.GetStateAsync(_familyId, _childId, null);
         _hasPin = await locks.HasPinAsync(_familyId, _childId);
 
+        var tzId = await db.Devices.AsNoTracking().Where(d => d.ChildId == _childId).Select(d => d.TimeZoneId).FirstOrDefaultAsync() ?? "UTC";
+        var tz = TimeZoneResolver.Resolve(tzId);
+        var localToday = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
+        var dayStart = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(localToday, DateTimeKind.Unspecified), tz);
+        var dayEnd = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(localToday.AddDays(1), DateTimeKind.Unspecified), tz);
+        _sitesBlockedToday = await db.VisitRecords.AsNoTracking()
+            .Where(v => v.FamilyId == _familyId && v.ChildId == _childId && v.Blocked && v.VisitedUtc >= dayStart && v.VisitedUtc < dayEnd)
+            .Select(v => v.Domain)
+            .Distinct()
+            .CountAsync();
+        _newAppsCount = await db.InstalledApps.AsNoTracking()
+            .Where(a => a.FamilyId == _familyId && a.ChildId == _childId && a.IsNew && a.ReviewedUtc == null && a.RemovedUtc == null)
+            .Select(a => a.Identity)
+            .Distinct()
+            .CountAsync();
+
         _history = await locks.GetHistoryAsync(_familyId, _childId);
+        _blockHistory = await db.BlockEvents.AsNoTracking()
+            .Where(b => b.FamilyId == _familyId && b.ChildId == _childId)
+            .OrderByDescending(b => b.OccurredUtc)
+            .Take(15)
+            .Select(b => new BlockEventDto(b.RuleType, b.Identity, b.DisplayName, b.OccurredUtc))
+            .ToListAsync();
+        _activity = _history.Select(h => new ActivityRow(HistoryLabel(h.Option, h.Detail), h.CreatedUtc, h.Minutes is null ? "" : $"{h.Minutes} min"))
+            .Concat(_blockHistory.Select(b => new ActivityRow(b.RuleType == "site" ? "Website blocked" : "App blocked", b.OccurredUtc, b.DisplayName)))
+            .OrderByDescending(a => a.When)
+            .Take(15)
+            .ToList();
 
         var devices = await db.Devices.AsNoTracking()
             .Where(d => d.FamilyId == _familyId && d.ChildId == _childId)
@@ -287,12 +334,16 @@ else
     private static string FormatUtc(DateTime utc) => utc.ToLocalTime().ToString("MMM d, HH:mm");
     private static string LastSeen(DateTime? utc) => utc is null ? "never" : utc.Value.ToLocalTime().ToString("MMM d, HH:mm");
 
-    private static string HistoryLabel(string option) => option switch
+    private static string HistoryLabel(string option, string? detail = null) => option switch
     {
         "dashboard-unlock" => "Dashboard unlock",
         "dashboard-bonus" => "Dashboard bonus",
         "pin-unlock-until-next" => "PIN override: unlock until next cycle",
         "pin-bonus" => "PIN override: bonus time",
+        "schedule-start" => $"Schedule started: {detail}",
+        "schedule-end" => $"Schedule ended: {detail}",
+        "item-bonus-site" => $"Website bonus: {detail}",
+        "item-bonus-app" => $"App bonus: {detail}",
         _ => option
     };
 
