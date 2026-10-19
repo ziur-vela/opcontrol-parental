@@ -28,6 +28,8 @@ public sealed class TaskManagerPolicy
             if (sid is null) return;
             var path = $"{sid}\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System";
 
+            try
+            {
             if (locked)
             {
                 using var key = Registry.Users.CreateSubKey(path, writable: true);
@@ -55,6 +57,11 @@ public sealed class TaskManagerPolicy
                 _previous = null;
                 Save();
                 _logger.LogInformation("Task Manager policy restored for {Account}", account);
+            }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            {
+                _logger.LogDebug(ex, "Task Manager policy not applied yet for {Account}", account);
             }
         }
     }

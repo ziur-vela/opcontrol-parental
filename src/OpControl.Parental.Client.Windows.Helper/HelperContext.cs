@@ -42,12 +42,11 @@ public sealed class HelperContext : ApplicationContext
         {
             _countdown.HideBanner();
             _overlays.Update(state);
-            if (!_hook.Install())
+            if (!_hookInstalled && _hook.Install())
             {
                 _hookInstalled = true;
                 HelperPaths.LogEvent("keyboard-hook-installed");
             }
-            _hookInstalled = true;
             _lastVisible = true;
             HelperPaths.WriteStatus(true, true, state.Reason);
             return;
