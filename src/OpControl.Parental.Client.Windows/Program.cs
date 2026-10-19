@@ -3,6 +3,24 @@ using Microsoft.Extensions.Hosting.WindowsServices;
 using Microsoft.Extensions.Logging;
 using OpControl.Parental.Client;
 
+if (args.Contains("--configure", StringComparer.OrdinalIgnoreCase))
+{
+    await ClientCommands.ConfigureAsync(args);
+    return;
+}
+
+if (args.Contains("--prepare-uninstall", StringComparer.OrdinalIgnoreCase))
+{
+    await ClientCommands.PrepareUninstallAsync();
+    return;
+}
+
+if (args.Contains("--version", StringComparer.OrdinalIgnoreCase))
+{
+    Console.WriteLine(ClientCommands.ClientVersion);
+    return;
+}
+
 if (args.Contains("--restore-dns", StringComparer.OrdinalIgnoreCase))
 {
     using var factory = LoggerFactory.Create(builder => builder.AddConsole());
@@ -22,12 +40,12 @@ Host.CreateDefaultBuilder(args)
         services.AddHttpClient<EnrollmentClient>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(30);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("OpControlParentalClient/0.4");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("OpControlParentalClient/0.5");
         });
         services.AddHttpClient("device", client =>
         {
             client.Timeout = TimeSpan.FromSeconds(30);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("OpControlParentalClient/0.4");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("OpControlParentalClient/0.5");
         });
         services.AddSingleton<ClientSettings>(_ => new ClientSettings { Value = ClientOptions.Load() });
         services.AddSingleton<CredentialStore>();
@@ -38,6 +56,7 @@ Host.CreateDefaultBuilder(args)
         services.AddSingleton<TaskManagerPolicy>();
         services.AddSingleton<OverrideSync>();
         services.AddSingleton<DataSyncService>();
+        services.AddSingleton<UpdateService>();
         services.AddSingleton<CategoryCache>();
         services.AddSingleton<NetworkDnsConfigurator>();
         services.AddSingleton<DnsProxy>();
@@ -51,6 +70,9 @@ Host.CreateDefaultBuilder(args)
         services.AddHostedService(sp => sp.GetRequiredService<RuntimeLoopService>());
         services.AddHostedService(sp => sp.GetRequiredService<PinPipeServer>());
         services.AddHostedService(sp => sp.GetRequiredService<DataSyncService>());
+        services.AddHostedService(sp => sp.GetRequiredService<UpdateService>());
+        services.AddHostedService<ClockMonitor>();
+        services.AddHostedService<UnaccountedTracker>();
         services.AddHostedService(sp => sp.GetRequiredService<AppInventoryService>());
         services.AddHostedService(sp => sp.GetRequiredService<AppBlockService>());
         services.AddHostedService(sp => sp.GetRequiredService<DnsFilterService>());

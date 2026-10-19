@@ -52,6 +52,12 @@ public class Device
     public DateTime? CredentialExpiresUtc { get; set; }
     public bool IsRevoked { get; set; }
     public string? ClientVersion { get; set; }
+    public string? PreviousClientVersion { get; set; }
+    public DateTime? UpdateRequestedUtc { get; set; }
+    public string? UpdateTargetVersion { get; set; }
+    public string? UpdateStatus { get; set; }
+    public DateTime? UpdateStatusUtc { get; set; }
+    public DateTime? LastUpdateCheckUtc { get; set; }
     public Child? Child { get; set; }
     public List<DeviceAccount> Accounts { get; set; } = [];
 }
@@ -332,6 +338,7 @@ public class FamilySettings
     public string? SmtpPasswordProtected { get; set; }
     public string? FromAddress { get; set; }
     public int OfflineAlertMinutes { get; set; } = 120;
+    public int InstallLinkMinutes { get; set; } = 1440;
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
 }
 
@@ -357,4 +364,47 @@ public class EnrollmentCode
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public DateTime ExpiresUtc { get; set; }
     public DateTime? UsedUtc { get; set; }
+}
+
+
+public class InstallLink
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid FamilyId { get; set; }
+    public Guid ChildId { get; set; }
+    public DevicePlatform Platform { get; set; } = DevicePlatform.Windows;
+    public string TokenHash { get; set; } = "";
+    public string CodeHash { get; set; } = "";
+    public string CodeProtected { get; set; } = "";
+    public Guid CreatedByParentId { get; set; }
+    public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
+    public DateTime ExpiresUtc { get; set; }
+    public DateTime? UsedUtc { get; set; }
+    public DateTime? RevokedUtc { get; set; }
+    public Guid? UsedDeviceId { get; set; }
+}
+
+public class UnaccountedInterval
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid FamilyId { get; set; }
+    public Guid ChildId { get; set; }
+    public Guid DeviceId { get; set; }
+    public DateTime StartUtc { get; set; }
+    public int DurationSeconds { get; set; }
+    public string Reason { get; set; } = "";
+    public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
+}
+
+public class DeviceUpdateEvent
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid FamilyId { get; set; }
+    public Guid ChildId { get; set; }
+    public Guid DeviceId { get; set; }
+    public string FromVersion { get; set; } = "";
+    public string ToVersion { get; set; } = "";
+    public string Status { get; set; } = "";
+    public string? Detail { get; set; }
+    public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
 }

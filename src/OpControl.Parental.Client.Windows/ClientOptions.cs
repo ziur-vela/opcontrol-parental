@@ -22,6 +22,12 @@ public sealed class ClientOptions
         return JsonSerializer.Deserialize<ClientOptions>(json, JsonOptions) ?? new ClientOptions();
     }
 
+    public void Save()
+    {
+        ClientPaths.EnsureDataDirectory();
+        File.WriteAllText(ClientPaths.ConfigFile, JsonSerializer.Serialize(this, JsonOptions));
+    }
+
     public void SaveWithoutCode()
     {
         var copy = new ClientOptions
@@ -66,8 +72,17 @@ public static class ClientPaths
     public static string WebsiteUsageQueueFile => Path.Combine(UserDirectory, "website-usage-queue.jsonl");
     public static string LastVisitFile => Path.Combine(PublicDirectory, "last-visit.json");
     public static string TamperQueueFile => Path.Combine(PrivateDirectory, "tamper-queue.jsonl");
+    public static string UnaccountedQueueFile => Path.Combine(PrivateDirectory, "unaccounted-queue.jsonl");
     public static string CleanShutdownFile => Path.Combine(PrivateDirectory, "clean-shutdown.json");
     public static string TamperBaselineFile => Path.Combine(PrivateDirectory, "tamper-baseline.json");
+    public static string UpdateDirectory => Path.Combine(DataDirectory, "updates");
+    public static string UpdatePendingFile => Path.Combine(UpdateDirectory, "pending-update.json");
+    public static string UpdateInProgressFile => Path.Combine(UpdateDirectory, "update-in-progress.flag");
+    public static string UpdateHealthyFile => Path.Combine(UpdateDirectory, "update-healthy.flag");
+    public static string UpdateLogFile => Path.Combine(UpdateDirectory, "update.log");
+    public static string UpdateCompletedFile => Path.Combine(UpdateDirectory, "update-completed.json");
+    public static string ForceRollbackFile => Path.Combine(UpdateDirectory, "force-rollback.flag");
+    public static string UninstallingFile => Path.Combine(DataDirectory, "uninstall-in-progress.flag");
     public static string InventorySnapshotFile => Path.Combine(PrivateDirectory, "app-inventory.json");
     public static string InventoryHashFile => Path.Combine(PrivateDirectory, "app-inventory.hash");
     public static string CategoryCacheFile => Path.Combine(PrivateDirectory, "categories.json");
@@ -83,6 +98,7 @@ public static class ClientPaths
         Directory.CreateDirectory(PrivateDirectory);
         Directory.CreateDirectory(PublicDirectory);
         Directory.CreateDirectory(UserDirectory);
+        Directory.CreateDirectory(UpdateDirectory);
     }
 
     public static void EnsureDirectoriesWithAcl()

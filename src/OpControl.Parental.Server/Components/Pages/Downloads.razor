@@ -1,0 +1,52 @@
+@page "/downloads"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using OpControl.Parental.Contracts
+@using OpControl.Parental.Server.Services
+@inject ReleaseCatalog Releases
+
+<PageTitle>Downloads · Parental OpControl</PageTitle>
+
+<div class="page-head">
+    <div>
+        <div class="eyebrow">Installer</div>
+        <h1>Downloads</h1>
+        <p class="muted">Install Parental OpControl manually on a Windows PC. The installer asks for a server URL, one-time code and the Windows account to protect.</p>
+    </div>
+</div>
+
+@if (_current is null)
+{
+    <div class="card">
+        <p class="muted">No client release is published on this server yet.</p>
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-title-row">
+            <h2>Windows installer</h2>
+            <span class="pill-soft">v@_current.Version</span>
+        </div>
+        <p class="muted">The setup program installs the service and user helper, keeps the device credential on upgrade, and supports silent deployment.</p>
+        <div class="button-row">
+            <a class="btn btn-primary" href="/downloads/setup">Download setup (@_current.SetupFileName)</a>
+            <a class="ghost-btn" href="/downloads/msi">Download MSI</a>
+        </div>
+        <p class="muted tiny">SHA-256 (MSI): <code>@_current.Sha256</code></p>
+        <p class="muted tiny">Published @_current.PublishedUtc.ToLocalTime().ToString("MMM d, yyyy HH:mm").</p>
+    </div>
+}
+
+<div class="card">
+    <h2>Silent install</h2>
+    <p class="muted">Run from an elevated command prompt:</p>
+    <pre class="code-block">msiexec /i OpControlParental.msi /qn SERVER=https://parental.opcontrol.net CODE=XXXXXXXXXX ACCOUNT=Emma</pre>
+    <p class="muted small">Upgrades keep the existing device credential and do not require a code. Uninstalling requires administrator rights and is reported to the dashboard before it completes.</p>
+</div>
+
+@code {
+    private ReleaseInfoDto? _current;
+
+    protected override void OnInitialized() => _current = Releases.CurrentInfo();
+}

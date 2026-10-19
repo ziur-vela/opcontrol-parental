@@ -247,6 +247,72 @@ public sealed record HeartbeatRequest(
     DateTime Utc,
     string? TimeZoneId);
 
+public sealed record InstallLinkCreateRequest(Guid ChildId, DevicePlatform Platform = DevicePlatform.Windows);
+
+public sealed record InstallLinkCreatedDto(
+    Guid Id,
+    Guid ChildId,
+    string ChildName,
+    DevicePlatform Platform,
+    string Token,
+    string Link,
+    string Code,
+    DateTime CreatedUtc,
+    DateTime ExpiresUtc);
+
+public sealed record InstallLinkDto(
+    Guid Id,
+    Guid ChildId,
+    string ChildName,
+    DevicePlatform Platform,
+    DateTime CreatedUtc,
+    DateTime ExpiresUtc,
+    DateTime? UsedUtc,
+    DateTime? RevokedUtc,
+    string? DeviceName);
+
+public sealed record InstallLinkStatusDto(
+    string Status,
+    string? ChildName,
+    string? DeviceName,
+    DateTime ExpiresUtc,
+    string? Error = null);
+
+public sealed record ReleaseInfoDto(
+    string Version,
+    string Sha256,
+    long SizeBytes,
+    DateTime PublishedUtc,
+    string SetupFileName,
+    string MsiFileName,
+    string? PreviousVersion);
+
+public sealed record UpdateInfoDto(
+    string Version,
+    string? CurrentVersion,
+    string Sha256,
+    long SizeBytes,
+    string DownloadPath,
+    DateTime PublishedUtc,
+    string? PreviousVersion);
+
+public sealed record DeviceUpdateHealthRequest(
+    string Version,
+    string? PreviousVersion,
+    string Status,
+    string? Detail = null);
+
+public sealed record UnaccountedIntervalDto(
+    Guid Id,
+    DateTime StartUtc,
+    int DurationSeconds,
+    string Reason);
+
+public sealed record UnaccountedBatchRequest(
+    IReadOnlyList<UnaccountedIntervalDto> Intervals);
+
+public sealed record UninstallReportRequest(string? Detail = null);
+
 public sealed record DeviceOverrideRequest(
     string Option,
     int? Minutes,
@@ -268,6 +334,7 @@ public static class DeviceGroups
 public static class DeviceHubMethods
 {
     public const string DeviceStateChanged = "DeviceStateChanged";
+    public const string UpdateRequested = "UpdateRequested";
 }
 
 public sealed record PinPipeRequest(

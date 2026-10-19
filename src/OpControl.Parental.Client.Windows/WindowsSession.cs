@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using Microsoft.Win32.SafeHandles;
+using OpControl.Parental.Contracts;
 
 namespace OpControl.Parental.Client;
 
@@ -85,6 +87,12 @@ public static class WindowsSession
 
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool GetNamedPipeClientProcessId(SafePipeHandle pipe, out uint clientProcessId);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr OpenProcess(uint access, bool inherit, uint processId);
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern bool QueryFullProcessImageName(IntPtr process, uint flags, StringBuilder name, ref int size);
 
     public static int GetMonitoredSessionId(string account)
     {
@@ -182,15 +190,44 @@ public static class WindowsSession
         }
     }
 
-    public static int GetPipeClientSessionId(SafePipeHandle pipe)
+    public static int GetPipeClientSessionId(SafePipeHandle pipe) => GetPipeClientProcessId(pipe) is var pid && pid > 0
+        ? GetProcessSessionId(pid)
+        : -1;
+
+    public static int GetPipeClientProcessId(SafePipeHandle pipe)
     {
         try
         {
-            if (!GetNamedPipeClientProcessId(pipe, out var pid)) return -1;
-            using var process = Process.GetProcessById((int)pid);
+            return GetNamedPipeClientProcessId(pipe, out var pid) ? (int)pid : -1;
+        }
+        catch { return -1; }
+    }
+
+    public static int GetProcessSessionId(int pid)
+    {
+        try
+        {
+            using var process = Process.GetProcessById(pid);
             return process.SessionId;
         }
         catch { return -1; }
+    }
+
+    public static string? GetProcessImagePath(int pid)
+    {
+        if (pid <= 0) return null;
+        var handle = OpenProcess(0x1000, false, (uint)pid);
+        if (handle == IntPtr.Zero) return null;
+        try
+        {
+            var buffer = new StringBuilder(2048);
+            var size = buffer.Capacity;
+            return QueryFullProcessImageName(handle, 0, buffer, ref size) ? buffer.ToString(0, size) : null;
+        }
+        finally
+        {
+            CloseHandle(handle);
+        }
     }
 
     private static string QueryString(int sessionId, int infoClass)
@@ -205,12 +242,17 @@ public static class WindowsSession
 public sealed class HelperSupervisor : BackgroundService
 {
     private readonly ClientSettings _settings;
+    private readonly DataSyncService _sync;
     private readonly ILogger<HelperSupervisor> _logger;
     private DateTime _lastLog = DateTime.MinValue;
+    private bool _wasRunning;
+    private DateTime _lastKilledReport = DateTime.MinValue;
+    private readonly Queue<DateTime> _recentKills = new();
 
-    public HelperSupervisor(ClientSettings settings, ILogger<HelperSupervisor> logger)
+    public HelperSupervisor(ClientSettings settings, DataSyncService sync, ILogger<HelperSupervisor> logger)
     {
         _settings = settings;
+        _sync = sync;
         _logger = logger;
     }
 
@@ -233,7 +275,28 @@ public sealed class HelperSupervisor : BackgroundService
                     continue;
                 }
 
-                if (!WindowsSession.IsHelperRunning(session))
+                var running = WindowsSession.IsHelperRunning(session);
+                if (_wasRunning && !running)
+                {
+                    var now = DateTime.UtcNow;
+                    _recentKills.Enqueue(now);
+                    while (_recentKills.Count > 0 && now - _recentKills.Peek() > TimeSpan.FromMinutes(10))
+                        _recentKills.Dequeue();
+                    if (now - _lastKilledReport > TimeSpan.FromMinutes(1))
+                    {
+                        _lastKilledReport = now;
+                        var repeated = _recentKills.Count >= 3;
+                        _sync.QueueTamper(new TamperEventDto("helper-killed",
+                            repeated
+                                ? $"The helper was killed {_recentKills.Count} times in 10 minutes; it is relaunched automatically."
+                                : "The helper process stopped unexpectedly; it is relaunched automatically.",
+                            now));
+                        _logger.LogWarning("Helper stopped unexpectedly (count {Count} in 10 min)", _recentKills.Count);
+                    }
+                }
+                _wasRunning = running;
+
+                if (!running)
                 {
                     var path = string.IsNullOrWhiteSpace(options.HelperPath)
                         ? Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "Helper", "OpControl.Parental.Helper.exe"))

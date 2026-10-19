@@ -97,6 +97,7 @@
     private string? _password;
     private string? _from;
     private int _offlineMinutes = 120;
+    private int _installLinkMinutes = 1440;
     private bool _hasPassword;
     private bool _hasPin;
     private string? _childName;
@@ -117,6 +118,7 @@
         _username = settings.SmtpUsername;
         _from = settings.FromAddress;
         _offlineMinutes = settings.OfflineAlertMinutes;
+        _installLinkMinutes = settings.InstallLinkMinutes;
         _hasPassword = !string.IsNullOrWhiteSpace(settings.SmtpPasswordProtected);
         var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
         var child = await db.Children.AsNoTracking()
@@ -140,7 +142,7 @@
         {
             using var scope = Scopes.CreateScope();
             var alerts = scope.ServiceProvider.GetRequiredService<AlertService>();
-            await alerts.SaveSettingsAsync(_familyId, _enabled, _host, _port, _useSsl, _username, _password, _from, _offlineMinutes);
+            await alerts.SaveSettingsAsync(_familyId, _enabled, _host, _port, _useSsl, _username, _password, _from, _offlineMinutes, _installLinkMinutes);
             _hasPassword |= !string.IsNullOrWhiteSpace(_password);
             _password = null;
             _saved = true;

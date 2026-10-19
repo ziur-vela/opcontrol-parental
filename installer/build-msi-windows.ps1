@@ -1,0 +1,30 @@
+param(
+    [Parameter(Mandatory = $true)][string]$Version,
+    [Parameter(Mandatory = $true)][string]$PublishRoot,
+    [Parameter(Mandatory = $true)][string]$OutFile,
+    [string]$InstallerDir = $PSScriptRoot,
+    [string]$WixTool = "C:\ocp-build\tools\wix.exe",
+    [string]$DotnetRoot = "C:\ocp-build\dotnet"
+)
+
+$ErrorActionPreference = "Stop"
+$env:DOTNET_ROOT = $DotnetRoot
+
+if (-not (Test-Path $WixTool)) {
+    throw "WiX not found at $WixTool. Install it with: dotnet tool install wix --tool-path C:\ocp-build\tools --version 5.0.2"
+}
+
+& $WixTool extension add -g WixToolset.Util.wixext/5.0.2 2>$null | Out-Null
+& $WixTool build (Join-Path $InstallerDir "Product.wxs") `
+    -arch x64 `
+    -ext WixToolset.Util.wixext `
+    -d "ProductVersion=$Version" `
+    -d "ClientDir=$PublishRoot\client" `
+    -d "HelperDir=$PublishRoot\helper" `
+    -d "BrandIcon=$(Join-Path $InstallerDir 'icon-color-128.png')" `
+    -d "ProductIcon=$(Join-Path $InstallerDir 'favicon.ico')" `
+    -d "InstallerDir=$InstallerDir" `
+    -o $OutFile
+
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+Write-Host "Built $OutFile"

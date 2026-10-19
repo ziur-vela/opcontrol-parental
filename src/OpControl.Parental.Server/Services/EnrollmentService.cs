@@ -89,6 +89,15 @@ public sealed class EnrollmentService
         }
 
         await _db.SaveChangesAsync(ct);
+
+        var installLink = await _db.InstallLinks.FirstOrDefaultAsync(l => l.CodeHash == hash && l.UsedUtc == null, ct);
+        if (installLink is not null)
+        {
+            installLink.UsedUtc = now;
+            installLink.UsedDeviceId = device.Id;
+            await _db.SaveChangesAsync(ct);
+        }
+
         var lockState = await _db.LockStates.FirstOrDefaultAsync(s => s.ChildId == code.ChildId, ct);
         if (lockState is null)
         {

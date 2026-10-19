@@ -1,0 +1,72 @@
+@page "/i/{token}"
+@model InstallLinkModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Install Parental OpControl";
+}
+
+<div class="auth-card install-card" data-token="@Model.Token">
+    <div class="auth-brand">
+        <img src="/brand/lockup-color.svg" alt="Parental OpControl" />
+    </div>
+
+    @if (Model.Status.Status == "connected")
+    {
+        <div class="status-mark ok">✓</div>
+        <h1>Connected</h1>
+        <p class="muted">@Model.Status.DeviceName is now protected by Parental OpControl.</p>
+        <p class="muted small">You can close this page. The device will appear in the dashboard immediately.</p>
+    }
+    else if (Model.Status.Status is "expired" or "revoked" or "invalid")
+    {
+        <div class="status-mark warn">!</div>
+        <h1>@(Model.Status.Status == "expired" ? "Link expired" : Model.Status.Status == "revoked" ? "Link revoked" : "Link not valid")</h1>
+        <p class="muted">@Model.Status.Error</p>
+        <p class="muted small">Open the dashboard, choose <strong>Add device</strong>, and create a new install link.</p>
+    }
+    else if (Model.IsPhone)
+    {
+        <div class="status-mark">📱</div>
+        <h1>Android coming soon</h1>
+        <p class="muted">This install link is for @Model.Status.ChildName's Windows computer. The Android app is not available yet.</p>
+        <p class="muted small">Open this link on the child's Windows PC while signed in as an administrator.</p>
+    }
+    else
+    {
+        <div class="status-mark">🖥️</div>
+        <h1>Install on this PC</h1>
+        <p class="muted">This will install Parental OpControl for <strong>@Model.Status.ChildName</strong>.</p>
+        <p class="muted small">Signed in as an administrator? The installer will ask which Windows account to protect.</p>
+        @if (Model.HasInstaller)
+        {
+            <a class="btn btn-primary btn-wide" href="/i/@Model.Token/download">Download installer</a>
+        }
+        else
+        {
+            <div class="alert danger">The installer is not published on this server yet.</div>
+        }
+        <p class="muted tiny">Link expires @Model.Status.ExpiresUtc.ToLocalTime().ToString("MMM d, HH:mm"). The link and code work once.</p>
+        <details class="install-fallback">
+            <summary>Installer didn't include the code?</summary>
+            <p class="muted small">Run the installer and type the one-time code shown in the parent dashboard. You can also download the latest installer from the dashboard's Downloads page.</p>
+        </details>
+    }
+</div>
+
+<script>
+    (function () {
+        const token = @System.Text.Json.JsonSerializer.Serialize(Model.Token);
+        if (@System.Text.Json.JsonSerializer.Serialize(Model.Status.Status) !== 'pending') return;
+        const timer = setInterval(async () => {
+            try {
+                const response = await fetch('/i/' + encodeURIComponent(token) + '/status', { cache: 'no-store' });
+                if (!response.ok) return;
+                const status = await response.json();
+                if (status.status !== 'pending') {
+                    clearInterval(timer);
+                    location.reload();
+                }
+            } catch { }
+        }, 3000);
+    })();
+</script>

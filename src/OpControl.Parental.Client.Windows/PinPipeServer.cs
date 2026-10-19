@@ -15,15 +15,17 @@ public sealed class PinPipeServer : BackgroundService
     private readonly LockoutStore _lockout;
     private readonly OverrideSync _overrides;
     private readonly ClientSettings _settings;
+    private readonly DataSyncService _sync;
     private readonly ILogger<PinPipeServer> _logger;
     private readonly ConcurrentDictionary<string, DateTime> _tickets = new();
 
-    public PinPipeServer(LockRuntime runtime, LockoutStore lockout, OverrideSync overrides, ClientSettings settings, ILogger<PinPipeServer> logger)
+    public PinPipeServer(LockRuntime runtime, LockoutStore lockout, OverrideSync overrides, ClientSettings settings, DataSyncService sync, ILogger<PinPipeServer> logger)
     {
         _runtime = runtime;
         _lockout = lockout;
         _overrides = overrides;
         _settings = settings;
+        _sync = sync;
         _logger = logger;
     }
 
@@ -71,11 +73,23 @@ public sealed class PinPipeServer : BackgroundService
     {
         try
         {
-            var clientSession = WindowsSession.GetPipeClientSessionId(pipe.SafePipeHandle);
+            var clientPid = WindowsSession.GetPipeClientProcessId(pipe.SafePipeHandle);
+            var clientSession = WindowsSession.GetProcessSessionId(clientPid);
             var monitoredSession = WindowsSession.GetMonitoredSessionId(_settings.Value.MonitoredAccount);
-            if (clientSession > 0 && monitoredSession > 0 && clientSession != monitoredSession)
+            var imagePath = WindowsSession.GetProcessImagePath(clientPid);
+            var expectedPath = string.IsNullOrWhiteSpace(_settings.Value.HelperPath)
+                ? Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "Helper", "OpControl.Parental.Helper.exe"))
+                : _settings.Value.HelperPath!;
+            var sessionOk = clientSession > 0 && monitoredSession > 0 && clientSession == monitoredSession;
+            var imageOk = !string.IsNullOrWhiteSpace(imagePath)
+                && string.Equals(Path.GetFileName(imagePath), "OpControl.Parental.Helper.exe", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(Path.GetFullPath(imagePath), Path.GetFullPath(expectedPath), StringComparison.OrdinalIgnoreCase);
+            if (!sessionOk || !imageOk)
             {
-                await WriteAsync(pipe, new PinPipeResponse(false, "Not allowed from this session."), ct);
+                _sync.QueueTamper(new TamperEventDto("helper-auth-failed",
+                    $"Rejected pipe client pid {clientPid} session {clientSession} image {imagePath ?? "unknown"}.", DateTime.UtcNow));
+                _logger.LogWarning("Rejected helper pipe client pid={Pid} session={Session} image={Image}", clientPid, clientSession, imagePath);
+                await WriteAsync(pipe, new PinPipeResponse(false, "Not allowed from this process."), ct);
                 return;
             }
 

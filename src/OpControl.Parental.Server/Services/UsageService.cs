@@ -7,8 +7,13 @@ namespace OpControl.Parental.Server.Services;
 public sealed class UsageService
 {
     private readonly ParentalDbContext _db;
+    private readonly AlertService _alerts;
 
-    public UsageService(ParentalDbContext db) => _db = db;
+    public UsageService(ParentalDbContext db, AlertService alerts)
+    {
+        _db = db;
+        _alerts = alerts;
+    }
 
     public static (DateTime StartUtc, DateTime EndUtc) LocalDayBounds(TimeZoneInfo tz, DateTime nowUtc)
     {
@@ -119,25 +124,82 @@ public sealed class UsageService
     {
         var now = DateTime.UtcNow;
         var earliest = now.AddDays(-30);
-        var latest = now.AddMinutes(10);
+        var latest = now.AddMinutes(1);
+        var rejected = 0;
+        var truncated = 0;
 
         var intervals = (request.Intervals ?? [])
             .Where(i => i.Id != Guid.Empty && i.DurationSeconds > 0)
-            .Where(i => i.StartUtc >= earliest && i.StartUtc <= latest)
             .GroupBy(i => i.Id)
             .Select(g => g.First())
             .Take(2000)
             .ToList();
-        if (intervals.Count > 0)
+        var accepted = new List<UsageIntervalDto>();
+        foreach (var item in intervals)
         {
-            var ids = intervals.Select(i => i.Id).ToList();
+            var start = item.StartUtc.Kind == DateTimeKind.Utc ? item.StartUtc : item.StartUtc.ToUniversalTime();
+            if (start < earliest || start > latest)
+            {
+                rejected++;
+                continue;
+            }
+            var wallClockCap = Math.Max(1, (int)Math.Ceiling((now - start).TotalSeconds) + 60);
+            var duration = Math.Clamp(item.DurationSeconds, 1, 900);
+            if (duration > wallClockCap)
+            {
+                duration = Math.Min(duration, wallClockCap);
+                truncated++;
+            }
+            accepted.Add(item with { StartUtc = start, DurationSeconds = duration });
+        }
+
+        if (accepted.Count > 0)
+        {
+            var ids = accepted.Select(i => i.Id).ToList();
             var existing = await _db.UsageIntervals.AsNoTracking()
                 .Where(u => u.DeviceId == device.Id && ids.Contains(u.Id))
                 .Select(u => u.Id)
                 .ToListAsync(ct);
             var known = existing.ToHashSet();
-            foreach (var item in intervals.Where(i => !known.Contains(i.Id)))
+
+            var dayTotals = new Dictionary<DateTime, int>();
+            foreach (var item in accepted.Where(i => !known.Contains(i.Id) && i.Active))
             {
+                var day = item.StartUtc.Date;
+                dayTotals[day] = dayTotals.GetValueOrDefault(day) + item.DurationSeconds;
+            }
+            var overDays = dayTotals.Where(p => p.Value > 86400).Select(p => p.Key).ToHashSet();
+            if (overDays.Count > 0)
+            {
+                var dayStart = overDays.Min();
+                var dayEnd = overDays.Max().AddDays(1);
+                var stored = await _db.UsageIntervals.AsNoTracking()
+                    .Where(u => u.DeviceId == device.Id && u.Active && u.StartUtc >= dayStart && u.StartUtc < dayEnd)
+                    .Select(u => new { u.StartUtc, u.DurationSeconds })
+                    .ToListAsync(ct);
+                foreach (var group in stored.GroupBy(u => u.StartUtc.Date))
+                    dayTotals[group.Key] = dayTotals.GetValueOrDefault(group.Key) + group.Sum(u => u.DurationSeconds);
+            }
+
+            foreach (var item in accepted.Where(i => !known.Contains(i.Id)))
+            {
+                var duration = item.DurationSeconds;
+                if (item.Active && overDays.Contains(item.StartUtc.Date))
+                {
+                    var used = dayTotals.GetValueOrDefault(item.StartUtc.Date);
+                    var remaining = Math.Max(0, 86400 - (used - duration));
+                    if (remaining <= 0)
+                    {
+                        rejected++;
+                        continue;
+                    }
+                    if (duration > remaining)
+                    {
+                        duration = remaining;
+                        truncated++;
+                    }
+                }
+
                 _db.UsageIntervals.Add(new UsageInterval
                 {
                     Id = item.Id,
@@ -146,8 +208,8 @@ public sealed class UsageService
                     DeviceId = device.Id,
                     AppIdentity = Clean(item.AppIdentity, 255),
                     AppDisplayName = Clean(item.AppDisplayName, 255),
-                    StartUtc = item.StartUtc.Kind == DateTimeKind.Utc ? item.StartUtc : item.StartUtc.ToUniversalTime(),
-                    DurationSeconds = Math.Clamp(item.DurationSeconds, 1, 900),
+                    StartUtc = item.StartUtc,
+                    DurationSeconds = duration,
                     Active = item.Active,
                     CreatedUtc = now
                 });
@@ -156,20 +218,37 @@ public sealed class UsageService
 
         var sites = (request.Sites ?? [])
             .Where(s => s.Id != Guid.Empty && s.DurationSeconds > 0 && !string.IsNullOrWhiteSpace(s.Domain))
-            .Where(s => s.StartUtc >= earliest && s.StartUtc <= latest)
             .GroupBy(s => s.Id)
             .Select(g => g.First())
             .Take(2000)
             .ToList();
-        if (sites.Count > 0)
+        var acceptedSites = new List<WebsiteUsageDto>();
+        foreach (var item in sites)
         {
-            var ids = sites.Select(s => s.Id).ToList();
+            var start = item.StartUtc.Kind == DateTimeKind.Utc ? item.StartUtc : item.StartUtc.ToUniversalTime();
+            if (start < earliest || start > latest)
+            {
+                rejected++;
+                continue;
+            }
+            var wallClockCap = Math.Max(1, (int)Math.Ceiling((now - start).TotalSeconds) + 60);
+            var duration = Math.Clamp(item.DurationSeconds, 1, 900);
+            if (duration > wallClockCap)
+            {
+                duration = Math.Min(duration, wallClockCap);
+                truncated++;
+            }
+            acceptedSites.Add(item with { StartUtc = start, DurationSeconds = duration });
+        }
+        if (acceptedSites.Count > 0)
+        {
+            var ids = acceptedSites.Select(s => s.Id).ToList();
             var existing = await _db.WebsiteUsages.AsNoTracking()
                 .Where(u => u.DeviceId == device.Id && ids.Contains(u.Id))
                 .Select(u => u.Id)
                 .ToListAsync(ct);
             var known = existing.ToHashSet();
-            foreach (var item in sites.Where(s => !known.Contains(s.Id)))
+            foreach (var item in acceptedSites.Where(s => !known.Contains(s.Id)))
             {
                 _db.WebsiteUsages.Add(new WebsiteUsage
                 {
@@ -178,14 +257,75 @@ public sealed class UsageService
                     ChildId = device.ChildId,
                     DeviceId = device.Id,
                     Domain = Clean(item.Domain, 255).ToLowerInvariant(),
-                    StartUtc = item.StartUtc.Kind == DateTimeKind.Utc ? item.StartUtc : item.StartUtc.ToUniversalTime(),
-                    DurationSeconds = Math.Clamp(item.DurationSeconds, 1, 900),
+                    StartUtc = item.StartUtc,
+                    DurationSeconds = item.DurationSeconds,
                     CreatedUtc = now
                 });
             }
         }
 
+        if (rejected > 0 || truncated > 0)
+        {
+            var detail = $"{rejected} rejected, {truncated} truncated";
+            _db.ClientTamperEvents.Add(new ClientTamperEvent
+            {
+                FamilyId = device.FamilyId,
+                ChildId = device.ChildId,
+                DeviceId = device.Id,
+                Kind = "usage-sanity",
+                Detail = detail,
+                OccurredUtc = now
+            });
+            await _db.SaveChangesAsync(ct);
+            await _alerts.AddAsync(device.FamilyId, device.ChildId, device.Id, "tampering",
+                "Usage data failed sanity checks",
+                $"{device.Name}: usage records were rejected or truncated ({detail}).",
+                TimeSpan.FromHours(1), ct);
+            return;
+        }
+
         await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task SyncUnaccountedAsync(Device device, UnaccountedBatchRequest request, CancellationToken ct = default)
+    {
+        var now = DateTime.UtcNow;
+        var earliest = now.AddDays(-30);
+        var incoming = (request.Intervals ?? [])
+            .Where(i => i.Id != Guid.Empty && i.DurationSeconds > 0)
+            .Where(i => i.StartUtc >= earliest && i.StartUtc <= now.AddMinutes(5))
+            .GroupBy(i => i.Id)
+            .Select(g => g.First())
+            .Take(2000)
+            .ToList();
+        if (incoming.Count == 0) return;
+        var ids = incoming.Select(i => i.Id).ToList();
+        var known = (await _db.UnaccountedIntervals.AsNoTracking()
+            .Where(u => u.DeviceId == device.Id && ids.Contains(u.Id))
+            .Select(u => u.Id)
+            .ToListAsync(ct)).ToHashSet();
+        foreach (var item in incoming.Where(i => !known.Contains(i.Id)))
+        {
+            _db.UnaccountedIntervals.Add(new UnaccountedInterval
+            {
+                Id = item.Id,
+                FamilyId = device.FamilyId,
+                ChildId = device.ChildId,
+                DeviceId = device.Id,
+                StartUtc = item.StartUtc.Kind == DateTimeKind.Utc ? item.StartUtc : item.StartUtc.ToUniversalTime(),
+                DurationSeconds = Math.Clamp(item.DurationSeconds, 1, 3600),
+                Reason = Clean(item.Reason, 80) is { Length: > 0 } reason ? reason : "helper-down",
+                CreatedUtc = now
+            });
+        }
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task<int> UnaccountedSecondsAsync(Guid familyId, Guid childId, DateTime startUtc, DateTime endUtc, CancellationToken ct = default)
+    {
+        return await _db.UnaccountedIntervals.AsNoTracking()
+            .Where(u => u.FamilyId == familyId && u.ChildId == childId && u.StartUtc >= startUtc && u.StartUtc < endUtc)
+            .SumAsync(u => u.DurationSeconds, ct);
     }
 
     private async Task<HashSet<string>> AlwaysAllowedIdentitiesAsync(Guid familyId, Guid childId, CancellationToken ct)

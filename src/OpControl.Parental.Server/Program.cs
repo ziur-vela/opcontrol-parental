@@ -100,12 +100,15 @@ builder.Services.AddSingleton<LoginThrottle>();
 builder.Services.AddScoped<FamilyScope>();
 builder.Services.AddScoped<DeviceAuthService>();
 builder.Services.AddScoped<EnrollmentService>();
+builder.Services.AddScoped<InstallService>();
+builder.Services.AddScoped<UpdateService>();
 builder.Services.AddScoped<LockService>();
 builder.Services.AddScoped<RuleService>();
 builder.Services.AddScoped<UsageService>();
 builder.Services.AddScoped<AlertService>();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<DashboardEventBus>();
+builder.Services.AddSingleton<ReleaseCatalog>();
 builder.Services.AddSingleton<DevicePresenceService>();
 builder.Services.AddHostedService<LockExpiryService>();
 builder.Services.AddHostedService<CategoryRefreshService>();
@@ -418,6 +421,141 @@ app.MapPost("/api/enrollment-codes", async (EnrollmentCodeRequest request, HttpC
         return Results.BadRequest(new { error = ex.Message });
     }
 }).RequireAuthorization();
+
+app.MapGet("/i/{token}/status", async (string token, InstallService installs, CancellationToken ct) =>
+{
+    var status = await installs.StatusAsync(token, ct);
+    return Results.Ok(new { status = status.Status, childName = status.ChildName, deviceName = status.DeviceName, expiresUtc = status.ExpiresUtc, error = status.Error });
+}).AllowAnonymous();
+
+app.MapGet("/i/{token}/download", async (string token, InstallService installs, ReleaseCatalog releases, CancellationToken ct) =>
+{
+    var status = await installs.StatusAsync(token, ct);
+    if (status.Status != "pending") return Results.NotFound(new { error = status.Error ?? "This install link has already been used." });
+    var link = await installs.FindAsync(token, ct);
+    if (link is null) return Results.NotFound();
+    var release = releases.Current();
+    if (release?.SetupPath is null || !File.Exists(release.SetupPath))
+        return Results.NotFound(new { error = "The installer is not published on this server yet." });
+    var code = installs.UnprotectCode(link);
+    var fileName = string.IsNullOrWhiteSpace(code) ? $"OpControlParental-Setup-{release.Version}.exe" : $"OpControlParental-{code}.exe";
+    return Results.File(release.SetupPath, "application/vnd.microsoft.portable-executable", fileName, enableRangeProcessing: true);
+}).AllowAnonymous();
+
+app.MapGet("/i/{token}/qr.png", (string token, InstallService installs) =>
+{
+    var url = $"{installs.BaseUrl}/i/{token}";
+    using var generator = new QRCoder.QRCodeGenerator();
+    using var data = generator.CreateQrCode(url, QRCoder.QRCodeGenerator.ECCLevel.Q);
+    var png = new QRCoder.PngByteQRCode(data).GetGraphic(8);
+    return Results.File(png, "image/png");
+}).AllowAnonymous();
+
+app.MapGet("/downloads/setup", (ReleaseCatalog releases) =>
+{
+    var release = releases.Current();
+    if (release?.SetupPath is null || !File.Exists(release.SetupPath)) return Results.NotFound(new { error = "No installer is published yet." });
+    return Results.File(release.SetupPath, "application/vnd.microsoft.portable-executable", $"OpControlParental-Setup-{release.Version}.exe", enableRangeProcessing: true);
+}).RequireAuthorization();
+
+app.MapGet("/downloads/msi", (ReleaseCatalog releases) =>
+{
+    var release = releases.Current();
+    if (release?.MsiPath is null || !File.Exists(release.MsiPath)) return Results.NotFound(new { error = "No MSI is published yet." });
+    return Results.File(release.MsiPath, "application/octet-stream", $"OpControlParental-{release.Version}.msi", enableRangeProcessing: true);
+}).RequireAuthorization();
+
+app.MapGet("/api/releases", (ReleaseCatalog releases) =>
+{
+    var current = releases.CurrentInfo();
+    return Results.Ok(new { current, all = releases.All().Select(r => r.ToDto(null)) });
+}).RequireAuthorization();
+
+app.MapPost("/api/install-links", async (InstallLinkCreateRequest request, HttpContext context, IAntiforgery antiforgery, FamilyScope family, InstallService installs, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    try
+    {
+        var created = await installs.CreateAsync(family.FamilyId, request.ChildId, family.ParentId, request.Platform, ct);
+        return Results.Ok(created);
+    }
+    catch (EnrollmentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapGet("/api/install-links", async (FamilyScope family, InstallService installs, CancellationToken ct) =>
+    Results.Ok(await installs.ListAsync(family.FamilyId, ct))).RequireAuthorization();
+
+app.MapPost("/api/install-links/{linkId:guid}/revoke", async (Guid linkId, HttpContext context, IAntiforgery antiforgery, FamilyScope family, InstallService installs, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    var ok = await installs.RevokeAsync(family.FamilyId, linkId, ct);
+    return ok ? Results.Ok(new { ok = true }) : Results.NotFound();
+}).RequireAuthorization();
+
+app.MapPost("/api/devices/{deviceId:guid}/update", async (Guid deviceId, HttpContext context, IAntiforgery antiforgery, FamilyScope family, UpdateService updates, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    try
+    {
+        var update = await updates.RequestAsync(family.FamilyId, deviceId, family.ParentId, ct);
+        return Results.Ok(new { ok = true, id = update.Id, toVersion = update.ToVersion });
+    }
+    catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapGet("/api/device/update", async (ClaimsPrincipal user, ParentalDbContext db, UpdateService updates, CancellationToken ct) =>
+{
+    var device = await DeviceFromClaimsAsync(user, db, ct);
+    if (device is null) return Results.Unauthorized();
+    var info = updates.BuildInfo(device);
+    return Results.Ok(info);
+}).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
+
+app.MapGet("/api/device/update/download", async (string version, ClaimsPrincipal user, ParentalDbContext db, ReleaseCatalog releases, CancellationToken ct) =>
+{
+    var device = await DeviceFromClaimsAsync(user, db, ct);
+    if (device is null) return Results.Unauthorized();
+    var release = releases.Get(version);
+    if (release?.MsiPath is null || !File.Exists(release.MsiPath)) return Results.NotFound();
+    return Results.File(release.MsiPath, "application/octet-stream", $"OpControlParental-{release.Version}.msi", enableRangeProcessing: true);
+}).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
+
+app.MapPost("/api/device/update/health", async (DeviceUpdateHealthRequest request, ClaimsPrincipal user, ParentalDbContext db, UpdateService updates, CancellationToken ct) =>
+{
+    var device = await DeviceFromClaimsAsync(user, db, ct);
+    if (device is null) return Results.Unauthorized();
+    var result = await updates.RecordHealthAsync(device, request, ct);
+    return Results.Ok(new { ok = true, id = result.Id });
+}).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
+
+app.MapPost("/api/device/unaccounted", async (UnaccountedBatchRequest request, ClaimsPrincipal user, ParentalDbContext db, UsageService usage, CancellationToken ct) =>
+{
+    var device = await DeviceFromClaimsAsync(user, db, ct);
+    if (device is null) return Results.Unauthorized();
+    await usage.SyncUnaccountedAsync(device, request, ct);
+    return Results.Ok(new { ok = true });
+}).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
+
+app.MapPost("/api/device/uninstall", async (UninstallReportRequest request, ClaimsPrincipal user, ParentalDbContext db, AlertService alerts, CancellationToken ct) =>
+{
+    var device = await DeviceFromClaimsAsync(user, db, ct);
+    if (device is null) return Results.Unauthorized();
+    db.ClientTamperEvents.Add(new ClientTamperEvent
+    {
+        FamilyId = device.FamilyId,
+        ChildId = device.ChildId,
+        DeviceId = device.Id,
+        Kind = "uninstall-attempted",
+        Detail = request.Detail is { Length: > 500 } ? request.Detail[..500] : request.Detail,
+        OccurredUtc = DateTime.UtcNow
+    });
+    await db.SaveChangesAsync(ct);
+    await alerts.AddAsync(device.FamilyId, device.ChildId, device.Id, "tampering",
+        "Uninstall attempted",
+        $"The Parental client was about to be removed from {device.Name}." + (string.IsNullOrWhiteSpace(request.Detail) ? "" : $" {request.Detail}"),
+        TimeSpan.FromMinutes(5), ct);
+    return Results.Ok(new { ok = true });
+}).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
 
 app.Run();
 

@@ -87,7 +87,7 @@ public sealed class AlertService
         return settings;
     }
 
-    public async Task SaveSettingsAsync(Guid familyId, bool emailsEnabled, string? host, int port, bool useSsl, string? username, string? password, string? from, int offlineMinutes, CancellationToken ct = default)
+    public async Task SaveSettingsAsync(Guid familyId, bool emailsEnabled, string? host, int port, bool useSsl, string? username, string? password, string? from, int offlineMinutes, int? installLinkMinutes = null, CancellationToken ct = default)
     {
         var settings = await EnsureSettingsAsync(familyId, ct);
         settings.AlertEmailsEnabled = emailsEnabled;
@@ -99,6 +99,8 @@ public sealed class AlertService
             settings.SmtpPasswordProtected = _protector.Protect(password);
         settings.FromAddress = string.IsNullOrWhiteSpace(from) ? null : from.Trim();
         settings.OfflineAlertMinutes = Math.Clamp(offlineMinutes, 5, 1440);
+        if (installLinkMinutes is { } linkMinutes)
+            settings.InstallLinkMinutes = Math.Clamp(linkMinutes, 5, 10080);
         settings.UpdatedUtc = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
     }

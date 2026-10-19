@@ -92,12 +92,33 @@ public sealed class DevicePresenceService
         var db = scope.ServiceProvider.GetRequiredService<Data.ParentalDbContext>();
         var device = await db.Devices.FindAsync(deviceId);
         if (device is null) return;
-        device.LastSeenUtc = utc.Kind == DateTimeKind.Utc ? utc : utc.ToUniversalTime();
+        var deviceUtc = utc.Kind == DateTimeKind.Utc ? utc : utc.ToUniversalTime();
+        var skew = deviceUtc - DateTime.UtcNow;
+        device.LastSeenUtc = deviceUtc;
         if (!string.IsNullOrWhiteSpace(timeZoneId) && device.TimeZoneId != timeZoneId)
             device.TimeZoneId = timeZoneId!;
         if (!string.IsNullOrWhiteSpace(clientVersion) && device.ClientVersion != clientVersion)
             device.ClientVersion = clientVersion;
         await db.SaveChangesAsync();
+
+        if (Math.Abs(skew.TotalMinutes) > 5)
+        {
+            db.ClientTamperEvents.Add(new Data.ClientTamperEvent
+            {
+                FamilyId = device.FamilyId,
+                ChildId = device.ChildId,
+                DeviceId = device.Id,
+                Kind = "clock-changed",
+                Detail = $"Device clock differs from server by {(int)skew.TotalMinutes} minutes.",
+                OccurredUtc = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+            var alerts = scope.ServiceProvider.GetRequiredService<AlertService>();
+            await alerts.AddAsync(device.FamilyId, device.ChildId, device.Id, "tampering",
+                "System clock changed",
+                $"{device.Name}'s clock differs from the server by {(int)Math.Abs(skew.TotalMinutes)} minutes.",
+                TimeSpan.FromHours(1));
+        }
     }
 
     public async Task<DeviceStatusDto> StatusAsync(Guid deviceId, bool online)

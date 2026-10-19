@@ -19,7 +19,7 @@ services:
       retries: 12
 
   web:
-    image: opcontrol-parental-web:0.2.0-20261019
+    image: opcontrol-parental-web:0.5.0-20261019
     container_name: parental-staging-web
     restart: unless-stopped
     depends_on:
@@ -32,11 +32,14 @@ services:
       ConnectionStrings__Default: Host=db;Database=parental;Username=parental;Password=${POSTGRES_PASSWORD}
       DataProtection__Path: /var/lib/opcontrol-parental/keys
       Database__Migrate: "true"
+      PublicBaseUrl: "http://100.116.211.100:8097"
+      Releases__Path: /var/lib/opcontrol-parental/releases
       TZ: UTC
     ports:
       - "100.116.211.100:8097:8080"
     volumes:
       - ./data/keys:/var/lib/opcontrol-parental/keys
+      - ./data/releases:/var/lib/opcontrol-parental/releases:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health || exit 1"]
       interval: 15s

@@ -1,0 +1,283 @@
+using System.Diagnostics;
+using System.Management;
+using System.Reflection;
+using System.Text.RegularExpressions;
+
+namespace OpControl.Parental.Setup;
+
+internal static class Program
+{
+    [STAThread]
+    private static int Main(string[] args)
+    {
+        ApplicationConfiguration.Initialize();
+        var silent = args.Any(a => a is "/S" or "/s" or "--silent" or "/quiet" or "/qn");
+        var server = Arg(args, "SERVER") ?? Arg(args, "--server") ?? "https://parental.opcontrol.net";
+        var code = Arg(args, "CODE") ?? Arg(args, "--code") ?? CodeFromFileName();
+        var account = Arg(args, "ACCOUNT") ?? Arg(args, "--account");
+
+        string msi;
+        try
+        {
+            msi = ExtractMsi();
+        }
+        catch (Exception ex)
+        {
+            if (!silent) MessageBox.Show("The installer package is missing.\n\n" + ex.Message, "Parental OpControl", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return 3;
+        }
+
+        try
+        {
+            if (silent)
+            {
+                if (string.IsNullOrWhiteSpace(code)) return 2;
+                return RunMsi(msi, server, code, account ?? "Emma", null);
+            }
+
+            using var form = new InstallForm(msi, server, code, account);
+            return form.ShowDialog() == DialogResult.OK ? form.ExitCode : 1;
+        }
+        finally
+        {
+            try { File.Delete(msi); } catch { }
+        }
+    }
+
+    private static string? Arg(string[] args, string name)
+    {
+        for (var i = 0; i < args.Length; i++)
+        {
+            var value = args[i];
+            if (string.Equals(value, name, StringComparison.OrdinalIgnoreCase))
+                return i + 1 < args.Length ? args[i + 1].Trim('"') : null;
+            var prefix = name + "=";
+            if (value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                return value[prefix.Length..].Trim('"');
+        }
+        return null;
+    }
+
+    private static string? CodeFromFileName()
+    {
+        try
+        {
+            var name = Path.GetFileNameWithoutExtension(Environment.ProcessPath ?? "");
+            var match = Regex.Match(name ?? "", @"OpControlParental-([A-Za-z0-9]{8,14})$", RegexOptions.IgnoreCase);
+            return match.Success ? match.Groups[1].Value.ToUpperInvariant() : null;
+        }
+        catch { return null; }
+    }
+
+    private static string ExtractMsi()
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        using var stream = assembly.GetManifestResourceStream("OpControlParental.msi")
+            ?? throw new InvalidOperationException("Embedded MSI not found.");
+        var path = Path.Combine(Path.GetTempPath(), $"OpControlParental-{Guid.NewGuid():N}.msi");
+        using var file = File.Create(path);
+        stream.CopyTo(file);
+        return path;
+    }
+
+    internal static int RunMsi(string msi, string server, string code, string account, Action<string>? progress)
+    {
+        progress?.Invoke("Installing Parental OpControl…");
+        var arguments = $"/i \"{msi}\" /qn /norestart SERVER=\"{server.TrimEnd('/')}\" CODE=\"{code.Trim()}\" ACCOUNT=\"{account.Trim()}\"";
+        using var process = Process.Start(new ProcessStartInfo
+        {
+            FileName = "msiexec.exe",
+            Arguments = arguments,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        });
+        if (process is null) return 4;
+        process.WaitForExit();
+        progress?.Invoke(process.ExitCode == 0 ? "Installation complete." : $"Installation failed (exit code {process.ExitCode}).");
+        return process.ExitCode;
+    }
+
+    internal static List<string> LocalAccounts(out HashSet<string> administrators)
+    {
+        var accounts = new List<string>();
+        administrators = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            var adminSids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            using (var groups = new ManagementObjectSearcher("SELECT * FROM Win32_Group WHERE LocalAccount=True"))
+            {
+                foreach (ManagementObject group in groups.Get())
+                {
+                    var sid = group["SID"]?.ToString() ?? "";
+                    if (sid is "S-1-5-32-544" or "S-1-5-32-545") adminSids.Add($"{group["Domain"]}\\{group["Name"]}");
+                }
+            }
+
+            using (var users = new ManagementObjectSearcher("SELECT * FROM Win32_UserAccount WHERE LocalAccount=True AND Disabled=False"))
+            {
+                foreach (ManagementObject user in users.Get())
+                {
+                    var name = $"{user["Domain"]}\\{user["Name"]}";
+                    var sid = user["SID"]?.ToString() ?? "";
+                    if (sid.EndsWith("-500") || sid.EndsWith("-501") || sid.EndsWith("-503")) continue;
+                    accounts.Add(name);
+                }
+            }
+
+            using (var members = new ManagementObjectSearcher("SELECT * FROM Win32_GroupUser"))
+            {
+                foreach (ManagementObject member in members.Get())
+                {
+                    var group = member["GroupComponent"]?.ToString() ?? "";
+                    var part = member["PartComponent"]?.ToString() ?? "";
+                    var match = Regex.Match(group, "Name=\"([^\"]+)\"");
+                    var userMatch = Regex.Match(part, "Domain=\"([^\"]+)\",Name=\"([^\"]+)\"");
+                    if (!match.Success || !userMatch.Success) continue;
+                    if (!adminSids.Any(s => s.EndsWith("\\" + match.Groups[1].Value, StringComparison.OrdinalIgnoreCase))) continue;
+                    administrators.Add($"{userMatch.Groups[1].Value}\\{userMatch.Groups[2].Value}");
+                }
+            }
+        }
+        catch { }
+        return accounts.OrderBy(a => a, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+}
+
+internal sealed class InstallForm : Form
+{
+    private readonly string _msi;
+    private readonly TextBox _server = new();
+    private readonly TextBox _code = new();
+    private readonly ComboBox _account = new();
+    private readonly Label _status = new();
+    private readonly Button _install = new();
+    private readonly ProgressBar _progress = new();
+    private readonly HashSet<string> _admins;
+
+    public int ExitCode { get; private set; } = 1;
+
+    public InstallForm(string msi, string server, string? code, string? account)
+    {
+        _msi = msi;
+        Text = "Install Parental OpControl";
+        FormBorderStyle = FormBorderStyle.FixedDialog;
+        MaximizeBox = false;
+        MinimizeBox = false;
+        StartPosition = FormStartPosition.CenterScreen;
+        AutoScaleMode = AutoScaleMode.Dpi;
+        Font = new Font("Segoe UI", 9.5f);
+        ClientSize = new Size(560, 360);
+        Padding = new Padding(20);
+
+        var title = new Label
+        {
+            Text = "Parental OpControl",
+            Font = new Font("Segoe UI Semibold", 16f),
+            AutoSize = true,
+            Location = new Point(22, 18)
+        };
+        var subtitle = new Label
+        {
+            Text = "Protect this Windows PC. Sign in as an administrator before continuing.",
+            AutoSize = false,
+            Size = new Size(510, 36),
+            Location = new Point(24, 58),
+            ForeColor = Color.FromArgb(90, 90, 100)
+        };
+
+        var serverLabel = new Label { Text = "Server URL", AutoSize = true, Location = new Point(24, 104) };
+        _server.Location = new Point(24, 124);
+        _server.Size = new Size(510, 28);
+        _server.Text = server;
+
+        var codeLabel = new Label { Text = "One-time code", AutoSize = true, Location = new Point(24, 160) };
+        _code.Location = new Point(24, 180);
+        _code.Size = new Size(240, 28);
+        _code.Text = code ?? "";
+
+        var accountLabel = new Label { Text = "Windows account to protect", AutoSize = true, Location = new Point(24, 216) };
+        _account.Location = new Point(24, 236);
+        _account.Size = new Size(510, 28);
+        _account.DropDownStyle = ComboBoxStyle.DropDownList;
+
+        var accounts = Program.LocalAccounts(out _admins);
+        foreach (var name in accounts)
+        {
+            var isAdmin = _admins.Any(a => a.Equals(name, StringComparison.OrdinalIgnoreCase));
+            _account.Items.Add(isAdmin ? $"{name} (administrator — not recommended)" : name);
+        }
+        var preferred = accounts.FirstOrDefault(a => string.Equals(a.Split('\\').Last(), "Emma", StringComparison.OrdinalIgnoreCase))
+            ?? accounts.FirstOrDefault(a => !_admins.Any(x => x.Equals(a, StringComparison.OrdinalIgnoreCase)))
+            ?? accounts.FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(account) && accounts.Contains(account)) preferred = account;
+        if (preferred is not null) _account.SelectedIndex = accounts.IndexOf(preferred);
+
+        _status.Location = new Point(24, 274);
+        _status.Size = new Size(510, 24);
+        _status.AutoSize = false;
+        _status.ForeColor = Color.FromArgb(90, 90, 100);
+
+        _progress.Location = new Point(24, 300);
+        _progress.Size = new Size(510, 8);
+        _progress.Style = ProgressBarStyle.Marquee;
+        _progress.Visible = false;
+
+        _install.Text = "Install";
+        _install.Size = new Size(140, 34);
+        _install.Location = new Point(394, 316);
+        _install.Click += async (_, _) => await InstallAsync();
+
+        var cancel = new Button { Text = "Cancel", Size = new Size(100, 34), Location = new Point(284, 316), DialogResult = DialogResult.Cancel };
+
+        Controls.AddRange([title, subtitle, serverLabel, _server, codeLabel, _code, accountLabel, _account, _status, _progress, _install, cancel]);
+        AcceptButton = _install;
+        CancelButton = cancel;
+        Shown += (_, _) => _install.Focus();
+    }
+
+    private async Task InstallAsync()
+    {
+        var server = _server.Text.Trim();
+        var code = _code.Text.Trim();
+        var account = (_account.SelectedItem?.ToString() ?? "").Replace(" (administrator — not recommended)", "");
+        if (!Uri.TryCreate(server, UriKind.Absolute, out var uri) || (uri.Scheme != "https" && uri.Scheme != "http"))
+        {
+            MessageBox.Show("Enter a valid server URL.", Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+        if (code.Length < 6)
+        {
+            MessageBox.Show("Enter the one-time code shown in the parent dashboard.", Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(account))
+        {
+            MessageBox.Show("Choose the Windows account to protect.", Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        _install.Enabled = false;
+        _account.Enabled = false;
+        _server.Enabled = false;
+        _code.Enabled = false;
+        _progress.Visible = true;
+        _status.Text = "Installing…";
+        var exit = await Task.Run(() => Program.RunMsi(_msi, server, code, account, text => BeginInvoke(() => _status.Text = text)));
+        ExitCode = exit;
+        _progress.Visible = false;
+        if (exit == 0)
+        {
+            MessageBox.Show("Parental OpControl is installed. The device will appear in the dashboard within a few seconds.", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+        else
+        {
+            MessageBox.Show($"The installer failed with exit code {exit}. See the Windows installer log for details.", Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            _install.Enabled = true;
+            _account.Enabled = true;
+            _server.Enabled = true;
+            _code.Enabled = true;
+        }
+    }
+}

@@ -50,6 +50,11 @@ else
             <div class="muted tiny">Excluded from screen time</div>
         </div>
         <div class="card stat-card">
+            <div class="eyebrow">Unaccounted</div>
+            <div class="stat-value">@FormatDuration(_unaccountedSeconds)</div>
+            <div class="muted tiny">Helper was not running</div>
+        </div>
+        <div class="card stat-card">
             <div class="eyebrow">Blocked attempts</div>
             <div class="stat-value">@_blockedAttempts</div>
             <div class="muted tiny">@PeriodLabel</div>
@@ -250,6 +255,7 @@ else
     private int _activeSeconds;
     private int _idleSeconds;
     private int _blockedAttempts;
+    private int _unaccountedSeconds;
     private int _todaySeconds;
     private int _averageSeconds;
     private int _usedTodaySeconds;
@@ -326,6 +332,7 @@ else
             .ToListAsync();
         _activeSeconds = intervals.Where(i => i.Active).Sum(i => i.DurationSeconds);
         _idleSeconds = intervals.Where(i => !i.Active).Sum(i => i.DurationSeconds);
+        _unaccountedSeconds = await usage.UnaccountedSecondsAsync(_familyId, child.Id, startUtc, endUtc);
         _blockedAttempts = await db.VisitRecords.AsNoTracking()
             .CountAsync(v => v.FamilyId == _familyId && v.ChildId == child.Id && v.Blocked && v.VisitedUtc >= startUtc && v.VisitedUtc < endUtc);
 

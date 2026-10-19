@@ -7,7 +7,10 @@ and user-session helper). Job 2 added the lock overlay, schedules, PIN overrides
 categories, app inventory/review, real-time app blocking, per-item bonus unlocks and the
 Websites/Apps dashboard pages. Job 4 adds active screen-time and foreground-app tracking,
 website time (approximate), daily device and per-app limits, always-allowed apps, reports,
-the activity timeline and alerts with optional email delivery.
+the activity timeline and alerts with optional email delivery. Job 5A adds the WiX MSI and
+interactive setup bootstrapper, the Add device install-link/QR flow, automatic client updates with
+SHA-256 verification and rollback, helper authentication, usage sanity checks, unaccounted
+helper-down time and additional tamper alerts.
 
 ## Solution
 
@@ -59,8 +62,71 @@ dotnet publish src/OpControl.Parental.Client.Windows -c Release -r win-x64 -o ou
 dotnet publish src/OpControl.Parental.Client.Windows.Helper -c Release -r win-x64 -o out/helper
 ```
 
-Install on a test device with `deploy/install-x1.ps1` (elevated PowerShell). Remove with
-`deploy/uninstall-x1.ps1`.
+### Installer, silent install and auto-update
+
+The Windows installer is a WiX MSI plus a small WinForms setup bootstrapper. Build commands:
+
+```bash
+# 1. Publish the Windows payloads on any OS with the .NET 10 SDK
+dotnet publish src/OpControl.Parental.Client.Windows -c Release -r win-x64 -o artifacts/publish-0.5.0/client -p:Version=0.5.0
+dotnet publish src/OpControl.Parental.Client.Windows.Helper -c Release -r win-x64 -o artifacts/publish-0.5.0/helper -p:Version=0.5.0
+
+# 2. Build the MSI on Windows (WiX 5 is Windows-only)
+dotnet tool install wix --tool-path C:\ocp-build\tools --version 5.0.2
+powershell -ExecutionPolicy Bypass -File installer/build-msi-windows.ps1 `
+  -Version 0.5.0 -PublishRoot artifacts/publish-0.5.0 `
+  -OutFile artifacts/OpControlParental-0.5.0.msi -InstallerDir installer
+
+# 3. Embed the MSI in the setup bootstrapper
+dotnet publish src/OpControl.Parental.Setup -c Release -r win-x64 -o artifacts/setup-0.5.0 `
+  -p:Version=0.5.0 -p:MsiPath="$PWD/artifacts/OpControlParental-0.5.0.msi"
+cp artifacts/setup-0.5.0/OpControl.Parental.Setup.exe artifacts/OpControlParental-Setup-0.5.0.exe
+```
+
+`installer/build-installer.sh` publishes the payloads and documents this sequence, but WiX itself
+must run on Windows. The setup bootstrapper is interactive; the MSI supports silent install:
+
+```bat
+msiexec /i OpControlParental.msi /qn SERVER=https://parental.opcontrol.net CODE=XXXXXXXXXX ACCOUNT=Emma
+OpControlParental-Setup-0.5.0.exe /S SERVER=https://parental.opcontrol.net CODE=XXXXXXXXXX ACCOUNT=Emma
+```
+
+The pre-configured download names the setup `OpControlParental-<CODE>.exe`; the bootstrapper reads
+the one-time code from its own file name and pre-fills the dialog. The MSI writes `SERVER`, `CODE`
+and `ACCOUNT` to `HKLM\Software\OpControl\Parental` on first install; the service consumes and
+deletes those values on first start. Upgrades keep `C:\ProgramData\OpControlParental` (device
+credential, cached state), so no re-enrollment is required.
+
+The server serves auto-update files from `data/releases` (mounted at
+`/var/lib/opcontrol-parental/releases`). Place `OpControlParental-<version>.msi` and
+`OpControlParental-Setup-<version>.exe` there. The highest version with an MSI is current;
+the server publishes its SHA-256. A device checks daily and whenever the dashboard requests an
+update, downloads the MSI, verifies SHA-256, runs the update runner, and reports healthy. If the
+new service does not write the health marker within five minutes, the runner uninstalls it with
+`SUPPRESSDATA=1` and installs the previous version (keeping the credential). The dashboard shows
+the client version per device and an Update now button.
+
+Signing is optional. Set a certificate and run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File installer/sign.ps1 -CertificateThumbprint <thumbprint>
+```
+
+This signs and verifies the MSI and setup EXE with SHA-256 and a timestamp.
+
+### Install links (Add device)
+
+Parents create a single-use install link in Add device. The dashboard shows the link, QR code,
+one-time code and copy/email buttons. The link is valid for 24 hours by default
+(`FamilySettings.InstallLinkMinutes`, configurable in Settings), can be revoked, and flips to
+"Connected" when the device enrolls. The public `/i/<token>` page detects phones (Android coming
+soon) and offers the pre-configured setup on Windows. A manual code entry fallback remains in the
+setup dialog and in the Downloads page instructions.
+
+### Manual scripted install (legacy)
+
+`deploy/install-x1.ps1` and `deploy/uninstall-x1.ps1` remain for reference, but new devices should
+use the MSI/setup.
 
 The service stores the device credential in `C:\ProgramData\OpControlParental\private\device.json`
 with an ACL that grants access to SYSTEM and Administrators only. The user-session helper reads

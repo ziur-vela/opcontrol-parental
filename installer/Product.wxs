@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <Package Name="Parental OpControl"
+           Manufacturer="OpControl IT Solutions"
+           Version="$(var.ProductVersion)"
+           UpgradeCode="dc5fb7b2-a7e6-4d02-b798-8b556150ceec"
+           Scope="perMachine"
+           Language="1033"
+           Compressed="yes">
+
+    <SummaryInformation Description="Parental OpControl device service and helper" Manufacturer="OpControl IT Solutions" />
+
+    <MajorUpgrade AllowDowngrades="yes" Schedule="afterInstallInitialize" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Property Id="SERVER" Secure="yes" />
+    <Property Id="CODE" Secure="yes" />
+    <Property Id="ACCOUNT" Secure="yes" />
+    <Property Id="SUPPRESSDATA" Secure="yes" />
+    <Property Id="ARPPRODUCTICON" Value="ProductIcon" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+
+    <Icon Id="ProductIcon" SourceFile="$(var.ProductIcon)" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLROOT" Name="OpControlParental">
+        <Directory Id="CLIENTDIR" Name="Client" />
+        <Directory Id="HELPERDIR" Name="Helper" />
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="Main" Title="Parental OpControl" Level="1" AllowAbsent="no">
+      <ComponentGroupRef Id="ClientComponents" />
+      <ComponentGroupRef Id="HelperComponents" />
+      <ComponentGroupRef Id="BrandComponents" />
+    </Feature>
+
+    <ComponentGroup Id="ClientComponents">
+      <Component Id="ClientExe" Guid="*" Directory="CLIENTDIR">
+        <File Id="ClientExeFile" Source="$(var.ClientDir)/OpControl.Parental.Client.exe" KeyPath="yes" />
+        <ServiceInstall Id="ServiceInstall"
+                        Name="OpControlParental"
+                        DisplayName="OpControl Parental"
+                        Description="Parental OpControl device service"
+                        Type="ownProcess"
+                        Start="auto"
+                        ErrorControl="normal"
+                        Account="LocalSystem" />
+        <ServiceControl Id="ServiceControl"
+                        Name="OpControlParental"
+                        Start="install"
+                        Stop="both"
+                        Remove="uninstall"
+                        Wait="yes" />
+        <util:ServiceConfig ServiceName="OpControlParental"
+                            FirstFailureActionType="restart"
+                            SecondFailureActionType="restart"
+                            ThirdFailureActionType="restart"
+                            RestartServiceDelayInSeconds="5"
+                            ResetPeriodInDays="1" />
+      </Component>
+      <Component Id="ClientSettings" Guid="*" Directory="CLIENTDIR">
+        <File Id="ClientAppSettings" Source="$(var.ClientDir)/appsettings.json" KeyPath="yes" />
+      </Component>
+      <Component Id="MsiConfig" Guid="*" Directory="INSTALLROOT" Condition="NOT Installed">
+        <RegistryKey Root="HKLM" Key="Software\OpControl\Parental">
+          <RegistryValue Name="Server" Type="string" Value="[SERVER]" KeyPath="yes" />
+          <RegistryValue Name="Code" Type="string" Value="[CODE]" />
+          <RegistryValue Name="Account" Type="string" Value="[ACCOUNT]" />
+        </RegistryKey>
+      </Component>
+    </ComponentGroup>
+
+    <ComponentGroup Id="HelperComponents">
+      <Component Id="HelperExe" Guid="*" Directory="HELPERDIR">
+        <File Id="HelperExeFile" Source="$(var.HelperDir)/OpControl.Parental.Helper.exe" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <ComponentGroup Id="BrandComponents">
+      <Component Id="BrandFiles" Guid="*" Directory="INSTALLROOT">
+        <File Id="BrandIcon" Source="$(var.BrandIcon)" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <CustomAction Id="PrepareLegacyInstall"
+                  Directory="SystemFolder"
+                  ExeCommand="[SystemFolder]cmd.exe /c sc stop OpControlParental &gt;nul 2&gt;&amp;1 &amp; ping -n 3 127.0.0.1 &gt;nul &amp; sc delete OpControlParental &gt;nul 2&gt;&amp;1 &amp; taskkill /f /im OpControl.Parental.Helper.exe &gt;nul 2&gt;&amp;1 &amp; schtasks /delete /tn &quot;OpControl Parental Helper&quot; /f &gt;nul 2&gt;&amp;1"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+
+    <CustomAction Id="ReportUninstall"
+                  Directory="SystemFolder"
+                  ExeCommand="[SystemFolder]cmd.exe /c powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand JABFAHIAcgBvAHIAQQBjAHQAaQBvAG4AUAByAGUAZgBlAHIAZQBuAGMAZQA9ACcAUwBpAGwAZQBuAHQAbAB5AEMAbwBuAHQAaQBuAHUAZQAnAAoAJABkAGEAdABhAD0ASgBvAGkAbgAtAFAAYQB0AGgAIAAkAGUAbgB2ADoAUAByAG8AZwByAGEAbQBEAGEAdABhACAAJwBPAHAAQwBvAG4AdAByAG8AbABQAGEAcgBlAG4AdABhAGwAJwAKAHQAcgB5AHsAUwBlAHQALQBDAG8AbgB0AGUAbgB0ACAALQBQAGEAdABoACAAKABKAG8AaQBuAC0AUABhAHQAaAAgACQAZABhAHQAYQAgACcAdQBuAGkAbgBzAHQAYQBsAGwALQBpAG4ALQBwAHIAbwBnAHIAZQBzAHMALgBmAGwAYQBnACcAKQAgAC0AVgBhAGwAdQBlACAAKABHAGUAdAAtAEQAYQB0AGUAIAAtAEYAbwByAG0AYQB0ACAAbwApAH0AYwBhAHQAYwBoAHsAfQAKAHQAcgB5AHsACgAgACAAJABjAD0ARwBlAHQALQBDAG8AbgB0AGUAbgB0ACAAKABKAG8AaQBuAC0AUABhAHQAaAAgACQAZABhAHQAYQAgACcAcAByAGkAdgBhAHQAZQBcAGQAZQB2AGkAYwBlAC4AagBzAG8AbgAnACkAIAAtAFIAYQB3ACAAfAAgAEMAbwBuAHYAZQByAHQARgByAG8AbQAtAEoAcwBvAG4ACgAgACAAJABvAD0ARwBlAHQALQBDAG8AbgB0AGUAbgB0ACAAKABKAG8AaQBuAC0AUABhAHQAaAAgACQAZABhAHQAYQAgACcAYwBvAG4AZgBpAGcALgBqAHMAbwBuACcAKQAgAC0AUgBhAHcAIAB8ACAAQwBvAG4AdgBlAHIAdABGAHIAbwBtAC0ASgBzAG8AbgAKACAAIABpAGYAKAAkAGMALgBDAHIAZQBkAGUAbgB0AGkAYQBsACAALQBhAG4AZAAgACQAbwAuAFMAZQByAHYAZQByAFUAcgBsACkAewAKACAAIAAgACAASQBuAHYAbwBrAGUALQBSAGUAcwB0AE0AZQB0AGgAbwBkACAALQBNAGUAdABoAG8AZAAgAFAAbwBzAHQAIAAtAFUAcgBpACAAKAAkAG8ALgBTAGUAcgB2AGUAcgBVAHIAbAAuAFQAcgBpAG0ARQBuAGQAKAAnAC8AJwApACsAJwAvAGEAcABpAC8AZABlAHYAaQBjAGUALwB1AG4AaQBuAHMAdABhAGwAbAAnACkAIAAtAEgAZQBhAGQAZQByAHMAIABAAHsAQQB1AHQAaABvAHIAaQB6AGEAdABpAG8AbgA9ACgAIgBCAGUAYQByAGUAcgAgACIAKwAkAGMALgBDAHIAZQBkAGUAbgB0AGkAYQBsACkAfQAgAC0AQwBvAG4AdABlAG4AdABUAHkAcABlACAAJwBhAHAAcABsAGkAYwBhAHQAaQBvAG4ALwBqAHMAbwBuACcAIAAtAEIAbwBkAHkAIAAnAHsAIgBkAGUAdABhAGkAbAAiADoAIgBVAG4AaQBuAHMAdABhAGwAbAAgAHMAdABhAHIAdABlAGQAIABvAG4AIAB0AGgAZQAgAGQAZQB2AGkAYwBlAC4AIgB9ACcAIAAtAFQAaQBtAGUAbwB1AHQAUwBlAGMAIAA4ACAAfAAgAE8AdQB0AC0ATgB1AGwAbAAKACAAIAB9AAoAfQBjAGEAdABjAGgAewB9AAoA"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <CustomAction Id="MarkUninstall"
+                  Directory="SystemFolder"
+                  ExeCommand="[SystemFolder]cmd.exe /c echo uninstall &gt; &quot;%ProgramData%\OpControlParental\uninstall-in-progress.flag&quot;"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <CustomAction Id="RemoveClientData"
+                  Directory="SystemFolder"
+                  ExeCommand="[SystemFolder]cmd.exe /c rmdir /s /q &quot;%ProgramData%\OpControlParental&quot;"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <InstallExecuteSequence>
+      <Custom Action="PrepareLegacyInstall" Before="InstallFiles" Condition="NOT Installed OR WIX_UPGRADE_DETECTED" />
+      <Custom Action="ReportUninstall" Before="StopServices" Condition="REMOVE=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE AND NOT SUPPRESSDATA" />
+      <Custom Action="MarkUninstall" Before="StopServices" Condition="REMOVE=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE AND NOT SUPPRESSDATA" />
+      <Custom Action="RemoveClientData" After="RemoveFiles" Condition="REMOVE=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE AND NOT SUPPRESSDATA" />
+    </InstallExecuteSequence>
+  </Package>
+</Wix>

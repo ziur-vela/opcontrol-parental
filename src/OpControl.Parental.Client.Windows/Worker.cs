@@ -13,9 +13,11 @@ public sealed class Worker : BackgroundService
     private readonly OverrideSync _overrides;
     private readonly CategoryCache _categories;
     private readonly ClientSettings _settings;
+    private readonly UpdateService _updates;
+    private readonly TaskManagerPolicy _policy;
     private DeviceCredential? _credential;
     private ClientOptions _options = new();
-    private string ClientVersion => typeof(Worker).Assembly.GetName().Version?.ToString() ?? "0.3.0";
+    private string ClientVersion => typeof(Worker).Assembly.GetName().Version?.ToString(3) ?? "0.5.0";
 
     private readonly IServiceProvider _serviceProvider;
 
@@ -28,6 +30,8 @@ public sealed class Worker : BackgroundService
         OverrideSync overrides,
         CategoryCache categories,
         ClientSettings settings,
+        UpdateService updates,
+        TaskManagerPolicy policy,
         IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
@@ -39,6 +43,8 @@ public sealed class Worker : BackgroundService
         _overrides = overrides;
         _categories = categories;
         _settings = settings;
+        _updates = updates;
+        _policy = policy;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -46,6 +52,7 @@ public sealed class Worker : BackgroundService
         ClientPaths.EnsureDirectoriesWithAcl();
         CheckPreviousShutdown();
         _options = ClientOptions.Load();
+        MsiConfig.Apply(_options);
         _settings.Value = _options;
         _logger.LogInformation("OpControl Parental client starting; server {Server}, monitored account {Account}", _options.ServerUrl, _options.MonitoredAccount);
 
@@ -54,6 +61,13 @@ public sealed class Worker : BackgroundService
         {
             _runtime.ApplyServerState(cached);
             _logger.LogInformation("Loaded cached device state for child {ChildId}", cached.ChildId);
+        }
+
+        var runtime = _runtime.Current;
+        if (runtime is null || !runtime.IsLocked)
+        {
+            _policy.Restore(_options.MonitoredAccount);
+            _logger.LogInformation("Task Manager policy restored after service start (device not locked)");
         }
 
         while (!stoppingToken.IsCancellationRequested)
@@ -170,6 +184,8 @@ public sealed class Worker : BackgroundService
         connection.KeepAliveInterval = TimeSpan.FromSeconds(15);
         connection.ServerTimeout = TimeSpan.FromSeconds(60);
 
+        connection.On<UpdateInfoDto>(DeviceHubMethods.UpdateRequested, info => _updates.RequestUpdate(info));
+
         connection.On<DeviceStateDto>(DeviceHubMethods.DeviceStateChanged, state =>
         {
             _runtime.ApplyServerState(state);
@@ -254,6 +270,23 @@ public sealed class Worker : BackgroundService
         try
         {
             Directory.CreateDirectory(ClientPaths.PrivateDirectory);
+            var update = File.Exists(ClientPaths.UpdateInProgressFile);
+            var uninstall = File.Exists(ClientPaths.UninstallingFile);
+            var recentUpdate = false;
+            try
+            {
+                if (File.Exists(ClientPaths.UpdateCompletedFile))
+                {
+                    var completed = File.GetLastWriteTimeUtc(ClientPaths.UpdateCompletedFile);
+                    recentUpdate = DateTime.UtcNow - completed < TimeSpan.FromMinutes(10);
+                }
+            }
+            catch { }
+            if (!update && !uninstall && !recentUpdate)
+            {
+                QueueTamper("service-stopped", "The service was stopped without an update or uninstall in progress.");
+                _logger.LogWarning("Service stopped while not updating or uninstalling");
+            }
             File.WriteAllText(ClientPaths.CleanShutdownFile, DateTime.UtcNow.ToString("o"));
         }
         catch { }

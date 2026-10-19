@@ -35,6 +35,9 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
     public DbSet<Alert> Alerts => Set<Alert>();
     public DbSet<FamilySettings> FamilySettings => Set<FamilySettings>();
     public DbSet<ClientTamperEvent> ClientTamperEvents => Set<ClientTamperEvent>();
+    public DbSet<InstallLink> InstallLinks => Set<InstallLink>();
+    public DbSet<UnaccountedInterval> UnaccountedIntervals => Set<UnaccountedInterval>();
+    public DbSet<DeviceUpdateEvent> DeviceUpdateEvents => Set<DeviceUpdateEvent>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -72,6 +75,9 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
             e.Property(x => x.TimeZoneId).HasMaxLength(80).IsRequired();
             e.Property(x => x.CredentialHash).HasMaxLength(64);
             e.Property(x => x.ClientVersion).HasMaxLength(40);
+            e.Property(x => x.PreviousClientVersion).HasMaxLength(40);
+            e.Property(x => x.UpdateTargetVersion).HasMaxLength(40);
+            e.Property(x => x.UpdateStatus).HasMaxLength(40);
             e.HasIndex(x => x.FamilyId);
             e.HasIndex(x => new { x.FamilyId, x.ChildId });
             e.HasIndex(x => x.CredentialHash).IsUnique();
@@ -286,6 +292,36 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
             e.Property(x => x.Kind).HasMaxLength(40).IsRequired();
             e.Property(x => x.Detail).HasMaxLength(500);
             e.HasIndex(x => new { x.FamilyId, x.ChildId, x.OccurredUtc });
+        });
+
+        builder.Entity<InstallLink>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Platform).HasConversion<string>().HasMaxLength(16);
+            e.Property(x => x.TokenHash).HasMaxLength(64).IsRequired();
+            e.Property(x => x.CodeHash).HasMaxLength(64).IsRequired();
+            e.Property(x => x.CodeProtected).HasMaxLength(512).IsRequired();
+            e.HasIndex(x => x.TokenHash).IsUnique();
+            e.HasIndex(x => x.CodeHash);
+            e.HasIndex(x => new { x.FamilyId, x.ChildId, x.CreatedUtc });
+        });
+
+        builder.Entity<UnaccountedInterval>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Reason).HasMaxLength(80).IsRequired();
+            e.HasIndex(x => new { x.FamilyId, x.ChildId, x.StartUtc });
+            e.HasIndex(x => new { x.DeviceId, x.StartUtc });
+        });
+
+        builder.Entity<DeviceUpdateEvent>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.FromVersion).HasMaxLength(40).IsRequired();
+            e.Property(x => x.ToVersion).HasMaxLength(40).IsRequired();
+            e.Property(x => x.Status).HasMaxLength(40).IsRequired();
+            e.Property(x => x.Detail).HasMaxLength(500);
+            e.HasIndex(x => new { x.DeviceId, x.CreatedUtc });
         });
     }
 }

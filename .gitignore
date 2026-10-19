@@ -9,3 +9,5 @@ deploy/.env
 data/
 *.pfx
 *.snk
+
+artifacts/

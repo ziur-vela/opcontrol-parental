@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpControl.Parental.Contracts;
@@ -316,7 +317,7 @@ public class Job4UsageTests
         db.AppRules.Add(new AppRule { FamilyId = family.Id, ChildId = child.Id, AppIdentity = "win32:school.exe|school", IsBlocked = false, Mode = RuleMode.Always, AlwaysAllowed = true });
         await db.SaveChangesAsync();
 
-        var service = new UsageService(db);
+        var service = new UsageService(db, new AlertService(db, new DashboardEventBus(), new EphemeralDataProtectionProvider(), NullLogger<AlertService>.Instance));
         var start = new DateTime(2026, 10, 19, 12, 0, 0, DateTimeKind.Utc);
         var interval = new UsageIntervalDto(Guid.NewGuid(), "win32:brave.exe|brave", "Brave", start, 30, true);
         var school = new UsageIntervalDto(Guid.NewGuid(), "win32:school.exe|school", "School", start, 60, true);
@@ -333,5 +334,54 @@ public class Job4UsageTests
         var apps = await service.AppUsageTodayAsync(family.Id, child.Id, TimeZoneInfo.Utc, start.AddMinutes(5));
         Assert.Equal(30, apps.Single(a => a.Identity == "win32:brave.exe|brave").UsedTodaySeconds);
         Assert.True(apps.Single(a => a.Identity == "win32:school.exe|school").AlwaysAllowed);
+    }
+
+    [Fact]
+    public async Task Usage_sanity_rejects_future_timestamps_and_caps_wall_clock_duration()
+    {
+        await using var db = new ParentalDbContext(new DbContextOptionsBuilder<ParentalDbContext>()
+            .UseInMemoryDatabase("sanity-" + Guid.NewGuid()).Options);
+        var family = new Family { Name = "F" };
+        var child = new Child { FamilyId = family.Id, Name = "C" };
+        var device = new Device { FamilyId = family.Id, ChildId = child.Id, Name = "D" };
+        db.Families.Add(family);
+        db.Children.Add(child);
+        db.Devices.Add(device);
+        await db.SaveChangesAsync();
+
+        var alerts = new AlertService(db, new DashboardEventBus(), new EphemeralDataProtectionProvider(), NullLogger<AlertService>.Instance);
+        var service = new UsageService(db, alerts);
+        var now = DateTime.UtcNow;
+        var future = new UsageIntervalDto(Guid.NewGuid(), "win32:test.exe|test", "Test", now.AddHours(1), 60, true);
+        var huge = new UsageIntervalDto(Guid.NewGuid(), "win32:test.exe|test", "Test", now.AddSeconds(-10), 5000, true);
+
+        await service.SyncUsageAsync(device, new UsageBatchRequest([future, huge]));
+
+        var stored = await db.UsageIntervals.SingleAsync();
+        Assert.InRange(stored.DurationSeconds, 1, 120);
+        Assert.Single(await db.ClientTamperEvents.ToListAsync());
+        Assert.Equal("usage-sanity", (await db.ClientTamperEvents.SingleAsync()).Kind);
+    }
+
+    [Fact]
+    public async Task Unaccounted_intervals_are_stored_once()
+    {
+        await using var db = new ParentalDbContext(new DbContextOptionsBuilder<ParentalDbContext>()
+            .UseInMemoryDatabase("unaccounted-" + Guid.NewGuid()).Options);
+        var family = new Family { Name = "F" };
+        var child = new Child { FamilyId = family.Id, Name = "C" };
+        var device = new Device { FamilyId = family.Id, ChildId = child.Id, Name = "D" };
+        db.Families.Add(family);
+        db.Children.Add(child);
+        db.Devices.Add(device);
+        await db.SaveChangesAsync();
+
+        var service = new UsageService(db, new AlertService(db, new DashboardEventBus(), new EphemeralDataProtectionProvider(), NullLogger<AlertService>.Instance));
+        var item = new UnaccountedIntervalDto(Guid.NewGuid(), DateTime.UtcNow.AddMinutes(-3), 120, "helper-down");
+        await service.SyncUnaccountedAsync(device, new UnaccountedBatchRequest([item]));
+        await service.SyncUnaccountedAsync(device, new UnaccountedBatchRequest([item]));
+
+        Assert.Equal(1, await db.UnaccountedIntervals.CountAsync());
+        Assert.Equal(120, await service.UnaccountedSecondsAsync(family.Id, child.Id, item.StartUtc.AddMinutes(-1), item.StartUtc.AddMinutes(5)));
     }
 }

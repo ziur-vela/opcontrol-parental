@@ -532,6 +532,9 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.Property<DateTime?>("LastSeenUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("LastUpdateCheckUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(120)
@@ -546,10 +549,28 @@ namespace OpControl.Parental.Server.Data.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)");
 
+                    b.Property<string>("PreviousClientVersion")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
                     b.Property<string>("TimeZoneId")
                         .IsRequired()
                         .HasMaxLength(80)
                         .HasColumnType("character varying(80)");
+
+                    b.Property<DateTime?>("UpdateRequestedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdateStatus")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime?>("UpdateStatusUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdateTargetVersion")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
 
                     b.HasKey("Id");
 
@@ -595,6 +616,50 @@ namespace OpControl.Parental.Server.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("DeviceAccounts");
+                });
+
+            modelBuilder.Entity("OpControl.Parental.Server.Data.DeviceUpdateEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ChildId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Detail")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FromVersion")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("ToVersion")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceId", "CreatedUtc");
+
+                    b.ToTable("DeviceUpdateEvents");
                 });
 
             modelBuilder.Entity("OpControl.Parental.Server.Data.EnrollmentCode", b =>
@@ -668,6 +733,9 @@ namespace OpControl.Parental.Server.Data.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<int>("InstallLinkMinutes")
+                        .HasColumnType("integer");
+
                     b.Property<int>("OfflineAlertMinutes")
                         .HasColumnType("integer");
 
@@ -695,6 +763,68 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.HasKey("FamilyId");
 
                     b.ToTable("FamilySettings");
+                });
+
+            modelBuilder.Entity("OpControl.Parental.Server.Data.InstallLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ChildId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("CodeProtected")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<Guid>("CreatedByParentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTime?>("RevokedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("UsedDeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UsedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CodeHash");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("FamilyId", "ChildId", "CreatedUtc");
+
+                    b.ToTable("InstallLinks");
                 });
 
             modelBuilder.Entity("OpControl.Parental.Server.Data.InstalledApp", b =>
@@ -1145,6 +1275,44 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.HasIndex("FamilyId");
 
                     b.ToTable("ScreenTimeLimits");
+                });
+
+            modelBuilder.Entity("OpControl.Parental.Server.Data.UnaccountedInterval", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ChildId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DurationSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTime>("StartUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceId", "StartUtc");
+
+                    b.HasIndex("FamilyId", "ChildId", "StartUtc");
+
+                    b.ToTable("UnaccountedIntervals");
                 });
 
             modelBuilder.Entity("OpControl.Parental.Server.Data.UsageInterval", b =>

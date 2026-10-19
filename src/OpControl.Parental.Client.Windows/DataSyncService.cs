@@ -66,6 +66,8 @@ public sealed class DataSyncService : BackgroundService
 
     public void QueueTamper(TamperEventDto tamper) => AppendLine(ClientPaths.TamperQueueFile, tamper);
 
+    public void QueueUnaccounted(UnaccountedIntervalDto interval) => AppendLine(ClientPaths.UnaccountedQueueFile, interval);
+
     public void RecordBlockEvent(string ruleType, string identity, string displayName)
     {
         var key = ruleType + ":" + identity;
@@ -151,6 +153,14 @@ public sealed class DataSyncService : BackgroundService
             var events = tamperLines.Select(Deserialize<TamperEventDto>).Where(v => v is not null).Cast<TamperEventDto>().ToList();
             if (events.Count > 0 && await PostAsync(client, $"{server}/api/device/tamper", new TamperEventRequest(events), credential, ct))
                 await RemoveLinesAsync(ClientPaths.TamperQueueFile, tamperLines);
+        }
+
+        var unaccountedLines = await TakeLinesAsync(ClientPaths.UnaccountedQueueFile, 500);
+        if (unaccountedLines.Count > 0)
+        {
+            var events = unaccountedLines.Select(Deserialize<UnaccountedIntervalDto>).Where(v => v is not null).Cast<UnaccountedIntervalDto>().ToList();
+            if (events.Count > 0 && await PostAsync(client, $"{server}/api/device/unaccounted", new UnaccountedBatchRequest(events), credential, ct))
+                await RemoveLinesAsync(ClientPaths.UnaccountedQueueFile, unaccountedLines);
         }
 
         var inventory = _pendingInventory;

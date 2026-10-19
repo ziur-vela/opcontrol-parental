@@ -7,6 +7,7 @@
 @inject IServiceScopeFactory Scopes
 @inject DevicePresenceService Presence
 @inject DashboardEventBus Events
+@inject OpControl.Parental.Server.Services.ReleaseCatalog Releases
 
 <PageTitle>Devices · Parental OpControl</PageTitle>
 
@@ -35,10 +36,18 @@
                         <div class="device-name">@device.Name</div>
                         <div class="muted tiny">@device.Platform · @(device.TimeZoneId ?? "UTC") · @(device.OsAccountName ?? "account not reported")</div>
                         <div class="muted tiny">@(string.IsNullOrWhiteSpace(device.ClientVersion) ? "version unknown" : "client " + device.ClientVersion)</div>
+                        @if (_updateStatuses.TryGetValue(device.DeviceId, out var updateStatus) && !string.IsNullOrWhiteSpace(updateStatus))
+                        {
+                            <div class="muted tiny">Update: @updateStatus</div>
+                        }
                     </div>
                     <div class="device-meta">
                         <div class="small">@(device.Online ? "Online" : "Offline")</div>
                         <div class="muted tiny">@(device.LastSeenUtc?.ToLocalTime().ToString("MMM d, HH:mm") ?? "never")</div>
+                        @if (device.Platform == DevicePlatform.Windows && _currentRelease is not null && IsOutdatedCurrent(device))
+                        {
+                            <button type="button" class="ghost-btn" onclick="ocpRequestUpdate(this, '@device.DeviceId')">Update now</button>
+                        }
                     </div>
                 </div>
             }
@@ -49,9 +58,19 @@
 @code {
     private Guid _familyId;
     private List<DeviceStatusDto> _devices = [];
+    private string? _currentRelease;
+    private Dictionary<Guid, string?> _updateStatuses = [];
+
+    private bool IsOutdatedCurrent(DeviceStatusDto device)
+    {
+        if (string.IsNullOrWhiteSpace(device.ClientVersion)) return true;
+        if (_currentRelease is null) return false;
+        return ReleaseCatalog.ParseVersion(device.ClientVersion) < ReleaseCatalog.ParseVersion(_currentRelease);
+    }
 
     protected override async Task OnInitializedAsync()
     {
+        _currentRelease = Releases.CurrentInfo()?.Version;
         var auth = await AuthState.GetAuthenticationStateAsync();
         Guid.TryParse(auth.User.FindFirst("family_id")?.Value, out _familyId);
         Events.DeviceStatusChanged += OnStatus;
@@ -72,6 +91,7 @@
             .Select(g => new { DeviceId = g.Key, Account = g.Select(a => a.OsAccountName).FirstOrDefault() })
             .ToDictionaryAsync(x => x.DeviceId, x => x.Account);
         _devices = devices.Select(d => new DeviceStatusDto(d.Id, d.ChildId, d.Name, d.Platform, Presence.IsOnline(d.Id), d.LastSeenUtc, d.TimeZoneId, accounts.GetValueOrDefault(d.Id), d.ClientVersion)).ToList();
+        _updateStatuses = devices.ToDictionary(d => d.Id, d => d.UpdateStatus is null ? null : $"{d.UpdateStatus} {d.UpdateTargetVersion}".Trim());
     }
 
     public ValueTask DisposeAsync()
