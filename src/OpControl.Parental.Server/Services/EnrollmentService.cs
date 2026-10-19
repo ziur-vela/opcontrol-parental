@@ -96,8 +96,8 @@ public sealed class EnrollmentService
             _db.LockStates.Add(lockState);
             await _db.SaveChangesAsync(ct);
         }
-        var evaluation = LockEvaluator.Evaluate(lockState, Array.Empty<Schedule>(), TimeZoneInfo.Utc, DateTime.UtcNow);
-        var state = new LockStateDto(lockState.ChildId, evaluation.IsLocked, lockState.ManualLock, lockState.UnlockUntilUtc, lockState.BonusUntilUtc, DateTime.UtcNow, evaluation.Reason);
+        var evaluation = LockRules.Evaluate(lockState.ManualLock, lockState.UnlockUntilUtc, lockState.BonusUntilUtc, Array.Empty<ScheduleDto>(), TimeZoneInfo.Utc, DateTime.UtcNow);
+        var state = new LockStateDto(lockState.ChildId, evaluation.IsLocked, lockState.ManualLock, lockState.UnlockUntilUtc, lockState.BonusUntilUtc, lockState.BonusMinutes, evaluation.EndsUtc, DateTime.UtcNow, evaluation.Reason, evaluation.ScheduleName);
 
         _logger.LogInformation("Device {DeviceId} enrolled for child {ChildId} in family {FamilyId}", device.Id, child.Id, child.FamilyId);
 

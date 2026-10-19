@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using OpControl.Parental.Server.Data;
-using OpControl.Parental.Server.Hubs;
 
 namespace OpControl.Parental.Server.Services;
 

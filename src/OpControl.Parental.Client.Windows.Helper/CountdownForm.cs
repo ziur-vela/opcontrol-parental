@@ -1,0 +1,68 @@
+namespace OpControl.Parental.Helper;
+
+public sealed class CountdownForm : Form
+{
+    private readonly Label _label;
+    private bool _blink;
+
+    public CountdownForm()
+    {
+        FormBorderStyle = FormBorderStyle.None;
+        StartPosition = FormStartPosition.Manual;
+        ShowInTaskbar = false;
+        TopMost = true;
+        BackColor = Color.FromArgb(20, 23, 29);
+        Width = 390;
+        Height = 62;
+        Padding = new Padding(14, 10, 14, 10);
+        var area = Screen.PrimaryScreen!.WorkingArea;
+        Location = new Point(area.Right - Width - 16, area.Bottom - Height - 12);
+
+        _label = new Label
+        {
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleCenter,
+            Font = new Font("Segoe UI", 14f, FontStyle.Bold),
+            ForeColor = Color.FromArgb(0, 200, 83),
+            BackColor = Color.Transparent
+        };
+        Controls.Add(_label);
+        Paint += (_, e) =>
+        {
+            using var pen = new Pen(Color.FromArgb(43, 48, 58), 1);
+            e.Graphics.DrawRectangle(pen, 0, 0, Width - 1, Height - 1);
+        };
+    }
+
+    public void UpdateText(string text, TimeSpan remaining)
+    {
+        _label.Text = text;
+        _blink = !_blink;
+        if (remaining.TotalSeconds <= 60)
+            _label.ForeColor = _blink ? Color.FromArgb(240, 101, 93) : Color.FromArgb(232, 188, 74);
+        else
+            _label.ForeColor = Color.FromArgb(0, 200, 83);
+
+        var area = Screen.PrimaryScreen!.WorkingArea;
+        Location = new Point(area.Right - Width - 16, area.Bottom - Height - 12);
+        if (!Visible) Show();
+    }
+
+    public void HideBanner()
+    {
+        if (Visible) Hide();
+    }
+
+    protected override bool ShowWithoutActivation => true;
+
+    protected override CreateParams CreateParams
+    {
+        get
+        {
+            var cp = base.CreateParams;
+            cp.ExStyle |= 0x08000000;
+            cp.ExStyle |= 0x00000080;
+            return cp;
+        }
+    }
+}

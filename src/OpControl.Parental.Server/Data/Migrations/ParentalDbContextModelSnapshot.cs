@@ -277,6 +277,10 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.Property<Guid>("ChildId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ClientVersion")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
                     b.Property<DateTime?>("CredentialExpiresUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -428,6 +432,9 @@ namespace OpControl.Parental.Server.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("BonusMinutes")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("BonusUntilUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -439,6 +446,10 @@ namespace OpControl.Parental.Server.Data.Migrations
 
                     b.Property<bool>("ManualLock")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("OverridePinHash")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<DateTime?>("UnlockUntilUtc")
                         .HasColumnType("timestamp with time zone");

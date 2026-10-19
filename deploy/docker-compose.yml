@@ -19,7 +19,7 @@ services:
       retries: 12
 
   web:
-    image: opcontrol-parental-web:0.1.0-20261018
+    image: opcontrol-parental-web:0.2.0-20261019
     container_name: parental-web
     restart: unless-stopped
     depends_on:

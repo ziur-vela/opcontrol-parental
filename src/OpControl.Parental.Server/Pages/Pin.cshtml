@@ -1,0 +1,43 @@
+@page "/pin"
+@model PinModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Override PIN";
+}
+<div class="page-head">
+    <div>
+        <div class="eyebrow">@Model.ChildName</div>
+        <h1>Override PIN</h1>
+        <p class="muted">The PIN is verified on the device. Only a PBKDF2 hash is stored, and the user-session helper never receives it.</p>
+    </div>
+</div>
+
+@if (Model.Message is not null)
+{
+    <div class="alert @(Model.IsError ? "danger" : "")">@Model.Message</div>
+}
+
+<div class="grid-2">
+    <div class="card">
+        <h2>@(Model.HasPin ? "Change PIN" : "Set PIN")</h2>
+        <form method="post" asp-page-handler="Set" class="stack">
+            <input type="hidden" asp-for="ChildId" />
+            <label class="field"><span>New PIN</span><input asp-for="NewPin" type="password" inputmode="numeric" maxlength="12" /></label>
+            <label class="field"><span>Confirm PIN</span><input asp-for="ConfirmPin" type="password" inputmode="numeric" maxlength="12" /></label>
+            <p class="muted tiny">4 to 12 digits. Five wrong attempts lock the override for 60 seconds.</p>
+            <button type="submit" class="btn btn-primary">Save PIN</button>
+        </form>
+    </div>
+    <div class="card">
+        <h2>Status</h2>
+        <p class="muted">@(Model.HasPin ? "An override PIN is set for this child." : "No override PIN is set.")</p>
+        @if (Model.HasPin)
+        {
+            <form method="post" asp-page-handler="Clear">
+                <input type="hidden" asp-for="ChildId" />
+                <button type="submit" class="btn btn-danger">Clear PIN</button>
+            </form>
+        }
+        <a class="btn btn-ghost" href="/">Back to dashboard</a>
+    </div>
+</div>

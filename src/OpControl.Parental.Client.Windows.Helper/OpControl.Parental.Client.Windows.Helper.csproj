@@ -10,11 +10,14 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <AssemblyName>OpControl.Parental.Helper</AssemblyName>
     <RootNamespace>OpControl.Parental.Helper</RootNamespace>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\OpControl.Parental.Contracts\OpControl.Parental.Contracts.csproj" />
+    <EmbeddedResource Include="brand\lockup-ondark-300h.png" />
+    <EmbeddedResource Include="brand\icon-color-128.png" />
   </ItemGroup>
 </Project>

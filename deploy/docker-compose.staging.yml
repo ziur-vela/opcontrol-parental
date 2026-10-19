@@ -1,0 +1,45 @@
+name: opcontrol-parental-staging
+
+services:
+  db:
+    image: postgres:17.6-bookworm
+    container_name: parental-staging-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: parental
+      POSTGRES_USER: parental
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      TZ: UTC
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U parental -d parental"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  web:
+    image: opcontrol-parental-web:0.2.0-20261019
+    container_name: parental-staging-web
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      ConnectionStrings__Default: Host=db;Database=parental;Username=parental;Password=${POSTGRES_PASSWORD}
+      DataProtection__Path: /var/lib/opcontrol-parental/keys
+      Database__Migrate: "true"
+      TZ: UTC
+    ports:
+      - "100.116.211.100:8097:8080"
+    volumes:
+      - ./data/keys:/var/lib/opcontrol-parental/keys
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s

@@ -58,6 +58,7 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
             e.Property(x => x.OsVersion).HasMaxLength(120);
             e.Property(x => x.TimeZoneId).HasMaxLength(80).IsRequired();
             e.Property(x => x.CredentialHash).HasMaxLength(64);
+            e.Property(x => x.ClientVersion).HasMaxLength(40);
             e.HasIndex(x => x.FamilyId);
             e.HasIndex(x => new { x.FamilyId, x.ChildId });
             e.HasIndex(x => x.CredentialHash).IsUnique();
@@ -115,6 +116,7 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
         builder.Entity<LockState>(e =>
         {
             e.HasKey(x => x.Id);
+            e.Property(x => x.OverridePinHash).HasMaxLength(256);
             e.HasIndex(x => x.ChildId).IsUnique();
             e.HasIndex(x => x.FamilyId);
         });

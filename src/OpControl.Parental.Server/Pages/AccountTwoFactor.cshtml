@@ -1,0 +1,68 @@
+@page "/account/2fa"
+@model AccountTwoFactorModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Two-factor authentication";
+}
+<div class="page-head">
+    <div>
+        <div class="eyebrow">Account security</div>
+        <h1>Two-factor authentication</h1>
+        <p class="muted">Use an authenticator app (TOTP) for parent sign-in.</p>
+    </div>
+</div>
+
+@if (Model.Message is not null)
+{
+    <div class="alert @(Model.IsError ? "danger" : "")">@Model.Message</div>
+}
+
+<div class="grid-2">
+    <div class="card">
+        <div class="card-title-row">
+            <h2>Status</h2>
+            <span class="pill-soft">@(Model.IsEnabled ? "Enabled" : "Not enabled")</span>
+        </div>
+        @if (Model.IsEnabled)
+        {
+            <p class="muted">Two-factor authentication is active for this account.</p>
+            <form method="post" asp-page-handler="Disable" onsubmit="return confirm('Disable two-factor authentication?');">
+                <button type="submit" class="btn btn-danger">Disable 2FA</button>
+            </form>
+            <form method="post" asp-page-handler="RegenerateRecoveryCodes">
+                <button type="submit" class="btn btn-ghost">Regenerate recovery codes</button>
+            </form>
+        }
+        else
+        {
+            <p class="muted">Scan the QR code with Google Authenticator, Microsoft Authenticator, 1Password or another TOTP app, then enter the 6-digit code.</p>
+            <div class="qr-box"><img src="@Model.QrDataUri" alt="TOTP QR code" /></div>
+            <div>
+                <div class="muted tiny">Manual key</div>
+                <div class="key-box">@Model.ManualKey</div>
+            </div>
+            <form method="post" asp-page-handler="Enable" class="stack">
+                <label class="field"><span>6-digit code</span><input name="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" /></label>
+                <button type="submit" class="btn btn-primary">Enable 2FA</button>
+            </form>
+        }
+    </div>
+    <div class="card">
+        <h2>Recovery codes</h2>
+        @if (Model.RecoveryCodes.Count > 0)
+        {
+            <div class="alert">Store these codes somewhere safe. They are shown once.</div>
+            <div class="recovery-list">
+                @foreach (var code in Model.RecoveryCodes)
+                {
+                    <div>@code</div>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="muted">Recovery codes are generated when you enable 2FA, or when you regenerate them.</p>
+        }
+        <a class="btn btn-ghost" href="/settings">Back to settings</a>
+    </div>
+</div>

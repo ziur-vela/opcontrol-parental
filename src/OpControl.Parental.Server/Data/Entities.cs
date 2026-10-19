@@ -51,6 +51,7 @@ public class Device
     public DateTime? CredentialIssuedUtc { get; set; }
     public DateTime? CredentialExpiresUtc { get; set; }
     public bool IsRevoked { get; set; }
+    public string? ClientVersion { get; set; }
     public Child? Child { get; set; }
     public List<DeviceAccount> Accounts { get; set; } = [];
 }
@@ -132,6 +133,8 @@ public class LockState
     public bool ManualLock { get; set; }
     public DateTime? UnlockUntilUtc { get; set; }
     public DateTime? BonusUntilUtc { get; set; }
+    public int? BonusMinutes { get; set; }
+    public string? OverridePinHash { get; set; }
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
     public Child? Child { get; set; }
 }

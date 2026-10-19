@@ -42,18 +42,24 @@ public sealed class LockService
 
     public async Task<LockStateDto> GetStateAsync(Guid familyId, Guid childId, string? timeZoneId = null, CancellationToken ct = default)
     {
-        var childExists = await _db.Children.AnyAsync(c => c.Id == childId && c.FamilyId == familyId, ct);
-        if (!childExists)
-            throw new InvalidOperationException("Child not found in this family.");
-
+        var child = await _db.Children.AsNoTracking().FirstOrDefaultAsync(c => c.Id == childId && c.FamilyId == familyId, ct)
+            ?? throw new InvalidOperationException("Child not found in this family.");
         var state = await EnsureLockStateAsync(familyId, childId, ct);
-        var schedules = await _db.Schedules
-            .AsNoTracking()
-            .Where(s => s.FamilyId == familyId && s.ChildId == childId && s.IsEnabled)
-            .ToListAsync(ct);
+        var schedules = await LoadScheduleDtosAsync(familyId, childId, ct);
+        var zone = ResolveTimeZone(timeZoneId ?? await FirstDeviceTimeZoneAsync(familyId, childId, ct));
+        return BuildDto(state, schedules, zone, DateTime.UtcNow);
+    }
 
-        var tz = ResolveTimeZone(timeZoneId);
-        return BuildDto(state, schedules, tz, DateTime.UtcNow);
+    public async Task<DeviceStateDto> GetDeviceStateAsync(Guid familyId, Guid childId, CancellationToken ct = default)
+    {
+        var child = await _db.Children.AsNoTracking().FirstOrDefaultAsync(c => c.Id == childId && c.FamilyId == familyId, ct)
+            ?? throw new InvalidOperationException("Child not found in this family.");
+        var state = await EnsureLockStateAsync(familyId, childId, ct);
+        var schedules = await LoadScheduleDtosAsync(familyId, childId, ct);
+        var parentName = await ParentDisplayNameAsync(familyId, ct);
+        return new DeviceStateDto(
+            childId, child.Name, parentName, state.ManualLock, state.UnlockUntilUtc, state.BonusUntilUtc,
+            state.BonusMinutes, state.OverridePinHash, schedules, DateTime.UtcNow);
     }
 
     public async Task<LockStateDto> ApplyAsync(Guid familyId, Guid childId, Guid? parentId, LockAction action, int? minutes = null, CancellationToken ct = default)
@@ -64,13 +70,8 @@ public sealed class LockService
 
         var state = await EnsureLockStateAsync(familyId, childId, ct);
         var now = DateTime.UtcNow;
-        var schedules = await _db.Schedules
-            .Where(s => s.FamilyId == familyId && s.ChildId == childId && s.IsEnabled)
-            .ToListAsync(ct);
-        var tz = ResolveTimeZone(await _db.Devices
-            .Where(d => d.FamilyId == familyId && d.ChildId == childId)
-            .Select(d => d.TimeZoneId)
-            .FirstOrDefaultAsync(ct));
+        var schedules = await LoadScheduleDtosAsync(familyId, childId, ct);
+        var zone = ResolveTimeZone(await FirstDeviceTimeZoneAsync(familyId, childId, ct));
 
         switch (action)
         {
@@ -78,11 +79,13 @@ public sealed class LockService
                 state.ManualLock = true;
                 state.UnlockUntilUtc = null;
                 state.BonusUntilUtc = null;
+                state.BonusMinutes = null;
                 break;
             case LockAction.Unlock:
                 state.ManualLock = false;
                 state.BonusUntilUtc = null;
-                state.UnlockUntilUtc = LockEvaluator.CurrentScheduleEnd(schedules, tz, now);
+                state.BonusMinutes = null;
+                state.UnlockUntilUtc = LockRules.NextLockCycleUtc(schedules, zone, now);
                 _db.OverrideEvents.Add(new OverrideEvent
                 {
                     FamilyId = familyId,
@@ -97,6 +100,7 @@ public sealed class LockService
                 state.ManualLock = true;
                 state.UnlockUntilUtc = null;
                 state.BonusUntilUtc = now.AddMinutes(bonusMinutes);
+                state.BonusMinutes = bonusMinutes;
                 _db.OverrideEvents.Add(new OverrideEvent
                 {
                     FamilyId = familyId,
@@ -114,25 +118,151 @@ public sealed class LockService
         state.UpdatedUtc = now;
         await _db.SaveChangesAsync(ct);
 
-        var dto = BuildDto(state, schedules, tz, now);
+        var dto = BuildDto(state, schedules, zone, now);
         _events.PublishLockState(dto);
-        await _hub.Clients.Group(DeviceGroups.Child(childId)).SendAsync(DeviceHubMethods.LockStateChanged, dto);
+        await PublishDeviceStateAsync(familyId, childId, ct);
         _logger.LogInformation("Lock action {Action} applied to child {ChildId} (locked={Locked})", action, childId, dto.IsLocked);
         return dto;
+    }
+
+    public async Task<LockStateDto> ApplyDeviceOverrideAsync(Device device, DeviceOverrideRequest request, CancellationToken ct = default)
+    {
+        var state = await EnsureLockStateAsync(device.FamilyId, device.ChildId, ct);
+        var now = DateTime.UtcNow;
+        var schedules = await LoadScheduleDtosAsync(device.FamilyId, device.ChildId, ct);
+        var zone = ResolveTimeZone(device.TimeZoneId);
+        var option = request.Option switch
+        {
+            "unlock-until-next" => "pin-unlock-until-next",
+            "bonus" => "pin-bonus",
+            _ => null
+        } ?? throw new InvalidOperationException("Unknown override option.");
+
+        if (request.Option == "unlock-until-next")
+        {
+            state.ManualLock = false;
+            state.BonusUntilUtc = null;
+            state.BonusMinutes = null;
+            state.UnlockUntilUtc = LockRules.NextLockCycleUtc(schedules, zone, now);
+        }
+        else
+        {
+            var bonusMinutes = Math.Clamp(request.Minutes ?? 15, 1, 1440);
+            state.ManualLock = true;
+            state.UnlockUntilUtc = null;
+            state.BonusUntilUtc = now.AddMinutes(bonusMinutes);
+            state.BonusMinutes = bonusMinutes;
+        }
+
+        state.UpdatedUtc = now;
+        _db.OverrideEvents.Add(new OverrideEvent
+        {
+            FamilyId = device.FamilyId,
+            ChildId = device.ChildId,
+            DeviceId = device.Id,
+            Option = option,
+            Minutes = request.Option == "bonus" ? Math.Clamp(request.Minutes ?? 15, 1, 1440) : null,
+            CreatedUtc = now
+        });
+        await _db.SaveChangesAsync(ct);
+
+        var dto = BuildDto(state, schedules, zone, now);
+        _events.PublishLockState(dto);
+        await PublishDeviceStateAsync(device.FamilyId, device.ChildId, ct);
+        _logger.LogInformation("Device PIN override {Option} applied to child {ChildId}", option, device.ChildId);
+        return dto;
+    }
+
+    public async Task SetPinAsync(Guid familyId, Guid childId, string pin, CancellationToken ct = default)
+    {
+        if (pin.Length is < 4 or > 12 || !pin.All(char.IsDigit))
+            throw new InvalidOperationException("PIN must be 4 to 12 digits.");
+        var state = await EnsureLockStateAsync(familyId, childId, ct);
+        state.OverridePinHash = PinHasher.Hash(pin);
+        state.UpdatedUtc = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        await PublishDeviceStateAsync(familyId, childId, ct);
+    }
+
+    public async Task ClearPinAsync(Guid familyId, Guid childId, CancellationToken ct = default)
+    {
+        var state = await EnsureLockStateAsync(familyId, childId, ct);
+        state.OverridePinHash = null;
+        state.UpdatedUtc = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        await PublishDeviceStateAsync(familyId, childId, ct);
+    }
+
+    public async Task<bool> HasPinAsync(Guid familyId, Guid childId, CancellationToken ct = default)
+    {
+        var state = await EnsureLockStateAsync(familyId, childId, ct);
+        return !string.IsNullOrWhiteSpace(state.OverridePinHash);
+    }
+
+    public async Task<List<OverrideEventDto>> GetHistoryAsync(Guid familyId, Guid childId, CancellationToken ct = default)
+    {
+        return await _db.OverrideEvents.AsNoTracking()
+            .Where(e => e.FamilyId == familyId && e.ChildId == childId)
+            .OrderByDescending(e => e.CreatedUtc)
+            .Take(50)
+            .Select(e => new OverrideEventDto(e.Id, e.Option, e.Minutes, e.CreatedUtc))
+            .ToListAsync(ct);
+    }
+
+    public async Task PublishDeviceStateAsync(Guid familyId, Guid childId, CancellationToken ct = default)
+    {
+        var state = await GetDeviceStateAsync(familyId, childId, ct);
+        await _hub.Clients.Group(DeviceGroups.Child(childId)).SendAsync(DeviceHubMethods.DeviceStateChanged, state);
     }
 
     public async Task<LockStateDto> PublishCurrentStateAsync(Guid familyId, Guid childId, CancellationToken ct = default)
     {
         var dto = await GetStateAsync(familyId, childId, null, ct);
         _events.PublishLockState(dto);
-        await _hub.Clients.Group(DeviceGroups.Child(childId)).SendAsync(DeviceHubMethods.LockStateChanged, dto);
+        await PublishDeviceStateAsync(familyId, childId, ct);
         return dto;
     }
 
-    private static LockStateDto BuildDto(LockState state, List<Schedule> schedules, TimeZoneInfo tz, DateTime now)
+    private async Task<List<ScheduleDto>> LoadScheduleDtosAsync(Guid familyId, Guid childId, CancellationToken ct)
     {
-        var evaluation = LockEvaluator.Evaluate(state, schedules, tz, now);
-        return new LockStateDto(state.ChildId, evaluation.IsLocked, state.ManualLock, state.UnlockUntilUtc, state.BonusUntilUtc, now, evaluation.Reason);
+        return await _db.Schedules.AsNoTracking()
+            .Where(s => s.FamilyId == familyId && s.ChildId == childId)
+            .OrderBy(s => s.StartMinutes)
+            .Select(s => new ScheduleDto(s.Id, s.Name, s.DaysMask, s.StartMinutes, s.EndMinutes, s.IsEnabled))
+            .ToListAsync(ct);
+    }
+
+    private async Task<string?> FirstDeviceTimeZoneAsync(Guid familyId, Guid childId, CancellationToken ct)
+    {
+        return await _db.Devices.AsNoTracking()
+            .Where(d => d.FamilyId == familyId && d.ChildId == childId)
+            .Select(d => d.TimeZoneId)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    private async Task<string?> ParentDisplayNameAsync(Guid familyId, CancellationToken ct)
+    {
+        return await _db.Users.AsNoTracking()
+            .Where(u => u.FamilyId == familyId)
+            .OrderBy(u => u.RoleInFamily == FamilyRole.Owner ? 0 : 1)
+            .Select(u => u.DisplayName)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    private static LockStateDto BuildDto(LockState state, IReadOnlyList<ScheduleDto> schedules, TimeZoneInfo tz, DateTime now)
+    {
+        var evaluation = LockRules.Evaluate(state.ManualLock, state.UnlockUntilUtc, state.BonusUntilUtc, schedules, tz, now);
+        return new LockStateDto(
+            state.ChildId,
+            evaluation.IsLocked,
+            state.ManualLock,
+            state.UnlockUntilUtc,
+            state.BonusUntilUtc,
+            state.BonusMinutes,
+            evaluation.EndsUtc,
+            now,
+            evaluation.Reason,
+            evaluation.ScheduleName);
     }
 
     private static TimeZoneInfo ResolveTimeZone(string? id)

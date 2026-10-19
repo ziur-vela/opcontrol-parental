@@ -8,23 +8,45 @@ public sealed class Worker : BackgroundService
     private readonly ILogger<Worker> _logger;
     private readonly EnrollmentClient _enrollment;
     private readonly CredentialStore _credentials;
-    private readonly StateStore _state;
+    private readonly DeviceStateStore _deviceStates;
+    private readonly LockRuntime _runtime;
+    private readonly OverrideSync _overrides;
+    private readonly ClientSettings _settings;
     private DeviceCredential? _credential;
     private ClientOptions _options = new();
+    private string ClientVersion => typeof(Worker).Assembly.GetName().Version?.ToString() ?? "0.2.0";
 
-    public Worker(ILogger<Worker> logger, EnrollmentClient enrollment, CredentialStore credentials, StateStore state)
+    public Worker(
+        ILogger<Worker> logger,
+        EnrollmentClient enrollment,
+        CredentialStore credentials,
+        DeviceStateStore deviceStates,
+        LockRuntime runtime,
+        OverrideSync overrides,
+        ClientSettings settings)
     {
         _logger = logger;
         _enrollment = enrollment;
         _credentials = credentials;
-        _state = state;
+        _deviceStates = deviceStates;
+        _runtime = runtime;
+        _overrides = overrides;
+        _settings = settings;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        ClientPaths.EnsureDataDirectory();
+        ClientPaths.EnsureDirectoriesWithAcl();
         _options = ClientOptions.Load();
-        _logger.LogInformation("OpControl Parental client starting; server {Server}", _options.ServerUrl);
+        _settings.Value = _options;
+        _logger.LogInformation("OpControl Parental client starting; server {Server}, monitored account {Account}", _options.ServerUrl, _options.MonitoredAccount);
+
+        var cached = _deviceStates.Load();
+        if (cached is not null)
+        {
+            _runtime.ApplyServerState(cached);
+            _logger.LogInformation("Loaded cached device state for child {ChildId}", cached.ChildId);
+        }
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -35,7 +57,6 @@ public sealed class Worker : BackgroundService
                     await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
                     continue;
                 }
-
                 await RunConnectionAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -74,7 +95,6 @@ public sealed class Worker : BackgroundService
             ExpiresUtc = result.CredentialExpiresUtc
         };
         _credentials.Save(_credential);
-        _state.Save(result.LockState);
         _options.EnrollmentCode = null;
         _options.SaveWithoutCode();
         _logger.LogInformation("Device credential stored for {DeviceId}", result.DeviceId);
@@ -84,6 +104,8 @@ public sealed class Worker : BackgroundService
     private async Task RunConnectionAsync(CancellationToken stoppingToken)
     {
         var credential = _credential!;
+        await _overrides.SyncPendingAsync(_options, stoppingToken);
+
         var connection = new HubConnectionBuilder()
             .WithUrl($"{_options.ServerUrl.TrimEnd('/')}/hubs/device", options =>
             {
@@ -104,11 +126,13 @@ public sealed class Worker : BackgroundService
         connection.KeepAliveInterval = TimeSpan.FromSeconds(15);
         connection.ServerTimeout = TimeSpan.FromSeconds(60);
 
-        connection.On<LockStateDto>(DeviceHubMethods.LockStateChanged, state =>
+        connection.On<DeviceStateDto>(DeviceHubMethods.DeviceStateChanged, state =>
         {
-            _state.Save(state);
-            _logger.LogInformation("Lock state: locked={Locked} reason={Reason} bonusUntil={BonusUntil}",
-                state.IsLocked, state.Reason, state.BonusUntilUtc);
+            _runtime.ApplyServerState(state);
+            if (_overrides.HasPending && _overrides.LastPending is { } pending)
+                _runtime.ApplyLocalOverride(pending.Option, pending.Minutes);
+            _logger.LogInformation("Device state: manual={Manual} unlock={Unlock} bonus={Bonus} schedules={Schedules}",
+                state.ManualLock, state.UnlockUntilUtc, state.BonusUntilUtc, state.Schedules.Count);
         });
 
         connection.Reconnecting += error =>
@@ -149,7 +173,9 @@ public sealed class Worker : BackgroundService
                 {
                     try
                     {
-                        await connection.InvokeAsync("Heartbeat", DateTime.UtcNow, TimeZoneInfo.Local.Id, stoppingToken);
+                        await connection.InvokeAsync("Heartbeat", DateTime.UtcNow, TimeZoneInfo.Local.Id, ClientVersion, stoppingToken);
+                        if (_overrides.HasPending)
+                            await _overrides.SyncPendingAsync(_options, stoppingToken);
                     }
                     catch (Exception ex)
                     {

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using OpControl.Parental.Contracts;
-using OpControl.Parental.Server.Hubs;
+using OpControl.Parental.Server.Data;
 
 namespace OpControl.Parental.Server.Services;
 
@@ -40,44 +41,44 @@ public sealed class DevicePresenceService
             return _connections.TryGetValue(deviceId, out var state) && state.Count > 0;
     }
 
-    public async Task ConnectedAsync(Guid deviceId, Guid familyId, Guid childId, string name, DevicePlatform platform, string? timeZoneId)
+    public async Task ConnectedAsync(Device device)
     {
         lock (_gate)
         {
-            if (!_connections.TryGetValue(deviceId, out var state))
-                _connections[deviceId] = state = new ConnectionState();
+            if (!_connections.TryGetValue(device.Id, out var state))
+                _connections[device.Id] = state = new ConnectionState();
             state.Count++;
             state.LastSeenUtc = DateTime.UtcNow;
         }
 
-        await UpdateLastSeenAsync(deviceId, DateTime.UtcNow);
-        _events.PublishDeviceStatus(new DeviceStatusDto(deviceId, childId, name, platform, true, DateTime.UtcNow, timeZoneId));
-        _logger.LogInformation("Device {DeviceId} connected", deviceId);
+        await UpdateLastSeenAsync(device.Id, DateTime.UtcNow);
+        _events.PublishDeviceStatus(await StatusAsync(device.Id, true));
+        _logger.LogInformation("Device {DeviceId} connected", device.Id);
     }
 
-    public async Task DisconnectedAsync(Guid deviceId, Guid childId, string name, DevicePlatform platform, string? timeZoneId)
+    public async Task DisconnectedAsync(Device device)
     {
         var now = DateTime.UtcNow;
         var online = false;
         lock (_gate)
         {
-            if (_connections.TryGetValue(deviceId, out var state))
+            if (_connections.TryGetValue(device.Id, out var state))
             {
                 state.Count--;
                 state.LastSeenUtc = now;
                 if (state.Count > 0)
                     online = true;
                 else
-                    _connections.Remove(deviceId);
+                    _connections.Remove(device.Id);
             }
         }
 
-        await UpdateLastSeenAsync(deviceId, now);
-        _events.PublishDeviceStatus(new DeviceStatusDto(deviceId, childId, name, platform, online, now, timeZoneId));
-        _logger.LogInformation("Device {DeviceId} disconnected (online={Online})", deviceId, online);
+        await UpdateLastSeenAsync(device.Id, now);
+        _events.PublishDeviceStatus(await StatusAsync(device.Id, online));
+        _logger.LogInformation("Device {DeviceId} disconnected (online={Online})", device.Id, online);
     }
 
-    public async Task HeartbeatAsync(Guid deviceId, DateTime utc, string? timeZoneId)
+    public async Task HeartbeatAsync(Guid deviceId, DateTime utc, string? timeZoneId, string? clientVersion)
     {
         lock (_gate)
         {
@@ -92,7 +93,23 @@ public sealed class DevicePresenceService
         device.LastSeenUtc = utc.Kind == DateTimeKind.Utc ? utc : utc.ToUniversalTime();
         if (!string.IsNullOrWhiteSpace(timeZoneId) && device.TimeZoneId != timeZoneId)
             device.TimeZoneId = timeZoneId!;
+        if (!string.IsNullOrWhiteSpace(clientVersion) && device.ClientVersion != clientVersion)
+            device.ClientVersion = clientVersion;
         await db.SaveChangesAsync();
+    }
+
+    public async Task<DeviceStatusDto> StatusAsync(Guid deviceId, bool online)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<Data.ParentalDbContext>();
+        var device = await db.Devices.AsNoTracking().FirstOrDefaultAsync(d => d.Id == deviceId);
+        if (device is null)
+            return new DeviceStatusDto(deviceId, Guid.Empty, "", DevicePlatform.Windows, online, null, null, null, null);
+        var account = await db.DeviceAccounts.AsNoTracking()
+            .Where(a => a.DeviceId == deviceId)
+            .Select(a => a.OsAccountName)
+            .FirstOrDefaultAsync();
+        return new DeviceStatusDto(device.Id, device.ChildId, device.Name, device.Platform, online, device.LastSeenUtc, device.TimeZoneId, account, device.ClientVersion);
     }
 
     private async Task UpdateLastSeenAsync(Guid deviceId, DateTime utc)

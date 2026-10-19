@@ -11,11 +11,13 @@ public class LoginModel : PageModel
 {
     private readonly SignInManager<ParentUser> _signIn;
     private readonly ParentalDbContext _db;
+    private readonly Services.LoginThrottle _throttle;
 
-    public LoginModel(SignInManager<ParentUser> signIn, ParentalDbContext db)
+    public LoginModel(SignInManager<ParentUser> signIn, ParentalDbContext db, Services.LoginThrottle throttle)
     {
         _signIn = signIn;
         _db = db;
+        _throttle = throttle;
     }
 
     [BindProperty]
@@ -46,10 +48,27 @@ public class LoginModel : PageModel
         if (!ModelState.IsValid)
             return Page();
 
+        var key = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        if (_throttle.IsBlocked(key))
+        {
+            Response.StatusCode = 429;
+            Error = "Too many sign-in attempts. Try again in a few minutes.";
+            return Page();
+        }
+
         var result = await _signIn.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: true);
         if (result.Succeeded)
+        {
+            _throttle.Reset(key);
             return LocalRedirect("/");
+        }
+        if (result.RequiresTwoFactor)
+        {
+            _throttle.Reset(key);
+            return RedirectToPage("/LoginTwoFactor", new { rememberMe = Input.RememberMe });
+        }
 
+        _throttle.RecordFailure(key);
         Error = result.IsLockedOut ? "This account is temporarily locked." : "Email or password is incorrect.";
         return Page();
     }

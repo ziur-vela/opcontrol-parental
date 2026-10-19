@@ -33,7 +33,8 @@
                     <span class="status-dot @(device.Online ? "online" : "offline")"></span>
                     <div class="device-main">
                         <div class="device-name">@device.Name</div>
-                        <div class="muted tiny">@device.Platform · @(device.TimeZoneId ?? "UTC")</div>
+                        <div class="muted tiny">@device.Platform · @(device.TimeZoneId ?? "UTC") · @(device.OsAccountName ?? "account not reported")</div>
+                        <div class="muted tiny">@(string.IsNullOrWhiteSpace(device.ClientVersion) ? "version unknown" : "client " + device.ClientVersion)</div>
                     </div>
                     <div class="device-meta">
                         <div class="small">@(device.Online ? "Online" : "Offline")</div>
@@ -64,7 +65,13 @@
         using var scope = Scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
         var devices = await db.Devices.AsNoTracking().Where(d => d.FamilyId == _familyId).OrderBy(d => d.Name).ToListAsync();
-        _devices = devices.Select(d => new DeviceStatusDto(d.Id, d.ChildId, d.Name, d.Platform, Presence.IsOnline(d.Id), d.LastSeenUtc, d.TimeZoneId)).ToList();
+        var ids = devices.Select(d => d.Id).ToList();
+        var accounts = await db.DeviceAccounts.AsNoTracking()
+            .Where(a => ids.Contains(a.DeviceId))
+            .GroupBy(a => a.DeviceId)
+            .Select(g => new { DeviceId = g.Key, Account = g.Select(a => a.OsAccountName).FirstOrDefault() })
+            .ToDictionaryAsync(x => x.DeviceId, x => x.Account);
+        _devices = devices.Select(d => new DeviceStatusDto(d.Id, d.ChildId, d.Name, d.Platform, Presence.IsOnline(d.Id), d.LastSeenUtc, d.TimeZoneId, accounts.GetValueOrDefault(d.Id), d.ClientVersion)).ToList();
     }
 
     public ValueTask DisposeAsync()

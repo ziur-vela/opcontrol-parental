@@ -93,7 +93,9 @@ if (!string.IsNullOrWhiteSpace(dataProtectionPath))
     builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(dataProtectionPath));
 }
 
+builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<LoginThrottle>();
 builder.Services.AddScoped<FamilyScope>();
 builder.Services.AddScoped<DeviceAuthService>();
 builder.Services.AddScoped<EnrollmentService>();
@@ -199,6 +201,44 @@ app.MapPost("/api/children/{childId:guid}/bonus", async (Guid childId, BonusRequ
     return Results.Ok(state);
 }).RequireAuthorization();
 
+app.MapPost("/api/children/{childId:guid}/pin", async (Guid childId, PinRequest request, HttpContext context, IAntiforgery antiforgery, FamilyScope family, LockService locks, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    try
+    {
+        await locks.SetPinAsync(family.FamilyId, childId, request.Pin, ct);
+        return Results.Ok(new { ok = true });
+    }
+    catch (Exception ex) when (ex is InvalidOperationException or UnauthorizedAccessException)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/children/{childId:guid}/pin/clear", async (Guid childId, HttpContext context, IAntiforgery antiforgery, FamilyScope family, LockService locks, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    await locks.ClearPinAsync(family.FamilyId, childId, ct);
+    return Results.Ok(new { ok = true });
+}).RequireAuthorization();
+
+app.MapPost("/api/device/override", async (DeviceOverrideRequest request, ClaimsPrincipal user, ParentalDbContext db, LockService locks, CancellationToken ct) =>
+{
+    var value = user.FindFirstValue(ParentalClaims.DeviceId);
+    if (!Guid.TryParse(value, out var deviceId)) return Results.Unauthorized();
+    var device = await db.Devices.FirstOrDefaultAsync(d => d.Id == deviceId && !d.IsRevoked, ct);
+    if (device is null) return Results.Unauthorized();
+    try
+    {
+        var state = await locks.ApplyDeviceOverrideAsync(device, request, ct);
+        return Results.Ok(state);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
+
 app.MapPost("/api/enrollment-codes", async (EnrollmentCodeRequest request, HttpContext context, IAntiforgery antiforgery, FamilyScope family, EnrollmentService enrollment, CancellationToken ct) =>
 {
     await antiforgery.ValidateRequestAsync(context);
@@ -217,3 +257,4 @@ app.Run();
 
 public sealed record BonusRequest(int Minutes);
 public sealed record EnrollmentCodeRequest(Guid ChildId);
+public sealed record PinRequest(string Pin);

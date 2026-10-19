@@ -25,14 +25,50 @@ public enum RuleAction
     Allowed = 1
 }
 
+public sealed record ScheduleDto(
+    Guid Id,
+    string Name,
+    int DaysMask,
+    int StartMinutes,
+    int EndMinutes,
+    bool IsEnabled);
+
+public sealed record DeviceStateDto(
+    Guid ChildId,
+    string ChildName,
+    string? ParentDisplayName,
+    bool ManualLock,
+    DateTime? UnlockUntilUtc,
+    DateTime? BonusUntilUtc,
+    int? BonusMinutes,
+    string? OverridePinHash,
+    IReadOnlyList<ScheduleDto> Schedules,
+    DateTime ServerUtc);
+
 public sealed record LockStateDto(
     Guid ChildId,
     bool IsLocked,
     bool ManualLock,
     DateTime? UnlockUntilUtc,
     DateTime? BonusUntilUtc,
+    int? BonusMinutes,
+    DateTime? EndsUtc,
     DateTime ServerUtc,
-    string Reason);
+    string Reason,
+    string? ScheduleName);
+
+public sealed record RuntimeLockStateDto(
+    Guid ChildId,
+    string ChildName,
+    string? ParentDisplayName,
+    bool IsLocked,
+    string Reason,
+    string? ScheduleName,
+    DateTime? EndsUtc,
+    DateTime? NextLockUtc,
+    DateTime? BonusUntilUtc,
+    int? BonusMinutes,
+    DateTime UpdatedUtc);
 
 public sealed record DeviceStatusDto(
     Guid DeviceId,
@@ -41,7 +77,9 @@ public sealed record DeviceStatusDto(
     DevicePlatform Platform,
     bool Online,
     DateTime? LastSeenUtc,
-    string? TimeZoneId);
+    string? TimeZoneId,
+    string? OsAccountName,
+    string? ClientVersion);
 
 public sealed record EnrollRequest(
     string Code,
@@ -67,6 +105,16 @@ public sealed record HeartbeatRequest(
     DateTime Utc,
     string? TimeZoneId);
 
+public sealed record DeviceOverrideRequest(
+    string Option,
+    int? Minutes);
+
+public sealed record OverrideEventDto(
+    Guid Id,
+    string Option,
+    int? Minutes,
+    DateTime CreatedUtc);
+
 public static class DeviceGroups
 {
     public static string Device(Guid deviceId) => $"device:{deviceId:N}";
@@ -75,5 +123,21 @@ public static class DeviceGroups
 
 public static class DeviceHubMethods
 {
-    public const string LockStateChanged = "LockStateChanged";
+    public const string DeviceStateChanged = "DeviceStateChanged";
 }
+
+public sealed record PinPipeRequest(
+    string Type,
+    string? Pin = null,
+    string? Option = null,
+    int? Minutes = null,
+    string? Ticket = null);
+
+public sealed record PinPipeResponse(
+    bool Ok,
+    string? Error = null,
+    bool LockedOut = false,
+    int? RemainingSeconds = null,
+    int? AttemptsRemaining = null,
+    string? Ticket = null,
+    RuntimeLockStateDto? State = null);

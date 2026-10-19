@@ -14,6 +14,9 @@ public class FoundationTests
             .UseInMemoryDatabase("test-" + Guid.NewGuid())
             .Options);
 
+    private static ScheduleDto Schedule(int mask, int start, int end, string name = "Bedtime", bool enabled = true) =>
+        new(Guid.NewGuid(), name, mask, start, end, enabled);
+
     [Fact]
     public void Hash_is_stable_and_codes_are_normalized()
     {
@@ -25,20 +28,24 @@ public class FoundationTests
     }
 
     [Fact]
+    public void Pin_hash_verifies_and_rejects_wrong_pin()
+    {
+        var hash = PinHasher.Hash("4821");
+        Assert.True(PinHasher.Verify(hash, "4821"));
+        Assert.False(PinHasher.Verify(hash, "4822"));
+        Assert.False(PinHasher.Verify(null, "4821"));
+        Assert.False(PinHasher.Verify("bogus", "4821"));
+    }
+
+    [Fact]
     public void Bonus_overrides_manual_lock_then_relocks()
     {
         var now = new DateTime(2026, 10, 18, 12, 0, 0, DateTimeKind.Utc);
-        var state = new LockState
-        {
-            ManualLock = true,
-            BonusUntilUtc = now.AddMinutes(15)
-        };
-
-        var during = LockEvaluator.Evaluate(state, Array.Empty<Schedule>(), TimeZoneInfo.Utc, now.AddMinutes(5));
+        var during = LockRules.Evaluate(true, null, now.AddMinutes(15), [], TimeZoneInfo.Utc, now.AddMinutes(5));
         Assert.False(during.IsLocked);
         Assert.Equal("bonus", during.Reason);
 
-        var after = LockEvaluator.Evaluate(state, Array.Empty<Schedule>(), TimeZoneInfo.Utc, now.AddMinutes(16));
+        var after = LockRules.Evaluate(true, null, now.AddMinutes(15), [], TimeZoneInfo.Utc, now.AddMinutes(16));
         Assert.True(after.IsLocked);
         Assert.Equal("manual", after.Reason);
     }
@@ -47,28 +54,42 @@ public class FoundationTests
     public void Manual_lock_and_unlock_override_are_evaluated_in_order()
     {
         var now = new DateTime(2026, 10, 18, 12, 0, 0, DateTimeKind.Utc);
-        var state = new LockState { ManualLock = true, UnlockUntilUtc = now.AddMinutes(10) };
-
-        Assert.False(LockEvaluator.Evaluate(state, Array.Empty<Schedule>(), TimeZoneInfo.Utc, now).IsLocked);
-        Assert.True(LockEvaluator.Evaluate(state, Array.Empty<Schedule>(), TimeZoneInfo.Utc, now.AddMinutes(11)).IsLocked);
-
-        state.ManualLock = false;
-        state.UnlockUntilUtc = null;
-        Assert.False(LockEvaluator.Evaluate(state, Array.Empty<Schedule>(), TimeZoneInfo.Utc, now).IsLocked);
+        Assert.False(LockRules.Evaluate(true, now.AddMinutes(10), null, [], TimeZoneInfo.Utc, now).IsLocked);
+        Assert.True(LockRules.Evaluate(true, now.AddMinutes(10), null, [], TimeZoneInfo.Utc, now.AddMinutes(11)).IsLocked);
+        Assert.False(LockRules.Evaluate(false, null, null, [], TimeZoneInfo.Utc, now).IsLocked);
     }
 
     [Fact]
     public void Overnight_schedule_spans_midnight()
     {
         var monday = new DateTime(2026, 10, 19, 23, 0, 0, DateTimeKind.Utc);
-        var schedules = new List<Schedule>
-        {
-            new() { DaysMask = 1 << 1, StartMinutes = 22 * 60, EndMinutes = 6 * 60, IsEnabled = true }
-        };
+        var schedules = new[] { Schedule(1 << 1, 22 * 60, 6 * 60) };
 
-        Assert.True(LockEvaluator.IsScheduleActive(schedules, TimeZoneInfo.Utc, monday));
-        Assert.True(LockEvaluator.IsScheduleActive(schedules, TimeZoneInfo.Utc, monday.AddHours(6)));
-        Assert.False(LockEvaluator.IsScheduleActive(schedules, TimeZoneInfo.Utc, monday.AddHours(13)));
+        Assert.True(LockRules.ActiveSchedule(schedules, TimeZoneInfo.Utc, monday) is not null);
+        Assert.True(LockRules.ActiveSchedule(schedules, TimeZoneInfo.Utc, monday.AddHours(6)) is not null);
+        Assert.Null(LockRules.ActiveSchedule(schedules, TimeZoneInfo.Utc, monday.AddHours(13)));
+    }
+
+    [Fact]
+    public void Next_lock_cycle_uses_current_window_end_then_next_start()
+    {
+        var mondayNight = new DateTime(2026, 10, 19, 23, 0, 0, DateTimeKind.Utc);
+        var schedules = new[] { Schedule(1 << 1, 22 * 60, 6 * 60) };
+
+        var cycle = LockRules.NextLockCycleUtc(schedules, TimeZoneInfo.Utc, mondayNight);
+        Assert.Equal(new DateTime(2026, 10, 20, 6, 0, 0, DateTimeKind.Utc), cycle);
+
+        var mondayNoon = new DateTime(2026, 10, 19, 12, 0, 0, DateTimeKind.Utc);
+        var next = LockRules.NextLockCycleUtc(schedules, TimeZoneInfo.Utc, mondayNoon);
+        Assert.Equal(new DateTime(2026, 10, 19, 22, 0, 0, DateTimeKind.Utc), next);
+    }
+
+    [Fact]
+    public void Countdown_uses_bonus_expiry_when_bonus_is_active()
+    {
+        var now = new DateTime(2026, 10, 18, 12, 0, 0, DateTimeKind.Utc);
+        var next = LockRules.NextLockUtc(true, null, now.AddMinutes(30), [], TimeZoneInfo.Utc, now);
+        Assert.Equal(now.AddMinutes(30), next);
     }
 
     [Fact]
@@ -84,7 +105,7 @@ public class FoundationTests
 
         var service = new EnrollmentService(db, NullLogger<EnrollmentService>.Instance);
         var (code, _) = await service.CreateCodeAsync(family.Id, child.Id, Guid.NewGuid());
-        var response = await service.RedeemAsync(new EnrollRequest(code, "Test device", DevicePlatform.Windows, "10", "UTC", "Ziur"));
+        var response = await service.RedeemAsync(new EnrollRequest(code, "Test device", DevicePlatform.Windows, "10", "UTC", "Emma"));
 
         Assert.Equal(family.Id, (await db.Devices.SingleAsync()).FamilyId);
         Assert.Equal(child.Id, response.ChildId);
@@ -107,8 +128,7 @@ public class FoundationTests
         await db.SaveChangesAsync();
 
         var service = new EnrollmentService(db, NullLogger<EnrollmentService>.Instance);
-        await Assert.ThrowsAsync<EnrollmentException>(() =>
-            service.CreateCodeAsync(familyA.Id, childB.Id, Guid.NewGuid()));
+        await Assert.ThrowsAsync<EnrollmentException>(() => service.CreateCodeAsync(familyA.Id, childB.Id, Guid.NewGuid()));
     }
 
     [Fact]

@@ -9,6 +9,8 @@ public sealed class ClientOptions
     public string? EnrollmentCode { get; set; }
     public string? DeviceName { get; set; }
     public string? OsAccountName { get; set; }
+    public string MonitoredAccount { get; set; } = "Emma";
+    public string? HelperPath { get; set; }
 
     public static ClientOptions Load()
     {
@@ -25,7 +27,9 @@ public sealed class ClientOptions
         {
             ServerUrl = ServerUrl,
             DeviceName = DeviceName,
-            OsAccountName = OsAccountName
+            OsAccountName = OsAccountName,
+            MonitoredAccount = MonitoredAccount,
+            HelperPath = HelperPath
         };
         ClientPaths.EnsureDataDirectory();
         File.WriteAllText(ClientPaths.ConfigFile, JsonSerializer.Serialize(copy, JsonOptions));
@@ -46,11 +50,33 @@ public static class ClientPaths
 
     public static string ConfigFile => Path.Combine(DataDirectory, "config.json");
     public static string PrivateDirectory => Path.Combine(DataDirectory, "private");
+    public static string PublicDirectory => Path.Combine(DataDirectory, "public");
+    public static string UserDirectory => Path.Combine(DataDirectory, "user");
     public static string CredentialFile => Path.Combine(PrivateDirectory, "device.json");
-    public static string StateFile => Path.Combine(DataDirectory, "state.json");
-    public static string LogFile => Path.Combine(DataDirectory, "service.log");
+    public static string DeviceStateFile => Path.Combine(PrivateDirectory, "device-state.json");
+    public static string LockoutFile => Path.Combine(PrivateDirectory, "lockout.json");
+    public static string OverrideQueueFile => Path.Combine(PrivateDirectory, "override-queue.jsonl");
+    public static string PolicyStateFile => Path.Combine(PrivateDirectory, "taskmgr-policy.json");
+    public static string StateFile => Path.Combine(PublicDirectory, "state.json");
+    public static string LogFile => Path.Combine(PublicDirectory, "service.log");
+    public static string HelperStatusFile => Path.Combine(UserDirectory, "helper-status.json");
+    public static string HelperEventsFile => Path.Combine(UserDirectory, "helper-events.log");
 
-    public static void EnsureDataDirectory() => Directory.CreateDirectory(DataDirectory);
+    public static void EnsureDataDirectory()
+    {
+        Directory.CreateDirectory(DataDirectory);
+        Directory.CreateDirectory(PrivateDirectory);
+        Directory.CreateDirectory(PublicDirectory);
+        Directory.CreateDirectory(UserDirectory);
+    }
+
+    public static void EnsureDirectoriesWithAcl()
+    {
+        EnsureDataDirectory();
+        SecureFile.SystemOnlyDirectory(PrivateDirectory);
+        SecureFile.UsersReadOnlyDirectory(PublicDirectory);
+        SecureFile.UsersWritableDirectory(UserDirectory);
+    }
 }
 
 public sealed class DeviceCredential
@@ -74,14 +100,8 @@ public sealed class CredentialStore
         {
             if (!File.Exists(ClientPaths.CredentialFile))
                 return null;
-            try
-            {
-                return JsonSerializer.Deserialize<DeviceCredential>(File.ReadAllText(ClientPaths.CredentialFile), JsonOptions);
-            }
-            catch
-            {
-                return null;
-            }
+            try { return JsonSerializer.Deserialize<DeviceCredential>(File.ReadAllText(ClientPaths.CredentialFile), JsonOptions); }
+            catch { return null; }
         }
     }
 
@@ -106,8 +126,40 @@ public sealed class CredentialStore
     {
         lock (_gate)
         {
-            if (File.Exists(ClientPaths.CredentialFile))
-                File.Delete(ClientPaths.CredentialFile);
+            if (File.Exists(ClientPaths.CredentialFile)) File.Delete(ClientPaths.CredentialFile);
+        }
+    }
+}
+
+public sealed class DeviceStateStore
+{
+    private static readonly JsonSerializerOptions JsonOptions = new(ClientOptions.JsonOptions);
+    private readonly object _gate = new();
+
+    public Contracts.DeviceStateDto? Load()
+    {
+        lock (_gate)
+        {
+            if (!File.Exists(ClientPaths.DeviceStateFile)) return null;
+            try { return JsonSerializer.Deserialize<Contracts.DeviceStateDto>(File.ReadAllText(ClientPaths.DeviceStateFile), JsonOptions); }
+            catch { return null; }
+        }
+    }
+
+    public void Save(Contracts.DeviceStateDto state)
+    {
+        lock (_gate)
+        {
+            Directory.CreateDirectory(ClientPaths.PrivateDirectory);
+            SecureFile.SystemOnlyDirectory(ClientPaths.PrivateDirectory);
+            var temp = ClientPaths.DeviceStateFile + ".tmp";
+            using (var stream = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                SecureFile.SystemOnly(temp);
+                JsonSerializer.Serialize(stream, state, JsonOptions);
+            }
+            File.Move(temp, ClientPaths.DeviceStateFile, overwrite: true);
+            SecureFile.SystemOnly(ClientPaths.DeviceStateFile);
         }
     }
 }
@@ -117,32 +169,15 @@ public sealed class StateStore
     private static readonly JsonSerializerOptions JsonOptions = new(ClientOptions.JsonOptions);
     private readonly object _gate = new();
 
-    public void Save(Contracts.LockStateDto state)
+    public void Save(Contracts.RuntimeLockStateDto state)
     {
         lock (_gate)
         {
-            ClientPaths.EnsureDataDirectory();
+            Directory.CreateDirectory(ClientPaths.PublicDirectory);
             var temp = ClientPaths.StateFile + ".tmp";
             File.WriteAllText(temp, JsonSerializer.Serialize(state, JsonOptions));
             File.Move(temp, ClientPaths.StateFile, overwrite: true);
             SecureFile.UsersReadable(ClientPaths.StateFile);
-        }
-    }
-
-    public Contracts.LockStateDto? Load()
-    {
-        lock (_gate)
-        {
-            if (!File.Exists(ClientPaths.StateFile))
-                return null;
-            try
-            {
-                return JsonSerializer.Deserialize<Contracts.LockStateDto>(File.ReadAllText(ClientPaths.StateFile), JsonOptions);
-            }
-            catch
-            {
-                return null;
-            }
         }
     }
 }
@@ -154,6 +189,12 @@ public static class SecureFile
 
     public static void SystemOnlyDirectory(string path) =>
         RunIcacls($"\"{path}\" /inheritance:r /grant:r \"SYSTEM:(OI)(CI)F\" \"Administrators:(OI)(CI)F\"");
+
+    public static void UsersReadOnlyDirectory(string path) =>
+        RunIcacls($"\"{path}\" /inheritance:r /grant:r \"SYSTEM:(OI)(CI)F\" \"Administrators:(OI)(CI)F\" \"Users:(OI)(CI)RX\"");
+
+    public static void UsersWritableDirectory(string path) =>
+        RunIcacls($"\"{path}\" /inheritance:r /grant:r \"SYSTEM:(OI)(CI)F\" \"Administrators:(OI)(CI)F\" \"Users:(OI)(CI)M\"");
 
     public static void UsersReadable(string path) =>
         RunIcacls($"\"{path}\" /inheritance:r /grant:r \"SYSTEM:F\" \"Administrators:F\" \"Users:R\"");
@@ -174,8 +215,6 @@ public static class SecureFile
             });
             process?.WaitForExit(10000);
         }
-        catch
-        {
-        }
+        catch { }
     }
 }

@@ -1,0 +1,73 @@
+@page "/schedules"
+@model SchedulesModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Lock schedules";
+}
+<div class="page-head">
+    <div>
+        <div class="eyebrow">@Model.ChildName</div>
+        <h1>Lock schedules</h1>
+        <p class="muted">Schedules apply to every device assigned to this child. Overnight windows are supported.</p>
+    </div>
+</div>
+
+@if (Model.Error is not null)
+{
+    <div class="alert danger">@Model.Error</div>
+}
+
+<div class="grid-2">
+    <div class="card">
+        <h2>Add a schedule</h2>
+        <form method="post" asp-page-handler="Add" class="stack">
+            <input type="hidden" asp-for="ChildId" />
+            <label class="field"><span>Name</span><input asp-for="NewName" placeholder="Bedtime" /></label>
+            <div class="field">
+                <span>Days</span>
+                <div class="day-grid">
+                    @for (var i = 0; i < 7; i++)
+                    {
+                        <label class="check"><input type="checkbox" name="Days" value="@i" /> @SchedulesModel.DayNames[i]</label>
+                    }
+                </div>
+            </div>
+            <div class="time-grid">
+                <label class="field"><span>Start</span><input asp-for="NewStart" type="time" /></label>
+                <label class="field"><span>End</span><input asp-for="NewEnd" type="time" /></label>
+            </div>
+            <p class="muted tiny">Example: 21:00 to 07:00 is an overnight window.</p>
+            <button type="submit" class="btn btn-primary">Add schedule</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <div class="card-title-row"><h2>Schedules</h2><span class="pill-soft">@Model.Schedules.Count</span></div>
+        @if (Model.Schedules.Count == 0)
+        {
+            <p class="muted">No schedules yet.</p>
+        }
+        else
+        {
+            <div class="schedule-list">
+                @foreach (var schedule in Model.Schedules)
+                {
+                    <div class="schedule-row">
+                        <div class="device-main">
+                            <div class="device-name">@schedule.Name</div>
+                            <div class="muted tiny">@SchedulesModel.DaysLabel(schedule.DaysMask) · @SchedulesModel.TimeLabel(schedule.StartMinutes) – @SchedulesModel.TimeLabel(schedule.EndMinutes)</div>
+                        </div>
+                        <form method="post" asp-page-handler="Toggle" class="inline-form">
+                            <input type="hidden" name="id" value="@schedule.Id" />
+                            <button class="btn @(schedule.IsEnabled ? "btn-primary" : "btn-ghost")" type="submit">@(schedule.IsEnabled ? "Enabled" : "Disabled")</button>
+                        </form>
+                        <form method="post" asp-page-handler="Delete" class="inline-form" onsubmit="return confirm('Delete this schedule?');">
+                            <input type="hidden" name="id" value="@schedule.Id" />
+                            <button class="ghost-btn" type="submit">Delete</button>
+                        </form>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>

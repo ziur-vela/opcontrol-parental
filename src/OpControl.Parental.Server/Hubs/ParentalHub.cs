@@ -36,10 +36,10 @@ public sealed class ParentalHub : Hub
 
         await Groups.AddToGroupAsync(Context.ConnectionId, DeviceGroups.Device(device.Id));
         await Groups.AddToGroupAsync(Context.ConnectionId, DeviceGroups.Child(device.ChildId));
-        await _presence.ConnectedAsync(device.Id, device.FamilyId, device.ChildId, device.Name, device.Platform, device.TimeZoneId);
+        await _presence.ConnectedAsync(device);
 
-        var state = await _locks.GetStateAsync(device.FamilyId, device.ChildId, device.TimeZoneId);
-        await Clients.Caller.SendAsync(DeviceHubMethods.LockStateChanged, state);
+        var state = await _locks.GetDeviceStateAsync(device.FamilyId, device.ChildId);
+        await Clients.Caller.SendAsync(DeviceHubMethods.DeviceStateChanged, state);
 
         _logger.LogInformation("Device {DeviceId} ({DeviceName}) connected on {ConnectionId}", device.Id, device.Name, Context.ConnectionId);
         await base.OnConnectedAsync();
@@ -50,18 +50,18 @@ public sealed class ParentalHub : Hub
         var device = await CurrentDeviceAsync();
         if (device is not null)
         {
-            await _presence.DisconnectedAsync(device.Id, device.ChildId, device.Name, device.Platform, device.TimeZoneId);
+            await _presence.DisconnectedAsync(device);
             _logger.LogInformation("Device {DeviceId} disconnected from {ConnectionId}", device.Id, Context.ConnectionId);
         }
 
         await base.OnDisconnectedAsync(exception);
     }
 
-    public Task Heartbeat(DateTime utc, string? timeZoneId)
+    public Task Heartbeat(DateTime utc, string? timeZoneId, string? clientVersion)
     {
         var value = Context.User?.FindFirstValue(ParentalClaims.DeviceId);
         return Guid.TryParse(value, out var deviceId)
-            ? _presence.HeartbeatAsync(deviceId, utc, timeZoneId)
+            ? _presence.HeartbeatAsync(deviceId, utc, timeZoneId, clientVersion)
             : Task.CompletedTask;
     }
 
