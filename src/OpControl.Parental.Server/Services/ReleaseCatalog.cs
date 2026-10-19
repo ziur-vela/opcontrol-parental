@@ -54,6 +54,12 @@ public sealed class ReleaseCatalog
         lock (_gate) return _releases.FirstOrDefault(r => r.MsiPath is not null);
     }
 
+    public ReleaseFiles? CurrentSetup()
+    {
+        EnsureFresh();
+        lock (_gate) return _releases.FirstOrDefault(r => r.SetupPath is not null && File.Exists(r.SetupPath));
+    }
+
     public ReleaseFiles? Previous()
     {
         EnsureFresh();

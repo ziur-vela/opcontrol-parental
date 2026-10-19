@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
+using OpControl.Parental.Contracts;
 using OpControl.Parental.Server.Data;
 using OpControl.Parental.Server.Services;
 using System.Text.Encodings.Web;
@@ -14,6 +15,8 @@ public static class ParentalClaims
     public const string DisplayName = "display_name";
     public const string DeviceId = "device_id";
     public const string ChildId = "child_id";
+    public const string Permissions = "permissions";
+    public const string ServerAdmin = "server_admin";
 }
 
 public sealed class ParentUserClaimsPrincipalFactory : Microsoft.AspNetCore.Identity.UserClaimsPrincipalFactory<ParentUser, Microsoft.AspNetCore.Identity.IdentityRole<Guid>>
@@ -30,6 +33,8 @@ public sealed class ParentUserClaimsPrincipalFactory : Microsoft.AspNetCore.Iden
         identity.AddClaim(new Claim(ParentalClaims.FamilyId, user.FamilyId.ToString()));
         identity.AddClaim(new Claim(ParentalClaims.FamilyRole, user.RoleInFamily.ToString()));
         identity.AddClaim(new Claim(ParentalClaims.DisplayName, user.DisplayName));
+        identity.AddClaim(new Claim(ParentalClaims.Permissions, ((int)(user.RoleInFamily == FamilyRole.Owner ? ParentPermissions.All : user.Permissions)).ToString()));
+        identity.AddClaim(new Claim(ParentalClaims.ServerAdmin, user.IsServerAdmin ? "true" : "false"));
         return identity;
     }
 }

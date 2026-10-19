@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Mail;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using OpControl.Parental.Contracts;
 using OpControl.Parental.Server.Data;
 
 namespace OpControl.Parental.Server.Services;
@@ -11,13 +12,16 @@ public sealed class AlertService
     private readonly ParentalDbContext _db;
     private readonly DashboardEventBus _events;
     private readonly IDataProtector _protector;
+    private readonly EmailSender _serverEmail;
     private readonly ILogger<AlertService> _logger;
 
-    public AlertService(ParentalDbContext db, DashboardEventBus events, IDataProtectionProvider protection, ILogger<AlertService> logger)
+    public AlertService(ParentalDbContext db, DashboardEventBus events, IDataProtectionProvider protection,
+        EmailSender serverEmail, ILogger<AlertService> logger)
     {
         _db = db;
         _events = events;
         _protector = protection.CreateProtector("OpControl.Parental.Smtp");
+        _serverEmail = serverEmail;
         _logger = logger;
     }
 
@@ -42,6 +46,18 @@ public sealed class AlertService
             Detail = detail.Length > 500 ? detail[..500] : detail,
             CreatedUtc = now
         };
+
+        var preferences = await EnsurePreferenceAsync(familyId, ct);
+        if (IsMuted(preferences, type))
+        {
+            alert.EmailedUtc = now;
+            alert.EmailLastError = "muted";
+        }
+        else
+        {
+            alert.NextEmailAttemptUtc = await NextEmailDueAsync(preferences, now, ct);
+        }
+
         _db.Alerts.Add(alert);
         await _db.SaveChangesAsync(ct);
         _events.PublishAlert(alert);
@@ -112,69 +128,219 @@ public sealed class AlertService
         catch { return null; }
     }
 
+    public async Task<AlertPreference> EnsurePreferenceAsync(Guid familyId, CancellationToken ct = default)
+    {
+        var preference = await _db.AlertPreferences.FirstOrDefaultAsync(p => p.FamilyId == familyId, ct);
+        if (preference is not null) return preference;
+        preference = new AlertPreference { FamilyId = familyId };
+        _db.AlertPreferences.Add(preference);
+        await _db.SaveChangesAsync(ct);
+        return preference;
+    }
+
+    public async Task SavePreferenceAsync(Guid familyId, AlertPreferencesDto dto, CancellationToken ct = default)
+    {
+        var preference = await EnsurePreferenceAsync(familyId, ct);
+        preference.MutedNewApp = dto.MutedNewApp;
+        preference.MutedRepeatedBlock = dto.MutedRepeatedBlock;
+        preference.MutedPinOverride = dto.MutedPinOverride;
+        preference.MutedLimit = dto.MutedLimit;
+        preference.MutedOffline = dto.MutedOffline;
+        preference.MutedTampering = dto.MutedTampering;
+        preference.QuietStartMinutes = Math.Clamp(dto.QuietStartMinutes, 0, 1439);
+        preference.QuietEndMinutes = Math.Clamp(dto.QuietEndMinutes, 0, 1439);
+        preference.DailyDigest = dto.DailyDigest;
+        preference.DigestHour = Math.Clamp(dto.DigestHour, 0, 23);
+        preference.UpdatedUtc = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public static AlertPreferencesDto ToDto(AlertPreference p) =>
+        new(p.MutedNewApp, p.MutedRepeatedBlock, p.MutedPinOverride, p.MutedLimit, p.MutedOffline, p.MutedTampering,
+            p.QuietStartMinutes, p.QuietEndMinutes, p.DailyDigest, p.DigestHour);
+
+    public static bool IsMuted(AlertPreference p, string type) => type switch
+    {
+        "new-app" => p.MutedNewApp,
+        "repeated-blocked-site" => p.MutedRepeatedBlock,
+        "pin-override" => p.MutedPinOverride,
+        "daily-limit" or "app-limit" => p.MutedLimit,
+        "device-offline" => p.MutedOffline,
+        "tampering" => p.MutedTampering,
+        _ => false
+    };
+
     public async Task<int> SendPendingEmailsAsync(Guid familyId, CancellationToken ct = default)
     {
         var settings = await _db.FamilySettings.AsNoTracking().FirstOrDefaultAsync(s => s.FamilyId == familyId, ct);
-        var pending = await _db.Alerts
-            .Where(a => a.FamilyId == familyId && a.EmailedUtc == null)
-            .OrderBy(a => a.CreatedUtc)
-            .Take(20)
-            .ToListAsync(ct);
-        if (pending.Count == 0) return 0;
-
-        if (settings is null || !settings.AlertEmailsEnabled || string.IsNullOrWhiteSpace(settings.SmtpHost) || string.IsNullOrWhiteSpace(settings.FromAddress))
+        if (settings is null || !settings.AlertEmailsEnabled)
         {
-            foreach (var alert in pending) alert.EmailedUtc = DateTime.UtcNow;
-            await _db.SaveChangesAsync(ct);
+            var unsent = await _db.Alerts.Where(a => a.FamilyId == familyId && a.EmailedUtc == null).ToListAsync(ct);
+            foreach (var alert in unsent) alert.EmailedUtc = DateTime.UtcNow;
+            if (unsent.Count > 0) await _db.SaveChangesAsync(ct);
             return 0;
         }
 
+        var now = DateTime.UtcNow;
+        var due = await _db.Alerts
+            .Where(a => a.FamilyId == familyId && a.EmailedUtc == null && (a.NextEmailAttemptUtc == null || a.NextEmailAttemptUtc <= now))
+            .OrderBy(a => a.CreatedUtc)
+            .Take(50)
+            .ToListAsync(ct);
+        if (due.Count == 0) return 0;
+
+        var preferences = await EnsurePreferenceAsync(familyId, ct);
         var recipients = await _db.Users.AsNoTracking()
             .Where(u => u.FamilyId == familyId && u.Email != null && u.Email != "")
             .Select(u => u.Email!)
             .ToListAsync(ct);
         if (recipients.Count == 0)
         {
-            foreach (var alert in pending) alert.EmailedUtc = DateTime.UtcNow;
+            foreach (var alert in due) alert.EmailedUtc = now;
             await _db.SaveChangesAsync(ct);
             return 0;
         }
 
-        var sent = 0;
-        foreach (var alert in pending)
+        if (preferences.DailyDigest)
         {
-            try
-            {
-                using var message = new MailMessage
-                {
-                    From = new MailAddress(settings.FromAddress),
-                    Subject = alert.Title,
-                    Body = $"{alert.Title}\n\n{alert.Detail}\n\n{alert.CreatedUtc:u}",
-                    IsBodyHtml = false
-                };
-                foreach (var address in recipients) message.To.Add(address);
-
-                using var client = new SmtpClient(settings.SmtpHost, settings.SmtpPort)
-                {
-                    EnableSsl = settings.SmtpUseSsl,
-                    DeliveryMethod = SmtpDeliveryMethod.Network,
-                    UseDefaultCredentials = false
-                };
-                var password = UnprotectPassword(settings);
-                if (!string.IsNullOrWhiteSpace(settings.SmtpUsername))
-                    client.Credentials = new NetworkCredential(settings.SmtpUsername, password ?? "");
-                await client.SendMailAsync(message, ct);
-                alert.EmailedUtc = DateTime.UtcNow;
-                sent++;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Alert email {AlertId} could not be sent", alert.Id);
-                alert.EmailedUtc = DateTime.UtcNow;
-            }
+            var sentDigest = await SendDigestAsync(familyId, settings, due, recipients, ct);
+            await _db.SaveChangesAsync(ct);
+            return sentDigest;
         }
 
+        var sent = 0;
+        foreach (var alert in due)
+        {
+            var (ok, error) = await SendOneAsync(settings, alert, recipients, ct);
+            if (ok)
+            {
+                alert.EmailedUtc = DateTime.UtcNow;
+                alert.EmailLastError = null;
+                sent++;
+            }
+            else
+            {
+                ScheduleRetry(alert, error);
+            }
+        }
         await _db.SaveChangesAsync(ct);
         return sent;
+    }
+
+    private async Task<int> SendDigestAsync(Guid familyId, FamilySettings settings, List<Alert> alerts, List<string> recipients, CancellationToken ct)
+    {
+        var body = new System.Text.StringBuilder();
+        body.AppendLine($"{alerts.Count} alert{(alerts.Count == 1 ? "" : "s")} for your family:");
+        body.AppendLine();
+        foreach (var alert in alerts)
+            body.AppendLine($"• {alert.Title}\n  {alert.Detail}\n  {alert.CreatedUtc:u}");
+        var (ok, error) = await SendMessageAsync(settings, recipients, "Parental OpControl daily digest", body.ToString(), ct);
+        if (!ok)
+        {
+            foreach (var alert in alerts) ScheduleRetry(alert, error);
+            return 0;
+        }
+        var now = DateTime.UtcNow;
+        foreach (var alert in alerts)
+        {
+            alert.EmailedUtc = now;
+            alert.EmailLastError = null;
+        }
+        return alerts.Count;
+    }
+
+    private async Task<(bool Ok, string? Error)> SendOneAsync(FamilySettings settings, Alert alert, List<string> recipients, CancellationToken ct)
+    {
+        var body = $"{alert.Title}\n\n{alert.Detail}\n\n{alert.CreatedUtc:u}";
+        return await SendMessageAsync(settings, recipients, alert.Title, body, ct);
+    }
+
+    private async Task<(bool Ok, string? Error)> SendMessageAsync(FamilySettings settings, List<string> recipients, string subject, string body, CancellationToken ct)
+    {
+        var server = await _serverEmail.EnsureSettingsAsync(ct);
+        if (_serverEmail.IsConfigured(server))
+        {
+            string? lastError = null;
+            foreach (var recipient in recipients)
+            {
+                var (sent, error) = await _serverEmail.SendAsync(recipient, subject, body, ct);
+                if (!sent) lastError = error;
+            }
+            return (lastError is null, lastError);
+        }
+
+        if (string.IsNullOrWhiteSpace(settings.SmtpHost) || string.IsNullOrWhiteSpace(settings.FromAddress))
+            return (false, "No SMTP server is configured.");
+
+        try
+        {
+            using var message = new MailMessage
+            {
+                From = new MailAddress(settings.FromAddress),
+                Subject = subject,
+                Body = body,
+                IsBodyHtml = false
+            };
+            foreach (var address in recipients) message.To.Add(address);
+            using var client = new SmtpClient(settings.SmtpHost, settings.SmtpPort)
+            {
+                EnableSsl = settings.SmtpUseSsl,
+                DeliveryMethod = SmtpDeliveryMethod.Network,
+                UseDefaultCredentials = false
+            };
+            var password = UnprotectPassword(settings);
+            if (!string.IsNullOrWhiteSpace(settings.SmtpUsername))
+                client.Credentials = new NetworkCredential(settings.SmtpUsername, password ?? "");
+            await client.SendMailAsync(message, ct);
+            return (true, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Alert email could not be sent");
+            return (false, ex.Message);
+        }
+    }
+
+    private static void ScheduleRetry(Alert alert, string? error)
+    {
+        alert.EmailAttempts++;
+        alert.EmailLastError = error is { Length: > 500 } ? error[..500] : error;
+        if (alert.EmailAttempts >= 6)
+        {
+            alert.EmailedUtc = DateTime.UtcNow;
+            return;
+        }
+        var minutes = Math.Min(60, (int)Math.Pow(2, alert.EmailAttempts));
+        alert.NextEmailAttemptUtc = DateTime.UtcNow.AddMinutes(minutes);
+    }
+
+    private async Task<DateTime?> NextEmailDueAsync(AlertPreference preference, DateTime nowUtc, CancellationToken ct)
+    {
+        var tzId = await _db.Devices.AsNoTracking()
+            .Where(d => d.FamilyId == preference.FamilyId)
+            .Select(d => d.TimeZoneId)
+            .FirstOrDefaultAsync(ct);
+        var tz = TimeZoneResolver.Resolve(tzId);
+        var local = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, tz);
+        var minutes = local.Hour * 60 + local.Minute;
+
+        var quiet = preference.QuietStartMinutes != preference.QuietEndMinutes
+            && (preference.QuietStartMinutes < preference.QuietEndMinutes
+                ? minutes >= preference.QuietStartMinutes && minutes < preference.QuietEndMinutes
+                : minutes >= preference.QuietStartMinutes || minutes < preference.QuietEndMinutes);
+        if (quiet)
+        {
+            var localEnd = local.Date.AddMinutes(preference.QuietEndMinutes);
+            if (preference.QuietStartMinutes > preference.QuietEndMinutes && minutes >= preference.QuietStartMinutes)
+                localEnd = localEnd.AddDays(1);
+            if (localEnd <= local) localEnd = localEnd.AddDays(1);
+            return UsageService.ToUtc(DateTime.SpecifyKind(localEnd, DateTimeKind.Unspecified), tz);
+        }
+
+        if (!preference.DailyDigest) return null;
+
+        var nextDigest = local.Date.AddHours(preference.DigestHour);
+        if (nextDigest <= local) nextDigest = nextDigest.AddDays(1);
+        return UsageService.ToUtc(DateTime.SpecifyKind(nextDigest, DateTimeKind.Unspecified), tz);
     }
 }

@@ -172,11 +172,20 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.Property<Guid?>("DeviceId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("EmailAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("EmailLastError")
+                        .HasColumnType("text");
+
                     b.Property<DateTime?>("EmailedUtc")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("FamilyId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("NextEmailAttemptUtc")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("ReadUtc")
                         .HasColumnType("timestamp with time zone");
@@ -195,6 +204,8 @@ namespace OpControl.Parental.Server.Data.Migrations
 
                     b.HasIndex("EmailedUtc");
 
+                    b.HasIndex("NextEmailAttemptUtc");
+
                     b.HasIndex("ChildId", "ReadUtc");
 
                     b.HasIndex("FamilyId", "CreatedUtc");
@@ -202,6 +213,50 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.HasIndex("ChildId", "Type", "CreatedUtc");
 
                     b.ToTable("Alerts");
+                });
+
+            modelBuilder.Entity("OpControl.Parental.Server.Data.AlertPreference", b =>
+                {
+                    b.Property<Guid>("FamilyId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("DailyDigest")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("DigestHour")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("MutedLimit")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("MutedNewApp")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("MutedOffline")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("MutedPinOverride")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("MutedRepeatedBlock")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("MutedTampering")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("QuietEndMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("QuietStartMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("FamilyId");
+
+                    b.ToTable("AlertPreferences");
                 });
 
             modelBuilder.Entity("OpControl.Parental.Server.Data.AppRule", b =>
@@ -715,6 +770,14 @@ namespace OpControl.Parental.Server.Data.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTime?>("SuspendedUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("Id");
 
                     b.ToTable("Families");
@@ -896,6 +959,71 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.ToTable("InstalledApps");
                 });
 
+            modelBuilder.Entity("OpControl.Parental.Server.Data.Invitation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CreatedByParentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CreatedFamilyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("ExpiresUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("FamilyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FamilyName")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<int>("Permissions")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("RevokedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("TokenProtected")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<DateTime?>("UsedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("Email", "UsedUtc");
+
+                    b.HasIndex("FamilyId", "Kind", "CreatedUtc");
+
+                    b.ToTable("Invitations");
+                });
+
             modelBuilder.Entity("OpControl.Parental.Server.Data.ItemBonus", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1050,6 +1178,9 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.Property<Guid>("FamilyId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("IsServerAdmin")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
 
@@ -1066,6 +1197,9 @@ namespace OpControl.Parental.Server.Data.Migrations
 
                     b.Property<string>("PasswordHash")
                         .HasColumnType("text");
+
+                    b.Property<int>("Permissions")
+                        .HasColumnType("integer");
 
                     b.Property<string>("PhoneNumber")
                         .HasColumnType("text");
@@ -1091,6 +1225,8 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("FamilyId");
+
+                    b.HasIndex("IsServerAdmin");
 
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
@@ -1275,6 +1411,84 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.HasIndex("FamilyId");
 
                     b.ToTable("ScreenTimeLimits");
+                });
+
+            modelBuilder.Entity("OpControl.Parental.Server.Data.ServerAdminAudit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("ActorEmail")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid?>("ActorParentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Detail")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("FamilyId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedUtc");
+
+                    b.ToTable("ServerAdminAudits");
+                });
+
+            modelBuilder.Entity("OpControl.Parental.Server.Data.ServerSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("FromAddress")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("FromName")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("SmtpHost")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("SmtpPasswordProtected")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<int>("SmtpPort")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("SmtpUseSsl")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SmtpUsername")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("UpdatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ServerSettings");
                 });
 
             modelBuilder.Entity("OpControl.Parental.Server.Data.UnaccountedInterval", b =>

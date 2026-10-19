@@ -15,6 +15,11 @@ public class FoundationTests
             .UseInMemoryDatabase("test-" + Guid.NewGuid())
             .Options);
 
+    private static AlertService NewAlerts(ParentalDbContext db) =>
+        new(db, new DashboardEventBus(), new EphemeralDataProtectionProvider(),
+            new EmailSender(db, new EphemeralDataProtectionProvider(), NullLogger<EmailSender>.Instance),
+            NullLogger<AlertService>.Instance);
+
     private static ScheduleDto Schedule(int mask, int start, int end, string name = "Bedtime", bool enabled = true) =>
         new(Guid.NewGuid(), name, mask, start, end, enabled);
 
@@ -237,6 +242,11 @@ public class Job3PolicyTests
 
 public class Job4UsageTests
 {
+    private static AlertService NewAlerts(ParentalDbContext db) =>
+        new(db, new DashboardEventBus(), new EphemeralDataProtectionProvider(),
+            new EmailSender(db, new EphemeralDataProtectionProvider(), NullLogger<EmailSender>.Instance),
+            NullLogger<AlertService>.Instance);
+
     private static DeviceStateDto State(
         IReadOnlyList<AppRuleDto>? apps = null,
         IReadOnlyList<AppDailyUsageDto>? usage = null,
@@ -317,7 +327,7 @@ public class Job4UsageTests
         db.AppRules.Add(new AppRule { FamilyId = family.Id, ChildId = child.Id, AppIdentity = "win32:school.exe|school", IsBlocked = false, Mode = RuleMode.Always, AlwaysAllowed = true });
         await db.SaveChangesAsync();
 
-        var service = new UsageService(db, new AlertService(db, new DashboardEventBus(), new EphemeralDataProtectionProvider(), NullLogger<AlertService>.Instance));
+        var service = new UsageService(db, NewAlerts(db));
         var start = new DateTime(2026, 10, 19, 12, 0, 0, DateTimeKind.Utc);
         var interval = new UsageIntervalDto(Guid.NewGuid(), "win32:brave.exe|brave", "Brave", start, 30, true);
         var school = new UsageIntervalDto(Guid.NewGuid(), "win32:school.exe|school", "School", start, 60, true);
@@ -349,7 +359,7 @@ public class Job4UsageTests
         db.Devices.Add(device);
         await db.SaveChangesAsync();
 
-        var alerts = new AlertService(db, new DashboardEventBus(), new EphemeralDataProtectionProvider(), NullLogger<AlertService>.Instance);
+        var alerts = NewAlerts(db);
         var service = new UsageService(db, alerts);
         var now = DateTime.UtcNow;
         var future = new UsageIntervalDto(Guid.NewGuid(), "win32:test.exe|test", "Test", now.AddHours(1), 60, true);
@@ -376,12 +386,134 @@ public class Job4UsageTests
         db.Devices.Add(device);
         await db.SaveChangesAsync();
 
-        var service = new UsageService(db, new AlertService(db, new DashboardEventBus(), new EphemeralDataProtectionProvider(), NullLogger<AlertService>.Instance));
+        var service = new UsageService(db, NewAlerts(db));
         var item = new UnaccountedIntervalDto(Guid.NewGuid(), DateTime.UtcNow.AddMinutes(-3), 120, "helper-down");
         await service.SyncUnaccountedAsync(device, new UnaccountedBatchRequest([item]));
         await service.SyncUnaccountedAsync(device, new UnaccountedBatchRequest([item]));
 
         Assert.Equal(1, await db.UnaccountedIntervals.CountAsync());
         Assert.Equal(120, await service.UnaccountedSecondsAsync(family.Id, child.Id, item.StartUtc.AddMinutes(-1), item.StartUtc.AddMinutes(5)));
+    }
+}
+
+
+public class Job5BMultiTenantTests
+{
+    private static ParentalDbContext NewDb() =>
+        new(new DbContextOptionsBuilder<ParentalDbContext>()
+            .UseInMemoryDatabase("job5b-" + Guid.NewGuid())
+            .Options);
+
+    private static AlertService Alerts(ParentalDbContext db) =>
+        new(db, new DashboardEventBus(), new EphemeralDataProtectionProvider(),
+            new EmailSender(db, new EphemeralDataProtectionProvider(), NullLogger<EmailSender>.Instance),
+            NullLogger<AlertService>.Instance);
+
+    private static (Family A, Child ChildA, Family B, Child ChildB) TwoFamilies()
+    {
+        var a = new Family { Name = "A" };
+        var childA = new Child { FamilyId = a.Id, Name = "A child" };
+        var b = new Family { Name = "B" };
+        var childB = new Child { FamilyId = b.Id, Name = "B child" };
+        return (a, childA, b, childB);
+    }
+
+    [Fact]
+    public async Task Cross_family_child_mutations_are_rejected()
+    {
+        await using var db = NewDb();
+        var (a, childA, b, childB) = TwoFamilies();
+        db.Families.AddRange(a, b);
+        db.Children.AddRange(childA, childB);
+        db.LockStates.Add(new LockState { FamilyId = a.Id, ChildId = childA.Id });
+        db.LockStates.Add(new LockState { FamilyId = b.Id, ChildId = childB.Id });
+        await db.SaveChangesAsync();
+
+        var locks = new LockService(db, null!, new DashboardEventBus(),
+            new RuleService(db, Alerts(db)), new UsageService(db, Alerts(db)), Alerts(db),
+            NullLogger<LockService>.Instance);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => locks.SetPinAsync(a.Id, childB.Id, "4821"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => locks.ClearPinAsync(a.Id, childB.Id));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => new RuleService(db, Alerts(db))
+            .AddItemBonusAsync(a.Id, childB.Id, Guid.NewGuid(), "site", "youtube.com", 5));
+        Assert.Null((await db.LockStates.SingleAsync(x => x.ChildId == childB.Id)).OverridePinHash);
+    }
+
+    [Fact]
+    public async Task Suspended_family_device_credentials_stop_working()
+    {
+        await using var db = NewDb();
+        var (a, childA, _, _) = TwoFamilies();
+        var token = SecretToken.NewToken();
+        db.Families.Add(a);
+        db.Children.Add(childA);
+        db.Devices.Add(new Device
+        {
+            FamilyId = a.Id, ChildId = childA.Id, Name = "D",
+            CredentialHash = SecretToken.Hash(token), CredentialExpiresUtc = DateTime.UtcNow.AddDays(30)
+        });
+        await db.SaveChangesAsync();
+
+        var auth = new DeviceAuthService(db);
+        Assert.NotNull(await auth.ValidateAsync(token, CancellationToken.None));
+
+        a.Status = FamilyStatus.Suspended;
+        await db.SaveChangesAsync();
+        Assert.Null(await auth.ValidateAsync(token, CancellationToken.None));
+
+        a.Status = FamilyStatus.Active;
+        await db.SaveChangesAsync();
+        Assert.NotNull(await auth.ValidateAsync(token, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Invitation_is_single_use_expiring_and_bound_to_kind()
+    {
+        await using var db = NewDb();
+        var (a, childA, _, _) = TwoFamilies();
+        db.Families.Add(a);
+        db.Children.Add(childA);
+        await db.SaveChangesAsync();
+
+        var protection = new EphemeralDataProtectionProvider();
+        var email = new EmailSender(db, protection, NullLogger<EmailSender>.Instance);
+        var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build();
+        var service = new InvitationService(db, null!, email, protection, config, NullLogger<InvitationService>.Instance);
+
+        var created = await service.CreateCoParentAsync(a.Id, Guid.NewGuid(), null, ParentPermissions.ViewReports);
+        Assert.Null(created.Email);
+        Assert.False(created.EmailSent);
+        Assert.NotNull(await service.FindValidAsync(created.Token));
+
+        var invitation = await db.Invitations.SingleAsync();
+        invitation.ExpiresUtc = DateTime.UtcNow.AddMinutes(-1);
+        await db.SaveChangesAsync();
+        Assert.Null(await service.FindValidAsync(created.Token));
+    }
+
+    [Fact]
+    public void Permission_matrix_owner_and_parent_behave_differently()
+    {
+        var parent = new FamilyAccess(Guid.NewGuid(), Guid.NewGuid(), "P", FamilyRole.Parent,
+            ParentPermissions.ViewReports | ParentPermissions.LockUnlockBonus, false, FamilyStatus.Active);
+        Assert.True(parent.Has(ParentPermissions.ViewReports));
+        Assert.True(parent.Has(ParentPermissions.LockUnlockBonus));
+        Assert.False(parent.Has(ParentPermissions.ManagePin));
+        Assert.Throws<PermissionDeniedException>(() => parent.Require(ParentPermissions.ManageDevices));
+
+        var owner = parent with { Role = FamilyRole.Owner, Permissions = ParentPermissions.None };
+        Assert.True(owner.Has(ParentPermissions.ManageDevices));
+        owner.Require(ParentPermissions.ManagePin);
+    }
+
+    [Fact]
+    public void Build_info_is_visible_and_versioned()
+    {
+        var info = new BuildInfo();
+        Assert.False(string.IsNullOrWhiteSpace(info.Version));
+        Assert.False(string.IsNullOrWhiteSpace(info.DisplayVersion));
+        Assert.Contains("build", info.DisplayVersion);
+        Assert.False(string.IsNullOrWhiteSpace(info.ToDto().Commit));
     }
 }

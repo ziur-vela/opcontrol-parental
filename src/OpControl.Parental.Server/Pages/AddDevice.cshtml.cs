@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpControl.Parental.Server.Auth;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using OpControl.Parental.Contracts;
@@ -8,7 +9,7 @@ using OpControl.Parental.Server.Services;
 
 namespace OpControl.Parental.Server.Pages;
 
-[Authorize]
+[Authorize(Policy = ParentalPolicies.ManageDevices)]
 public class AddDeviceModel : PageModel
 {
     private readonly ParentalDbContext _db;

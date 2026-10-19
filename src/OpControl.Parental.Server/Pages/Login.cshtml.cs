@@ -34,11 +34,12 @@ public class LoginModel : PageModel
         public bool RememberMe { get; set; }
     }
 
-    public async Task<IActionResult> OnGetAsync()
+    public async Task<IActionResult> OnGetAsync(string? error)
     {
         if (!await _db.Families.AnyAsync())
             return RedirectToPage("/Setup");
-        if (User.Identity?.IsAuthenticated == true)
+        if (error == "suspended") Error = "This family is suspended. Contact the server administrator.";
+        if (User.Identity?.IsAuthenticated == true && Error is null)
             return LocalRedirect("/");
         return Page();
     }

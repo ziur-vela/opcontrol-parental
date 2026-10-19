@@ -1,60 +1,74 @@
 @inherits LayoutComponentBase
 @using Microsoft.EntityFrameworkCore
+@using OpControl.Parental.Contracts
 @using OpControl.Parental.Server.Data
 @using OpControl.Parental.Server.Services
 @inject AuthenticationStateProvider AuthState
 @inject IServiceScopeFactory Scopes
 @inject DashboardEventBus Events
+@inject BuildInfo Build
+@inject Microsoft.Extensions.Options.IOptions<BrandOptions> BrandOptions
 @implements IDisposable
 
+@{
+    var brand = BrandOptions.Value;
+}
+<style>:root { --accent: @brand.AccentColor; }</style>
 <div class="app-shell">
     <aside class="sidebar">
         <div class="brand-row">
-            <img src="/brand/lockup-ondark.svg" alt="Parental OpControl" class="brand-logo brand-dark" />
-            <img src="/brand/lockup-color.svg" alt="Parental OpControl" class="brand-logo brand-light" />
+            <img src="@brand.LogoDark" alt="@brand.ProductName" class="brand-logo brand-dark" />
+            <img src="@brand.LogoLight" alt="@brand.ProductName" class="brand-logo brand-light" />
         </div>
         <nav class="nav">
-            <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
-                <span class="nav-ico">⌂</span> Home
-            </NavLink>
-            <NavLink class="nav-link" href="/screen-time">
-                <span class="nav-ico">◔</span> Screen time
-            </NavLink>
-            <NavLink class="nav-link" href="/activity">
-                <span class="nav-ico">≡</span> Activity
-            </NavLink>
-            <NavLink class="nav-link" href="/websites">
-                <span class="nav-ico">◎</span> Websites
-            </NavLink>
-            <NavLink class="nav-link" href="/apps">
-                <span class="nav-ico">▤</span> Apps
-            </NavLink>
-            <NavLink class="nav-link" href="/devices">
-                <span class="nav-ico">▣</span> Devices
-            </NavLink>
-            <NavLink class="nav-link" href="/schedules">
-                <span class="nav-ico">◷</span> Schedules
-            </NavLink>
-            <NavLink class="nav-link" href="/alerts">
-                <span class="nav-ico">◉</span> Alerts
-                @if (_unread > 0)
-                {
-                    <span class="nav-count">@_unread</span>
-                }
-            </NavLink>
-            <NavLink class="nav-link" href="/add-device">
-                <span class="nav-ico">＋</span> Add device
-            </NavLink>
-            <NavLink class="nav-link" href="/downloads">
-                <span class="nav-ico">⤓</span> Downloads
-            </NavLink>
-            <NavLink class="nav-link" href="/settings">
-                <span class="nav-ico">⚙</span> Settings
-            </NavLink>
+            <NavLink class="nav-link" href="/" Match="NavLinkMatch.All"><span class="nav-ico">⌂</span> Home</NavLink>
+            @if (Can(PermissionFlags.ViewReports))
+            {
+                <NavLink class="nav-link" href="/screen-time"><span class="nav-ico">◔</span> Screen time</NavLink>
+                <NavLink class="nav-link" href="/activity"><span class="nav-ico">≡</span> Activity</NavLink>
+            }
+            @if (Can(PermissionFlags.WebsiteRules))
+            {
+                <NavLink class="nav-link" href="/websites"><span class="nav-ico">◎</span> Websites</NavLink>
+            }
+            @if (Can(PermissionFlags.AppRules))
+            {
+                <NavLink class="nav-link" href="/apps"><span class="nav-ico">▤</span> Apps</NavLink>
+            }
+            @if (Can(PermissionFlags.ManageDevices))
+            {
+                <NavLink class="nav-link" href="/devices"><span class="nav-ico">▣</span> Devices</NavLink>
+            }
+            @if (Can(PermissionFlags.SchedulesLimits))
+            {
+                <NavLink class="nav-link" href="/schedules"><span class="nav-ico">◷</span> Schedules</NavLink>
+            }
+            @if (Can(PermissionFlags.ViewReports))
+            {
+                <NavLink class="nav-link" href="/alerts">
+                    <span class="nav-ico">◉</span> Alerts
+                    @if (_unread > 0) { <span class="nav-count">@_unread</span> }
+                </NavLink>
+            }
+            @if (Can(PermissionFlags.ManageDevices))
+            {
+                <NavLink class="nav-link" href="/add-device"><span class="nav-ico">＋</span> Add device</NavLink>
+                <NavLink class="nav-link" href="/downloads"><span class="nav-ico">⤓</span> Downloads</NavLink>
+            }
+            @if (_isOwner)
+            {
+                <NavLink class="nav-link" href="/team"><span class="nav-ico">👥</span> Parents</NavLink>
+            }
+            @if (_isServerAdmin)
+            {
+                <NavLink class="nav-link" href="/server-admin"><span class="nav-ico">☷</span> Server admin</NavLink>
+            }
+            <NavLink class="nav-link" href="/settings"><span class="nav-ico">⚙</span> Settings</NavLink>
         </nav>
         <div class="sidebar-foot">
-            <div class="pill-soft">Job 5A</div>
-            <div class="muted small">Installer, add-device links, auto-update and hardening.</div>
+            <div class="pill-soft">@Build.DisplayVersion</div>
+            <div class="muted small">@brand.ProductName</div>
+            <a class="muted small" href="/settings">Version details</a>
         </div>
     </aside>
 
@@ -86,9 +100,32 @@
 
 @code {
     private int _unread;
+    private bool _isOwner;
+    private bool _isServerAdmin;
+    private ParentPermissions _permissions;
+
+    [Flags]
+    private enum PermissionFlags
+    {
+        None = 0,
+        LockUnlockBonus = 1,
+        WebsiteRules = 2,
+        AppRules = 4,
+        SchedulesLimits = 8,
+        ViewReports = 16,
+        ManageDevices = 32,
+        ManagePin = 64
+    }
+
+    private bool Can(PermissionFlags permission) =>
+        _isOwner || ((int)_permissions & (int)permission) == (int)permission;
 
     protected override async Task OnInitializedAsync()
     {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        _isOwner = string.Equals(auth.User.FindFirst("family_role")?.Value, "Owner", StringComparison.OrdinalIgnoreCase);
+        _isServerAdmin = string.Equals(auth.User.FindFirst("server_admin")?.Value, "true", StringComparison.OrdinalIgnoreCase);
+        _permissions = int.TryParse(auth.User.FindFirst("permissions")?.Value, out var value) ? (ParentPermissions)value : ParentPermissions.None;
         Events.AlertChanged += OnAlertChanged;
         await RefreshAsync();
     }

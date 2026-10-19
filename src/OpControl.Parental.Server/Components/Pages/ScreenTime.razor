@@ -1,6 +1,7 @@
 @page "/screen-time"
-@attribute [Authorize]
+@attribute [Authorize(Policy = ParentalPolicies.ViewReports)]
 @rendermode InteractiveServer
+@using OpControl.Parental.Server.Auth
 @using Microsoft.EntityFrameworkCore
 @using OpControl.Parental.Contracts
 @using OpControl.Parental.Server.Data

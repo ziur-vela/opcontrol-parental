@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpControl.Parental.Server.Auth;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using OpControl.Parental.Server.Data;
@@ -7,7 +8,7 @@ using OpControl.Parental.Server.Services;
 
 namespace OpControl.Parental.Server.Pages;
 
-[Authorize]
+[Authorize(Policy = ParentalPolicies.SchedulesLimits)]
 public class SchedulesModel : PageModel
 {
     public static readonly string[] DayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

@@ -1,0 +1,303 @@
+@page "/server-admin"
+@attribute [Authorize(Policy = ParentalPolicies.ServerAdmin)]
+@rendermode InteractiveServer
+@using OpControl.Parental.Server.Auth
+@using Microsoft.EntityFrameworkCore
+@using OpControl.Parental.Contracts
+@using OpControl.Parental.Server.Data
+@using OpControl.Parental.Server.Services
+@inject AuthenticationStateProvider AuthState
+@inject IServiceScopeFactory Scopes
+@inject BuildInfo Build
+
+<PageTitle>Server admin · Parental OpControl</PageTitle>
+
+<div class="page-head">
+    <div>
+        <div class="eyebrow">Server</div>
+        <h1>Server admin</h1>
+        <p class="muted">Invite families, manage server settings and see only family metadata. Family rules, reports and activity stay private unless you are a member of that family.</p>
+    </div>
+    <span class="pill-soft">@Build.DisplayVersion</span>
+</div>
+
+@if (!_isServerAdmin)
+{
+    <div class="card danger"><h2>Not allowed</h2><p class="muted">This page is for the server administrator.</p></div>
+}
+else
+{
+    @if (_error is not null) { <div class="alert danger">@_error</div> }
+    @if (_notice is not null) { <div class="alert ok">@_notice</div> }
+
+    <section class="card">
+        <h2>Invite a family</h2>
+        <p class="muted small">New families can only join by invitation. The link expires in 7 days and can be used once. There is no public sign-up.</p>
+        <div class="grid-2">
+            <label class="field"><span>Email (optional)</span><input @bind="_inviteEmail" placeholder="owner@example.com" /></label>
+            <label class="field"><span>Family name hint (optional)</span><input @bind="_inviteFamilyName" /></label>
+        </div>
+        <div class="button-row">
+            <button class="btn btn-primary" @onclick="InviteAsync">Create invitation</button>
+        </div>
+        @if (_createdLink is not null)
+        {
+            <label class="field"><span>One-time invitation link</span><input readonly value="@_createdLink" /></label>
+            <div class="muted tiny">@(_emailSent ? "Email sent to the invitee." : "Copy this link and send it to the invitee.")</div>
+        }
+    </section>
+
+    <section class="card">
+        <h2>Pending family invitations</h2>
+        @if (_invitations.Count == 0)
+        {
+            <p class="muted">No pending invitations.</p>
+        }
+        else
+        {
+            <div class="device-list">
+                @foreach (var invite in _invitations)
+                {
+                    <div class="device-row">
+                        <div class="device-main">
+                            <div class="device-name">@(invite.Email ?? "Link-only invitation")</div>
+                            <div class="muted tiny">@(invite.FamilyName ?? "Family name chosen by invitee") · expires @invite.ExpiresUtc.ToLocalTime().ToString("MMM d, HH:mm")</div>
+                        </div>
+                        <div class="device-meta">
+                            <button class="ghost-btn" @onclick="() => ResendAsync(invite)">Resend</button>
+                            <button class="ghost-btn" @onclick="() => RevokeAsync(invite)">Revoke</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="card">
+        <h2>Families</h2>
+        <div class="device-list">
+            @foreach (var family in _families)
+            {
+                <div class="device-row">
+                    <div class="device-main">
+                        <div class="device-name">@family.Name @(family.Status == FamilyStatus.Suspended ? "· suspended" : "")</div>
+                        <div class="muted tiny">@family.OwnerName · @family.OwnerEmail · created @family.CreatedUtc.ToLocalTime().ToString("MMM d, yyyy")</div>
+                        <div class="muted tiny">@family.Children child(ren) · @family.Devices device(s) · last activity @(family.LastActivityUtc?.ToLocalTime().ToString("MMM d, HH:mm") ?? "never")</div>
+                    </div>
+                    <div class="device-meta">
+                        @if (family.Status == FamilyStatus.Active)
+                        {
+                            <button class="ghost-btn" @onclick="() => SetStatusAsync(family, false)">Suspend</button>
+                        }
+                        else
+                        {
+                            <button class="ghost-btn" @onclick="() => SetStatusAsync(family, true)">Reactivate</button>
+                        }
+                        <button class="ghost-btn danger-text" @onclick="() => BeginDelete(family)">Delete</button>
+                    </div>
+                </div>
+            }
+        </div>
+        @if (_deleting is not null)
+        {
+            <div class="alert danger">
+                <div>Delete <strong>@_deleting.Name</strong> and all of its data? This cannot be undone.</div>
+                <label class="field"><span>Type the family name to confirm</span><input @bind="_deleteConfirmation" /></label>
+                <div class="button-row">
+                    <button class="btn btn-primary" disabled="@(_deleteConfirmation != _deleting.Name)" @onclick="DeleteAsync">Delete family</button>
+                    <button class="btn btn-ghost" @onclick="CancelDelete">Cancel</button>
+                </div>
+            </div>
+        }
+    </section>
+
+    <section class="card">
+        <h2>Server SMTP</h2>
+        <p class="muted small">Used for family invitations and alert emails. Existing family SMTP settings remain as a fallback.</p>
+        <div class="grid-2">
+            <label class="field"><span>SMTP host</span><input @bind="_smtpHost" /></label>
+            <label class="field"><span>Port</span><input type="number" @bind="_smtpPort" /></label>
+            <label class="field"><span>Username</span><input @bind="_smtpUsername" /></label>
+            <label class="field"><span>Password @(_hasSmtpPassword ? "(stored)" : "")</span><input type="password" @bind="_smtpPassword" placeholder="@(_hasSmtpPassword ? "Leave blank to keep" : "")" /></label>
+            <label class="field"><span>From address</span><input @bind="_smtpFrom" /></label>
+            <label class="field"><span>From name</span><input @bind="_smtpFromName" /></label>
+        </div>
+        <label class="check"><input type="checkbox" @bind="_smtpSsl" /> Use SSL/TLS</label>
+        <div class="button-row"><button class="btn btn-primary" @onclick="SaveSmtpAsync">Save SMTP</button></div>
+    </section>
+
+    <section class="card">
+        <h2>Server admin activity</h2>
+        @if (_audit.Count == 0)
+        {
+            <p class="muted">No server admin actions yet.</p>
+        }
+        else
+        {
+            <div class="timeline">
+                @foreach (var entry in _audit)
+                {
+                    <div class="timeline-row">
+                        <div class="timeline-icon accent">⚑</div>
+                        <div class="timeline-main">
+                            <div class="timeline-title">@entry.Action</div>
+                            <div class="muted tiny">@entry.ActorEmail · @(entry.Detail ?? "")</div>
+                        </div>
+                        <div class="muted tiny">@entry.CreatedUtc.ToLocalTime().ToString("MMM d, HH:mm")</div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+}
+
+@code {
+    private Guid _familyId;
+    private bool _isServerAdmin;
+    private List<FamilyAdminDto> _families = [];
+    private List<InvitationDto> _invitations = [];
+    private List<ServerAdminAudit> _audit = [];
+    private string? _inviteEmail;
+    private string? _inviteFamilyName;
+    private string? _createdLink;
+    private bool _emailSent;
+    private FamilyAdminDto? _deleting;
+    private string _deleteConfirmation = "";
+    private string? _error;
+    private string? _notice;
+
+    private string? _smtpHost;
+    private int _smtpPort = 587;
+    private bool _smtpSsl = true;
+    private string? _smtpUsername;
+    private string? _smtpPassword;
+    private string? _smtpFrom;
+    private string? _smtpFromName;
+    private bool _hasSmtpPassword;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        Guid.TryParse(auth.User.FindFirst("family_id")?.Value, out _familyId);
+        _isServerAdmin = string.Equals(auth.User.FindFirst("server_admin")?.Value, "true", StringComparison.OrdinalIgnoreCase);
+        if (_isServerAdmin) await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        using var scope = Scopes.CreateScope();
+        var admin = scope.ServiceProvider.GetRequiredService<ServerAdminService>();
+        var invites = scope.ServiceProvider.GetRequiredService<InvitationService>();
+        var email = scope.ServiceProvider.GetRequiredService<EmailSender>();
+        _families = await admin.ListFamiliesAsync();
+        _invitations = await invites.ListAllPendingAsync();
+        _audit = await admin.RecentAuditAsync();
+        var settings = await email.EnsureSettingsAsync();
+        _smtpHost = settings.SmtpHost;
+        _smtpPort = settings.SmtpPort;
+        _smtpSsl = settings.SmtpUseSsl;
+        _smtpUsername = settings.SmtpUsername;
+        _smtpFrom = settings.FromAddress;
+        _smtpFromName = settings.FromName;
+        _hasSmtpPassword = !string.IsNullOrWhiteSpace(settings.SmtpPasswordProtected);
+    }
+
+    private async Task InviteAsync()
+    {
+        _error = null; _notice = null; _createdLink = null;
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var invites = scope.ServiceProvider.GetRequiredService<InvitationService>();
+            var auth = await AuthState.GetAuthenticationStateAsync();
+            Guid.TryParse(auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var actorId);
+            var created = await invites.CreateFamilyInviteAsync(actorId, _inviteEmail, _inviteFamilyName);
+            _createdLink = created.Link;
+            _emailSent = created.EmailSent;
+            _inviteEmail = null;
+            _inviteFamilyName = null;
+            await RefreshAsync();
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private async Task ResendAsync(InvitationDto invite)
+    {
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var result = await scope.ServiceProvider.GetRequiredService<InvitationService>().ResendAsync(invite.Id);
+            _notice = result.Ok ? (result.EmailSent ? "Invitation email sent again." : result.Error) : result.Error;
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private async Task RevokeAsync(InvitationDto invite)
+    {
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            await scope.ServiceProvider.GetRequiredService<InvitationService>().RevokeAsync(invite.Id);
+            _notice = "Invitation revoked.";
+            await RefreshAsync();
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private async Task SetStatusAsync(FamilyAdminDto family, bool active)
+    {
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var access = await scope.ServiceProvider.GetRequiredService<FamilyScope>().AccessAsync();
+            await scope.ServiceProvider.GetRequiredService<ServerAdminService>()
+                .SetStatusAsync(family.Id, active ? FamilyStatus.Active : FamilyStatus.Suspended, access.ParentId, access.DisplayName);
+            _notice = active ? "Family reactivated." : "Family suspended.";
+            await RefreshAsync();
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private void CancelDelete()
+    {
+        _deleting = null;
+        _deleteConfirmation = "";
+    }
+
+    private void BeginDelete(FamilyAdminDto family)
+    {
+        _deleting = family;
+        _deleteConfirmation = "";
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (_deleting is null) return;
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var access = await scope.ServiceProvider.GetRequiredService<FamilyScope>().AccessAsync();
+            await scope.ServiceProvider.GetRequiredService<ServerAdminService>()
+                .DeleteFamilyAsync(_deleting.Id, access.ParentId, access.DisplayName);
+            _notice = "Family deleted.";
+            _deleting = null;
+            _deleteConfirmation = "";
+            await RefreshAsync();
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private async Task SaveSmtpAsync()
+    {
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            await scope.ServiceProvider.GetRequiredService<EmailSender>()
+                .SaveSettingsAsync(_smtpHost, _smtpPort, _smtpSsl, _smtpUsername, _smtpPassword, _smtpFrom, _smtpFromName);
+            _smtpPassword = null;
+            _notice = "SMTP settings saved.";
+            await RefreshAsync();
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+}

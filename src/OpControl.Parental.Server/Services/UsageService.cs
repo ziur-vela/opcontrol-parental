@@ -46,8 +46,15 @@ public sealed class UsageService
         _ => limit.SundayMinutes
     };
 
+    public async Task EnsureChildAsync(Guid familyId, Guid childId, CancellationToken ct = default)
+    {
+        if (!await _db.Children.AnyAsync(c => c.Id == childId && c.FamilyId == familyId, ct))
+            throw new InvalidOperationException("Child not found in this family.");
+    }
+
     public async Task<ScreenTimeLimit> EnsureLimitAsync(Guid familyId, Guid childId, CancellationToken ct = default)
     {
+        await EnsureChildAsync(familyId, childId, ct);
         var limit = await _db.ScreenTimeLimits.FirstOrDefaultAsync(l => l.ChildId == childId && l.FamilyId == familyId, ct);
         if (limit is not null) return limit;
         limit = new ScreenTimeLimit { FamilyId = familyId, ChildId = childId };
@@ -58,6 +65,7 @@ public sealed class UsageService
 
     public async Task<ScreenTimeLimit> SetLimitAsync(Guid familyId, Guid childId, Guid? parentId, bool enabled, bool spokenWarnings, int monday, int tuesday, int wednesday, int thursday, int friday, int saturday, int sunday, CancellationToken ct = default)
     {
+        await EnsureChildAsync(familyId, childId, ct);
         var limit = await EnsureLimitAsync(familyId, childId, ct);
         limit.Enabled = enabled;
         limit.SpokenWarnings = spokenWarnings;

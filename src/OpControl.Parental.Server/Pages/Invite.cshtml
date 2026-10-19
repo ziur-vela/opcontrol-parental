@@ -1,0 +1,58 @@
+@page "/invite/{token}"
+@model InviteModel
+@using OpControl.Parental.Contracts
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = Model.Kind == InvitationKind.NewFamily ? "Create your family" : "Join as a co-parent";
+}
+
+@if (Model.Invalid)
+{
+    <h1 class="auth-title">Invitation unavailable</h1>
+    <p class="muted auth-sub">This invitation link is invalid, expired, already used or revoked. Ask the person who invited you for a new link. New families can only join by invitation.</p>
+    <a class="btn btn-ghost btn-block" href="/login">Go to sign in</a>
+}
+else if (Model.Kind == InvitationKind.NewFamily)
+{
+    <h1 class="auth-title">Create your family</h1>
+    <p class="muted auth-sub">You were invited to the server. Create the family owner account and the first child. You will land in your own empty dashboard.</p>
+
+    @if (!string.IsNullOrEmpty(Model.Error))
+    {
+        <div class="alert danger">@Model.Error</div>
+    }
+
+    <form method="post" class="stack">
+        <label class="field"><span>Family name</span><input asp-for="Input.FamilyName" placeholder="Our family" /></label>
+        <label class="field"><span>Your name</span><input asp-for="Input.DisplayName" placeholder="Parent name" /></label>
+        <label class="field"><span>First child's name</span><input asp-for="Input.ChildName" placeholder="Child name" /></label>
+        <label class="field">
+            <span>Email</span>
+            <input asp-for="Input.Email" type="email" autocomplete="username" readonly="@(Model.InvitationEmail is not null)" />
+        </label>
+        <label class="field"><span>Password</span><input asp-for="Input.Password" type="password" autocomplete="new-password" /><span class="muted tiny">At least 8 characters with upper, lower and a digit.</span></label>
+        <label class="field"><span>Confirm password</span><input asp-for="Input.ConfirmPassword" type="password" autocomplete="new-password" /></label>
+        <button type="submit" class="btn btn-primary btn-block">Create family</button>
+    </form>
+}
+else
+{
+    <h1 class="auth-title">Join @Model.InvitationFamilyName</h1>
+    <p class="muted auth-sub">You were invited as a co-parent. Create your own login. An authenticator app can be added later in Settings.</p>
+
+    @if (!string.IsNullOrEmpty(Model.Error))
+    {
+        <div class="alert danger">@Model.Error</div>
+    }
+
+    <form method="post" class="stack">
+        <label class="field"><span>Your name</span><input asp-for="Input.DisplayName" placeholder="Parent name" /></label>
+        <label class="field">
+            <span>Email</span>
+            <input asp-for="Input.Email" type="email" autocomplete="username" readonly="@(Model.InvitationEmail is not null)" />
+        </label>
+        <label class="field"><span>Password</span><input asp-for="Input.Password" type="password" autocomplete="new-password" /><span class="muted tiny">At least 8 characters with upper, lower and a digit.</span></label>
+        <label class="field"><span>Confirm password</span><input asp-for="Input.ConfirmPassword" type="password" autocomplete="new-password" /></label>
+        <button type="submit" class="btn btn-primary btn-block">Create login</button>
+    </form>
+}

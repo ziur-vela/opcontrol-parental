@@ -1,8 +1,10 @@
 @page "/devices"
-@attribute [Authorize]
+@attribute [Authorize(Policy = ParentalPolicies.ManageDevices)]
 @rendermode InteractiveServer
+@using OpControl.Parental.Server.Auth
 @using Microsoft.EntityFrameworkCore
 @using OpControl.Parental.Server.Data
+@using OpControl.Parental.Server.Services
 @inject AuthenticationStateProvider AuthState
 @inject IServiceScopeFactory Scopes
 @inject DevicePresenceService Presence
@@ -35,7 +37,23 @@
                     <div class="device-main">
                         <div class="device-name">@device.Name</div>
                         <div class="muted tiny">@device.Platform · @(device.TimeZoneId ?? "UTC") · @(device.OsAccountName ?? "account not reported")</div>
-                        <div class="muted tiny">@(string.IsNullOrWhiteSpace(device.ClientVersion) ? "version unknown" : "client " + device.ClientVersion)</div>
+                        <div class="muted tiny">
+                            @(string.IsNullOrWhiteSpace(device.ClientVersion) ? "version unknown" : "client " + device.ClientVersion)
+                            @if (_currentRelease is not null) { <span>· latest @_currentRelease</span> }
+                            @if (device.Platform == DevicePlatform.Windows && _currentRelease is not null && IsOutdatedCurrent(device))
+                            {
+                                <span class="badge-soft warn">Update available</span>
+                            }
+                        </div>
+                        <div class="muted tiny">
+                            Time zone:
+                            <select value="@device.TimeZoneId" @onchange="e => SetTimeZoneAsync(device, e.Value?.ToString())">
+                                @foreach (var zone in TimeZones)
+                                {
+                                    <option value="@zone.Id">@zone.DisplayName</option>
+                                }
+                            </select>
+                        </div>
                         @if (_updateStatuses.TryGetValue(device.DeviceId, out var updateStatus) && !string.IsNullOrWhiteSpace(updateStatus))
                         {
                             <div class="muted tiny">Update: @updateStatus</div>
@@ -60,6 +78,23 @@
     private List<DeviceStatusDto> _devices = [];
     private string? _currentRelease;
     private Dictionary<Guid, string?> _updateStatuses = [];
+    private static readonly IReadOnlyList<TimeZoneInfo> TimeZones = TimeZoneInfo.GetSystemTimeZones();
+
+    private async Task SetTimeZoneAsync(DeviceStatusDto device, string? zoneId)
+    {
+        if (string.IsNullOrWhiteSpace(zoneId)) return;
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
+            var row = await db.Devices.FirstOrDefaultAsync(d => d.Id == device.DeviceId && d.FamilyId == _familyId);
+            if (row is null) return;
+            row.TimeZoneId = TimeZoneResolver.Resolve(zoneId).Id;
+            await db.SaveChangesAsync();
+            await RefreshAsync();
+        }
+        catch { }
+    }
 
     private bool IsOutdatedCurrent(DeviceStatusDto device)
     {

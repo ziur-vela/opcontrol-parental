@@ -377,3 +377,18 @@ code { background: var(--surface2); padding: 2px 6px; border-radius: 6px; font-s
     .weekday-grid { grid-template-columns: 1fr 1fr; }
     .nav-count { margin-left: 0; }
 }
+
+/* Job 5B */
+.child-tabs { display: flex; gap: 0.4rem; overflow-x: auto; margin: 0 0 1rem; padding-bottom: 0.25rem; -webkit-overflow-scrolling: touch; }
+.child-tabs .chip { white-space: nowrap; text-decoration: none; }
+.badge-soft { display: inline-block; margin-left: 0.35rem; padding: 0.05rem 0.4rem; border-radius: 999px; font-size: 0.68rem; font-weight: 700; background: rgba(255, 193, 7, 0.16); color: #ffc107; }
+.badge-soft.warn { background: rgba(255, 193, 7, 0.16); }
+.version-line { font-family: "Space Grotesk", sans-serif; font-size: 1.1rem; font-weight: 600; margin: 0.35rem 0; }
+.danger-text { color: #ff6b6b !important; }
+.devices-page select, select { background: var(--surface-2, #1b1f2a); color: inherit; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 0.2rem 0.35rem; max-width: 16rem; }
+@media (max-width: 720px) {
+  .child-tabs { position: sticky; top: 0; z-index: 5; background: var(--bg, #0f1218); padding-top: 0.4rem; }
+  .page-head { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+  .device-row { flex-wrap: wrap; }
+  .grid-2 { grid-template-columns: 1fr; }
+}

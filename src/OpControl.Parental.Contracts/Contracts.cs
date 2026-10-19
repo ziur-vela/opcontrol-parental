@@ -13,6 +13,32 @@ public enum FamilyRole
     Parent = 1
 }
 
+public enum FamilyStatus
+{
+    Active = 0,
+    Suspended = 1
+}
+
+[Flags]
+public enum ParentPermissions
+{
+    None = 0,
+    LockUnlockBonus = 1,
+    WebsiteRules = 2,
+    AppRules = 4,
+    SchedulesLimits = 8,
+    ViewReports = 16,
+    ManageDevices = 32,
+    ManagePin = 64,
+    All = LockUnlockBonus | WebsiteRules | AppRules | SchedulesLimits | ViewReports | ManageDevices | ManagePin
+}
+
+public enum InvitationKind
+{
+    CoParent = 0,
+    NewFamily = 1
+}
+
 public enum RuleMode
 {
     Always = 0,
@@ -352,3 +378,55 @@ public sealed record PinPipeResponse(
     int? AttemptsRemaining = null,
     string? Ticket = null,
     RuntimeLockStateDto? State = null);
+
+public sealed record InvitationCreatedDto(
+    Guid Id,
+    InvitationKind Kind,
+    string? Email,
+    string Token,
+    string Link,
+    DateTime CreatedUtc,
+    DateTime ExpiresUtc,
+    ParentPermissions Permissions,
+    bool EmailSent);
+
+public sealed record InvitationDto(
+    Guid Id,
+    InvitationKind Kind,
+    Guid? FamilyId,
+    string? FamilyName,
+    string? Email,
+    ParentPermissions Permissions,
+    DateTime CreatedUtc,
+    DateTime ExpiresUtc,
+    DateTime? UsedUtc,
+    DateTime? RevokedUtc);
+
+public sealed record FamilyAdminDto(
+    Guid Id,
+    string Name,
+    string OwnerEmail,
+    string OwnerName,
+    DateTime CreatedUtc,
+    int Children,
+    int Devices,
+    DateTime? LastActivityUtc,
+    FamilyStatus Status);
+
+public sealed record VersionInfoDto(
+    string Version,
+    string DisplayVersion,
+    string Commit,
+    string BuildDate);
+
+public sealed record AlertPreferencesDto(
+    bool MutedNewApp,
+    bool MutedRepeatedBlock,
+    bool MutedPinOverride,
+    bool MutedLimit,
+    bool MutedOffline,
+    bool MutedTampering,
+    int QuietStartMinutes,
+    int QuietEndMinutes,
+    bool DailyDigest,
+    int DigestHour);

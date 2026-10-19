@@ -38,6 +38,10 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
     public DbSet<InstallLink> InstallLinks => Set<InstallLink>();
     public DbSet<UnaccountedInterval> UnaccountedIntervals => Set<UnaccountedInterval>();
     public DbSet<DeviceUpdateEvent> DeviceUpdateEvents => Set<DeviceUpdateEvent>();
+    public DbSet<Invitation> Invitations => Set<Invitation>();
+    public DbSet<ServerSettings> ServerSettings => Set<ServerSettings>();
+    public DbSet<AlertPreference> AlertPreferences => Set<AlertPreference>();
+    public DbSet<ServerAdminAudit> ServerAdminAudits => Set<ServerAdminAudit>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -47,13 +51,16 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
         {
             e.HasKey(x => x.Id);
             e.Property(x => x.Name).HasMaxLength(120).IsRequired();
+            e.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
         });
 
         builder.Entity<ParentUser>(e =>
         {
             e.Property(x => x.DisplayName).HasMaxLength(120).IsRequired();
             e.Property(x => x.RoleInFamily).HasConversion<string>().HasMaxLength(16);
+            e.Property(x => x.Permissions).HasConversion<int>();
             e.HasIndex(x => x.FamilyId);
+            e.HasIndex(x => x.IsServerAdmin);
             e.HasOne(x => x.Family).WithMany(x => x.Parents).HasForeignKey(x => x.FamilyId).OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -274,7 +281,8 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
             e.HasIndex(x => new { x.FamilyId, x.CreatedUtc });
             e.HasIndex(x => new { x.ChildId, x.ReadUtc });
             e.HasIndex(x => new { x.ChildId, x.Type, x.CreatedUtc });
-            e.HasIndex(x => new { x.EmailedUtc });
+            e.HasIndex(x => x.EmailedUtc);
+            e.HasIndex(x => x.NextEmailAttemptUtc);
         });
 
         builder.Entity<FamilySettings>(e =>
@@ -322,6 +330,44 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
             e.Property(x => x.Status).HasMaxLength(40).IsRequired();
             e.Property(x => x.Detail).HasMaxLength(500);
             e.HasIndex(x => new { x.DeviceId, x.CreatedUtc });
+        });
+
+        builder.Entity<Invitation>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(16);
+            e.Property(x => x.FamilyName).HasMaxLength(120);
+            e.Property(x => x.Email).HasMaxLength(255);
+            e.Property(x => x.Permissions).HasConversion<int>();
+            e.Property(x => x.TokenHash).HasMaxLength(64).IsRequired();
+            e.Property(x => x.TokenProtected).HasMaxLength(1024).IsRequired();
+            e.HasIndex(x => x.TokenHash).IsUnique();
+            e.HasIndex(x => new { x.FamilyId, x.Kind, x.CreatedUtc });
+            e.HasIndex(x => new { x.Email, x.UsedUtc });
+        });
+
+        builder.Entity<ServerSettings>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.SmtpHost).HasMaxLength(255);
+            e.Property(x => x.SmtpUsername).HasMaxLength(255);
+            e.Property(x => x.SmtpPasswordProtected).HasMaxLength(1024);
+            e.Property(x => x.FromAddress).HasMaxLength(255);
+            e.Property(x => x.FromName).HasMaxLength(120);
+        });
+
+        builder.Entity<AlertPreference>(e =>
+        {
+            e.HasKey(x => x.FamilyId);
+        });
+
+        builder.Entity<ServerAdminAudit>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.ActorEmail).HasMaxLength(255).IsRequired();
+            e.Property(x => x.Action).HasMaxLength(80).IsRequired();
+            e.Property(x => x.Detail).HasMaxLength(1000);
+            e.HasIndex(x => x.CreatedUtc);
         });
     }
 }

@@ -95,6 +95,14 @@ public sealed class LockService
                 state.UnlockUntilUtc = null;
                 state.BonusUntilUtc = null;
                 state.BonusMinutes = null;
+                _db.OverrideEvents.Add(new OverrideEvent
+                {
+                    FamilyId = familyId,
+                    ChildId = childId,
+                    CreatedByParentId = parentId,
+                    Option = "dashboard-lock",
+                    CreatedUtc = now
+                });
                 break;
             case LockAction.Unlock:
                 state.ManualLock = false;
@@ -201,6 +209,7 @@ public sealed class LockService
 
     public async Task SetPinAsync(Guid familyId, Guid childId, string pin, CancellationToken ct = default)
     {
+        await EnsureChildAsync(familyId, childId, ct);
         if (pin.Length is < 4 or > 12 || !pin.All(char.IsDigit))
             throw new InvalidOperationException("PIN must be 4 to 12 digits.");
         var state = await EnsureLockStateAsync(familyId, childId, ct);
@@ -212,6 +221,7 @@ public sealed class LockService
 
     public async Task ClearPinAsync(Guid familyId, Guid childId, CancellationToken ct = default)
     {
+        await EnsureChildAsync(familyId, childId, ct);
         var state = await EnsureLockStateAsync(familyId, childId, ct);
         state.OverridePinHash = null;
         state.UpdatedUtc = DateTime.UtcNow;
@@ -221,6 +231,7 @@ public sealed class LockService
 
     public async Task<bool> HasPinAsync(Guid familyId, Guid childId, CancellationToken ct = default)
     {
+        await EnsureChildAsync(familyId, childId, ct);
         var state = await EnsureLockStateAsync(familyId, childId, ct);
         return !string.IsNullOrWhiteSpace(state.OverridePinHash);
     }
@@ -247,6 +258,12 @@ public sealed class LockService
         _events.PublishLockState(dto);
         await PublishDeviceStateAsync(familyId, childId, ct);
         return dto;
+    }
+
+    public async Task EnsureChildAsync(Guid familyId, Guid childId, CancellationToken ct = default)
+    {
+        if (!await _db.Children.AnyAsync(c => c.Id == childId && c.FamilyId == familyId, ct))
+            throw new InvalidOperationException("Child not found in this family.");
     }
 
     private async Task<List<ScheduleDto>> LoadScheduleDtosAsync(Guid familyId, Guid childId, CancellationToken ct)

@@ -20,6 +20,12 @@ public sealed class RuleService
         _alerts = alerts;
     }
 
+    public async Task EnsureChildAsync(Guid familyId, Guid childId, CancellationToken ct = default)
+    {
+        if (!await _db.Children.AnyAsync(c => c.Id == childId && c.FamilyId == familyId, ct))
+            throw new InvalidOperationException("Child not found in this family.");
+    }
+
     public static string NormalizeDomain(string input)
     {
         var value = (input ?? "").Trim().ToLowerInvariant();
@@ -192,6 +198,7 @@ public sealed class RuleService
     {
         if (ruleType is not ("site" or "app"))
             throw new InvalidOperationException("Unknown rule type.");
+        await EnsureChildAsync(familyId, childId, ct);
         identity = ruleType == "site" ? NormalizeDomain(identity) : NormalizeAppIdentity(identity);
         minutes = Math.Clamp(minutes, 1, 1440);
         var now = DateTime.UtcNow;
@@ -239,6 +246,7 @@ public sealed class RuleService
 
     public async Task ToggleCategoryAsync(Guid familyId, Guid childId, string key, bool enabled, CancellationToken ct = default)
     {
+        await EnsureChildAsync(familyId, childId, ct);
         var category = await _db.Categories.FirstOrDefaultAsync(c => c.Key == key, ct)
             ?? throw new InvalidOperationException("Category not found.");
         var toggle = await _db.ChildCategories.FirstOrDefaultAsync(c => c.FamilyId == familyId && c.ChildId == childId && c.CategoryKey == key, ct);
@@ -414,6 +422,7 @@ public sealed class RuleService
 
     public async Task SetAppLimitAsync(Guid familyId, Guid childId, Guid? parentId, string identity, string displayName, string? publisher, int? minutes, bool alwaysAllowed, CancellationToken ct = default)
     {
+        await EnsureChildAsync(familyId, childId, ct);
         identity = NormalizeAppIdentity(identity);
         displayName = string.IsNullOrWhiteSpace(displayName) ? identity : displayName.Trim();
         var rule = await _db.AppRules.FirstOrDefaultAsync(r => r.FamilyId == familyId && r.ChildId == childId && r.AppIdentity == identity, ct);

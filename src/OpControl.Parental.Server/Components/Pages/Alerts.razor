@@ -1,6 +1,7 @@
 @page "/alerts"
-@attribute [Authorize]
+@attribute [Authorize(Policy = ParentalPolicies.ViewReports)]
 @rendermode InteractiveServer
+@using OpControl.Parental.Server.Auth
 @using Microsoft.EntityFrameworkCore
 @using OpControl.Parental.Server.Data
 @using OpControl.Parental.Server.Services

@@ -7,6 +7,8 @@ public class Family
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = "";
+    public FamilyStatus Status { get; set; } = FamilyStatus.Active;
+    public DateTime? SuspendedUtc { get; set; }
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public List<ParentUser> Parents { get; set; } = [];
     public List<Child> Children { get; set; } = [];
@@ -17,6 +19,8 @@ public class ParentUser : IdentityUser<Guid>
     public Guid FamilyId { get; set; }
     public string DisplayName { get; set; } = "";
     public FamilyRole RoleInFamily { get; set; } = FamilyRole.Parent;
+    public ParentPermissions Permissions { get; set; } = ParentPermissions.None;
+    public bool IsServerAdmin { get; set; }
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public Family? Family { get; set; }
 }
@@ -325,6 +329,9 @@ public class Alert
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public DateTime? ReadUtc { get; set; }
     public DateTime? EmailedUtc { get; set; }
+    public int EmailAttempts { get; set; }
+    public DateTime? NextEmailAttemptUtc { get; set; }
+    public string? EmailLastError { get; set; }
 }
 
 public class FamilySettings
@@ -405,6 +412,65 @@ public class DeviceUpdateEvent
     public string FromVersion { get; set; } = "";
     public string ToVersion { get; set; } = "";
     public string Status { get; set; } = "";
+    public string? Detail { get; set; }
+    public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
+}
+
+
+public class Invitation
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public InvitationKind Kind { get; set; } = InvitationKind.CoParent;
+    public Guid? FamilyId { get; set; }
+    public string? FamilyName { get; set; }
+    public string? Email { get; set; }
+    public ParentPermissions Permissions { get; set; } = ParentPermissions.All;
+    public string TokenHash { get; set; } = "";
+    public string TokenProtected { get; set; } = "";
+    public Guid CreatedByParentId { get; set; }
+    public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
+    public DateTime ExpiresUtc { get; set; }
+    public DateTime? UsedUtc { get; set; }
+    public DateTime? RevokedUtc { get; set; }
+    public Guid? CreatedFamilyId { get; set; }
+}
+
+public class ServerSettings
+{
+    public int Id { get; set; } = 1;
+    public string? SmtpHost { get; set; }
+    public int SmtpPort { get; set; } = 587;
+    public bool SmtpUseSsl { get; set; } = true;
+    public string? SmtpUsername { get; set; }
+    public string? SmtpPasswordProtected { get; set; }
+    public string? FromAddress { get; set; }
+    public string? FromName { get; set; } = "Parental OpControl";
+    public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
+}
+
+public class AlertPreference
+{
+    public Guid FamilyId { get; set; }
+    public bool MutedNewApp { get; set; }
+    public bool MutedRepeatedBlock { get; set; }
+    public bool MutedPinOverride { get; set; }
+    public bool MutedLimit { get; set; }
+    public bool MutedOffline { get; set; }
+    public bool MutedTampering { get; set; }
+    public int QuietStartMinutes { get; set; }
+    public int QuietEndMinutes { get; set; }
+    public bool DailyDigest { get; set; }
+    public int DigestHour { get; set; } = 18;
+    public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
+}
+
+public class ServerAdminAudit
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid? ActorParentId { get; set; }
+    public string ActorEmail { get; set; } = "";
+    public string Action { get; set; } = "";
+    public Guid? FamilyId { get; set; }
     public string? Detail { get; set; }
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
 }

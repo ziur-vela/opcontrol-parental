@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using OpControl.Parental.Contracts;
 using OpControl.Parental.Server.Data;
 
 namespace OpControl.Parental.Server.Services;
@@ -16,18 +17,24 @@ public sealed class DeviceAuthService
 
         var hash = SecretToken.Hash(token);
         var now = DateTime.UtcNow;
-        return await _db.Devices
+        var device = await _db.Devices
             .AsNoTracking()
             .FirstOrDefaultAsync(d => d.CredentialHash == hash
                 && !d.IsRevoked
                 && d.CredentialExpiresUtc != null
                 && d.CredentialExpiresUtc > now, ct);
+        if (device is null) return null;
+        var active = await _db.Families.AsNoTracking()
+            .AnyAsync(f => f.Id == device.FamilyId && f.Status == FamilyStatus.Active, ct);
+        return active ? device : null;
     }
 
     public async Task<(Device Device, string Token)> RefreshAsync(Guid deviceId, CancellationToken ct)
     {
         var device = await _db.Devices.FirstOrDefaultAsync(d => d.Id == deviceId && !d.IsRevoked, ct)
             ?? throw new InvalidOperationException("Device not found.");
+        var active = await _db.Families.AnyAsync(f => f.Id == device.FamilyId && f.Status == FamilyStatus.Active, ct);
+        if (!active) throw new InvalidOperationException("This family is suspended.");
 
         var token = SecretToken.NewToken();
         device.CredentialHash = SecretToken.Hash(token);

@@ -70,6 +70,9 @@ public sealed class ParentalHub : Hub
         var value = Context.User?.FindFirstValue(ParentalClaims.DeviceId);
         if (!Guid.TryParse(value, out var deviceId))
             return null;
-        return await _db.Devices.AsNoTracking().FirstOrDefaultAsync(d => d.Id == deviceId && !d.IsRevoked);
+        var device = await _db.Devices.AsNoTracking().FirstOrDefaultAsync(d => d.Id == deviceId && !d.IsRevoked);
+        if (device is null) return null;
+        var active = await _db.Families.AsNoTracking().AnyAsync(f => f.Id == device.FamilyId && f.Status == FamilyStatus.Active);
+        return active ? device : null;
     }
 }

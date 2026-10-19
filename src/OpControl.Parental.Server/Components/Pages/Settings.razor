@@ -1,11 +1,14 @@
 @page "/settings"
 @attribute [Authorize]
 @rendermode InteractiveServer
+@using OpControl.Parental.Server.Auth
 @using Microsoft.EntityFrameworkCore
 @using OpControl.Parental.Server.Data
 @using OpControl.Parental.Server.Services
 @inject AuthenticationStateProvider AuthState
 @inject IServiceScopeFactory Scopes
+@inject BuildInfo Build
+@inject Microsoft.Extensions.Options.IOptions<OpControl.Parental.Server.Services.BrandOptions> BrandOptions
 
 <PageTitle>Settings · Parental OpControl</PageTitle>
 
@@ -13,7 +16,7 @@
     <div>
         <div class="eyebrow">Family</div>
         <h1>Settings</h1>
-        <p class="muted">Owner settings for alert emails. Push notifications are a later job.</p>
+        <p class="muted">Owner settings for alerts, email delivery and the family.</p>
     </div>
 </div>
 
@@ -57,7 +60,21 @@
 
 <div class="card">
     <h2>Owner account</h2>
-    <p class="muted">First-run setup creates the owner. Additional parents will be invited by the owner in a later job.</p>
+    <p class="muted">The owner controls family settings, invitations and removing parents. Invite co-parents from <a href="/team">Parents</a>.</p>
+</div>
+
+<div class="card">
+    <div class="card-title-row">
+        <h2>Build version</h2>
+        <span class="pill-soft">stamped at build time</span>
+    </div>
+    <p class="muted small">This comes from the running image, not from a typed setting.</p>
+    <div class="version-line">@Build.DisplayVersion</div>
+    <div class="muted tiny">Version @Build.Version · commit @Build.Commit · built @Build.BuildDate</div>
+    <div class="button-row">
+        <a class="btn btn-ghost" href="/version" target="_blank">Open /version</a>
+        <a class="btn btn-ghost" href="/health" target="_blank">Open /health</a>
+    </div>
 </div>
 
 <div class="card">
@@ -76,11 +93,34 @@
 </div>
 
 <div class="card">
-    <h2>Brand</h2>
-    <p class="muted">The product name, logo and accent color are kept in one place so they can be swapped without code changes.</p>
-    <div class="brand-preview">
-        <img src="/brand/lockup-color.svg" alt="Parental OpControl" />
+    <h2>Alert controls</h2>
+    <p class="muted small">Mute an alert type, delay emails during quiet hours, or send one daily digest instead of individual emails.</p>
+    <div class="grid-2">
+        <label class="check"><input type="checkbox" @bind="_muteNewApp" disabled="@(!_isOwner)" /> Mute new app alerts</label>
+        <label class="check"><input type="checkbox" @bind="_muteRepeated" disabled="@(!_isOwner)" /> Mute repeated blocked sites</label>
+        <label class="check"><input type="checkbox" @bind="_mutePin" disabled="@(!_isOwner)" /> Mute PIN override alerts</label>
+        <label class="check"><input type="checkbox" @bind="_muteLimit" disabled="@(!_isOwner)" /> Mute limit alerts</label>
+        <label class="check"><input type="checkbox" @bind="_muteOffline" disabled="@(!_isOwner)" /> Mute offline alerts</label>
+        <label class="check"><input type="checkbox" @bind="_muteTamper" disabled="@(!_isOwner)" /> Mute tampering alerts</label>
+        <label class="field"><span>Quiet hours start</span><input type="text" placeholder="22:00" @bind="_quietStart" disabled="@(!_isOwner)" /></label>
+        <label class="field"><span>Quiet hours end</span><input type="text" placeholder="07:00" @bind="_quietEnd" disabled="@(!_isOwner)" /></label>
+        <label class="check"><input type="checkbox" @bind="_digest" disabled="@(!_isOwner)" /> Send a daily digest instead</label>
+        <label class="field"><span>Digest hour (local, 0-23)</span><input type="number" min="0" max="23" @bind="_digestHour" disabled="@(!_isOwner)" /></label>
     </div>
+    <p class="muted tiny">Muted types still appear in the dashboard; only email delivery is muted. Quiet hours suppress email until the end of the window. Failed emails retry with backoff (up to 6 attempts).</p>
+    @if (_isOwner)
+    {
+        <div class="button-row"><button class="btn btn-primary" disabled="@_busy" @onclick="SavePreferencesAsync">Save alert controls</button></div>
+    }
+</div>
+
+<div class="card">
+    <h2>Brand</h2>
+    <p class="muted">The product name, logo and accent color come from one server configuration (<code>Branding</code>).</p>
+    <div class="brand-preview">
+        <img src="@BrandOptions.Value.LogoLight" alt="@BrandOptions.Value.ProductName" />
+    </div>
+    <div class="muted tiny">@BrandOptions.Value.ProductName · accent @BrandOptions.Value.AccentColor</div>
 </div>
 
 @code {
@@ -101,6 +141,16 @@
     private bool _hasPassword;
     private bool _hasPin;
     private string? _childName;
+    private bool _muteNewApp;
+    private bool _muteRepeated;
+    private bool _mutePin;
+    private bool _muteLimit;
+    private bool _muteOffline;
+    private bool _muteTamper;
+    private string _quietStart = "22:00";
+    private string _quietEnd = "07:00";
+    private bool _digest;
+    private int _digestHour = 18;
 
     protected override async Task OnInitializedAsync()
     {
@@ -130,6 +180,44 @@
             _childName = child.Name;
             _hasPin = await scope.ServiceProvider.GetRequiredService<LockService>().HasPinAsync(_familyId, child.Id);
         }
+        var preference = await alerts.EnsurePreferenceAsync(_familyId);
+        _muteNewApp = preference.MutedNewApp;
+        _muteRepeated = preference.MutedRepeatedBlock;
+        _mutePin = preference.MutedPinOverride;
+        _muteLimit = preference.MutedLimit;
+        _muteOffline = preference.MutedOffline;
+        _muteTamper = preference.MutedTampering;
+        _quietStart = FormatMinutes(preference.QuietStartMinutes);
+        _quietEnd = FormatMinutes(preference.QuietEndMinutes);
+        _digest = preference.DailyDigest;
+        _digestHour = preference.DigestHour;
+    }
+
+    private static string FormatMinutes(int minutes) => $"{minutes / 60:00}:{minutes % 60:00}";
+
+    private static int ParseMinutes(string? value)
+    {
+        if (TimeSpan.TryParse(value, out var span)) return Math.Clamp((int)span.TotalMinutes, 0, 1439);
+        return 0;
+    }
+
+    private async Task SavePreferencesAsync()
+    {
+        if (!_isOwner) return;
+        _busy = true;
+        _error = null;
+        _saved = false;
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var alerts = scope.ServiceProvider.GetRequiredService<AlertService>();
+            await alerts.SavePreferenceAsync(_familyId, new OpControl.Parental.Contracts.AlertPreferencesDto(
+                _muteNewApp, _muteRepeated, _mutePin, _muteLimit, _muteOffline, _muteTamper,
+                ParseMinutes(_quietStart), ParseMinutes(_quietEnd), _digest, _digestHour));
+            _saved = true;
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _busy = false; }
     }
 
     private async Task SaveAsync()

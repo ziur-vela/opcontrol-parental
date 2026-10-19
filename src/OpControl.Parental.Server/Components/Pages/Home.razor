@@ -1,6 +1,7 @@
 @page "/"
 @attribute [Authorize]
 @rendermode InteractiveServer
+@using OpControl.Parental.Server.Auth
 @using Microsoft.EntityFrameworkCore
 @using OpControl.Parental.Contracts
 @using OpControl.Parental.Server.Data
@@ -35,11 +36,22 @@ else
         </div>
     </div>
 
+    <nav class="child-tabs" aria-label="Child sections">
+        <a class="chip active" href="/">Overview</a>
+        <a class="chip" href="/screen-time">Screen time</a>
+        <a class="chip" href="/websites">Websites</a>
+        <a class="chip" href="/apps">Apps</a>
+        <a class="chip" href="/activity">Activity</a>
+        <a class="chip" href="/devices">Devices</a>
+    </nav>
+
     @if (!string.IsNullOrEmpty(_error))
     {
         <div class="alert danger">@_error</div>
     }
 
+    @if (_canView)
+    {
     <section class="stat-grid">
         <a class="card stat-card" href="/screen-time">
             <div class="eyebrow">Screen time today</div>
@@ -62,6 +74,7 @@ else
             <div class="muted tiny">@NextScheduleLabel</div>
         </a>
     </section>
+    }
 
     <div class="grid-2 home-grid">
         <section class="card child-card">
@@ -77,6 +90,8 @@ else
                 </div>
             </div>
 
+            @if (_canView)
+            {
             <div class="screen-time-block">
                 <div class="card-title-row">
                     <div class="eyebrow">Screen time</div>
@@ -87,20 +102,28 @@ else
                 </div>
                 <div class="muted tiny">@RemainingText</div>
             </div>
+            }
 
             <div class="lock-banner @(_state?.IsLocked == true ? "locked" : "unlocked")">
                 <span>@StateHeadline</span>
                 <span class="muted tiny">@ReasonText</span>
             </div>
 
-            <div class="button-row">
-                <button class="btn btn-primary" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Lock)">Lock now</button>
-                <button class="btn btn-accent" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Bonus, 15)">+15 min</button>
-                <button class="btn btn-accent" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Bonus, 30)">+30 min</button>
-                <button class="btn btn-ghost" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Unlock)">Unlock</button>
-                <a class="btn btn-ghost" href="/screen-time">Open profile →</a>
-            </div>
-            <div class="muted tiny">Unlock PIN @(_hasPin ? "is set (works offline on the lock screen)" : "is not set"). <a href="/pin">@(_hasPin ? "Change PIN" : "Set PIN")</a></div>
+            @if (_canLock)
+            {
+                <div class="button-row">
+                    <button class="btn btn-primary" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Lock)">Lock now</button>
+                    <button class="btn btn-accent" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Bonus, 15)">+15 min</button>
+                    <button class="btn btn-accent" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Bonus, 30)">+30 min</button>
+                    <button class="btn btn-ghost" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Unlock)">Unlock</button>
+                    <a class="btn btn-ghost" href="/screen-time">Open profile →</a>
+                </div>
+                <div class="muted tiny">Unlock PIN @(_hasPin ? "is set (works offline on the lock screen)" : "is not set"). <a href="/pin">@(_hasPin ? "Change PIN" : "Set PIN")</a></div>
+            }
+            else
+            {
+                <div class="muted tiny">You can view this family but you do not have permission to lock or give bonus time.</div>
+            }
         </section>
 
         <section class="card">
@@ -226,6 +249,8 @@ else
     private List<ScheduleDto> _schedules = [];
     private List<Segment> _scheduleSegments = [];
     private bool _loading = true;
+    private bool _canLock;
+    private bool _canView;
     private bool _busy;
     private bool _hasPin;
     private int _usedTodaySeconds;
@@ -251,6 +276,11 @@ else
             _error = "Family scope is missing from the session.";
             return;
         }
+        var isOwner = string.Equals(auth.User.FindFirst("family_role")?.Value, "Owner", StringComparison.OrdinalIgnoreCase);
+        _canLock = isOwner || (int.TryParse(auth.User.FindFirst("permissions")?.Value, out var permissions)
+            && (permissions & (int)OpControl.Parental.Contracts.ParentPermissions.LockUnlockBonus) != 0);
+        _canView = isOwner || (int.TryParse(auth.User.FindFirst("permissions")?.Value, out var reportPermissions)
+            && (reportPermissions & (int)OpControl.Parental.Contracts.ParentPermissions.ViewReports) != 0);
 
         Events.DeviceStatusChanged += OnDeviceStatus;
         Events.LockStateChanged += OnLockState;

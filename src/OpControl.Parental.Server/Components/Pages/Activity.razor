@@ -1,6 +1,7 @@
 @page "/activity"
-@attribute [Authorize]
+@attribute [Authorize(Policy = ParentalPolicies.ViewReports)]
 @rendermode InteractiveServer
+@using OpControl.Parental.Server.Auth
 @using Microsoft.EntityFrameworkCore
 @using OpControl.Parental.Contracts
 @using OpControl.Parental.Server.Data
@@ -127,11 +128,23 @@ else
             .CountAsync(v => v.ChildId == child.Id && v.Blocked && v.VisitedUtc >= start && v.VisitedUtc < end);
 
         var rows = new List<EventRow>();
+        var parentNames = await db.Users.AsNoTracking()
+            .Where(u => u.FamilyId == _familyId)
+            .ToDictionaryAsync(u => u.Id, u => u.DisplayName);
         var overrides = await db.OverrideEvents.AsNoTracking()
             .Where(e => e.FamilyId == _familyId && e.ChildId == child.Id)
             .OrderByDescending(e => e.CreatedUtc).Take(120).ToListAsync();
         rows.AddRange(overrides.Select(e => new EventRow(e.CreatedUtc, OverrideIcon(e.Option), OverrideTone(e.Option),
-            OverrideTitle(e.Option), OverrideDetail(e))));
+            OverrideTitle(e.Option) + (e.CreatedByParentId is { } changedBy && parentNames.TryGetValue(changedBy, out var byName) ? $" · by {byName}" : ""),
+            OverrideDetail(e))));
+
+        var ruleHistory = await db.RuleHistory.AsNoTracking()
+            .Where(h => h.FamilyId == _familyId && h.ChildId == child.Id)
+            .OrderByDescending(h => h.ChangedUtc).Take(80).ToListAsync();
+        rows.AddRange(ruleHistory.Select(h => new EventRow(h.ChangedUtc, "◎", "accent",
+            $"{(h.RuleType == "site" ? "Website" : "App")} rule {h.Action.ToString().ToLowerInvariant()}" +
+            (h.ChangedByParentId is { } changedBy && parentNames.TryGetValue(changedBy, out var byName) ? $" · by {byName}" : ""),
+            h.DisplayName)));
 
         var blocks = await db.BlockEvents.AsNoTracking()
             .Where(b => b.FamilyId == _familyId && b.ChildId == child.Id)

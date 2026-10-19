@@ -10,7 +10,10 @@ website time (approximate), daily device and per-app limits, always-allowed apps
 the activity timeline and alerts with optional email delivery. Job 5A adds the WiX MSI and
 interactive setup bootstrapper, the Add device install-link/QR flow, automatic client updates with
 SHA-256 verification and rollback, helper authentication, usage sanity checks, unaccounted
-helper-down time and additional tamper alerts.
+helper-down time and additional tamper alerts. Job 5B adds co-parent roles and permissions,
+multi-family tenancy with invite-only registration, server administrator tools, per-device time
+zones, alert controls (mute/quiet hours/digest/retry), swappable branding and build-version
+stamping.
 
 ## Solution
 
@@ -42,14 +45,29 @@ Stack directory on `opcontrol-dockers`: `/opt/stacks/opcontrol-parental/`.
 - `data/keys/` ASP.NET Data Protection keys (back up with the database)
 - `repo/` build context
 
-Build and redeploy:
+Build and redeploy (the script stamps the version, commit and build date automatically):
 
 ```bash
-cd /opt/stacks/opcontrol-parental/repo
-docker build -t opcontrol-parental-web:0.1.0-20261018 .
+./deploy/build-image.sh opcontrol-parental-web
 cd /opt/stacks/opcontrol-parental
 docker compose up -d
 ```
+
+The image tag is `<version>-<YYYYMMDD>`. `GET /version` and `GET /health` return the same stamped
+version string; the dashboard sidebar and Settings show it too. A build from an untagged commit
+shows a `git describe` value such as `v0.6.0-3-g1a2b3c4`, so it is never mistaken for a release.
+
+Server administrator and SMTP (no dashboard login needed):
+
+```bash
+docker exec parental-web dotnet OpControl.Parental.Server.dll --set-server-admin owner@example.com
+# SMTP JSON on stdin; password is protected with the Data Protection keys
+printf '%s' "$SMTP_JSON" | docker exec -i parental-web \
+  dotnet OpControl.Parental.Server.dll --set-server-smtp-stdin
+```
+
+Only the first run creates a family (`/setup`); afterwards new families join by invitation from
+the server administrator and there is no public sign-up.
 
 Health: `GET /health`. Public URL: `https://parental.opcontrol.net` (Cloudflare Tunnel).
 
