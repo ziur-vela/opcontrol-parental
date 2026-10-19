@@ -16,7 +16,7 @@ Start-Sleep -Seconds 2
 sc.exe delete OpControlParental 2>$null | Out-Null
 Get-ScheduledTask -TaskName "OpControl Parental Helper*" -ErrorAction SilentlyContinue | Unregister-ScheduledTask -Confirm:$false
 
-New-Item -ItemType Directory -Force -Path "$root\Client", "$root\Helper", $data | Out-Null
+New-Item -ItemType Directory -Force -Path "$root\Client", "$root\Helper", $data, "$data\private" | Out-Null
 Copy-Item "$stage\client\*" "$root\Client" -Recurse -Force
 Copy-Item "$stage\helper\*" "$root\Helper" -Recurse -Force
 
@@ -29,6 +29,7 @@ $config = [ordered]@{
 Set-Content -Path "$data\config.json" -Value $config -Encoding UTF8
 icacls "$data\config.json" /inheritance:r /grant:r "SYSTEM:F" "Administrators:F" | Out-Null
 icacls "$data" /grant "Users:(OI)(CI)RX" | Out-Null
+icacls "$data\private" /inheritance:r /grant:r "SYSTEM:(OI)(CI)F" "Administrators:(OI)(CI)F" | Out-Null
 
 sc.exe create OpControlParental binPath= "`"$root\Client\OpControl.Parental.Client.exe`"" start= auto DisplayName= "OpControl Parental" | Out-Null
 sc.exe description OpControlParental "OpControl Parental device service" | Out-Null

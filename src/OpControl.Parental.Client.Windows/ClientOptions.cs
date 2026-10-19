@@ -45,7 +45,8 @@ public static class ClientPaths
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "OpControlParental");
 
     public static string ConfigFile => Path.Combine(DataDirectory, "config.json");
-    public static string CredentialFile => Path.Combine(DataDirectory, "device.json");
+    public static string PrivateDirectory => Path.Combine(DataDirectory, "private");
+    public static string CredentialFile => Path.Combine(PrivateDirectory, "device.json");
     public static string StateFile => Path.Combine(DataDirectory, "state.json");
     public static string LogFile => Path.Combine(DataDirectory, "service.log");
 
@@ -88,9 +89,14 @@ public sealed class CredentialStore
     {
         lock (_gate)
         {
-            ClientPaths.EnsureDataDirectory();
+            Directory.CreateDirectory(ClientPaths.PrivateDirectory);
+            SecureFile.SystemOnlyDirectory(ClientPaths.PrivateDirectory);
             var temp = ClientPaths.CredentialFile + ".tmp";
-            File.WriteAllText(temp, JsonSerializer.Serialize(credential, JsonOptions));
+            using (var stream = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                SecureFile.SystemOnly(temp);
+                JsonSerializer.Serialize(stream, credential, JsonOptions);
+            }
             File.Move(temp, ClientPaths.CredentialFile, overwrite: true);
             SecureFile.SystemOnly(ClientPaths.CredentialFile);
         }
@@ -144,7 +150,10 @@ public sealed class StateStore
 public static class SecureFile
 {
     public static void SystemOnly(string path) =>
-        RunIcacls($"\"{path}\" /inheritance:r /grant:r \"SYSTEM:F\" \"Administrators:F\"");
+        RunIcacls($"\"{path}\" /inheritance:r /grant:r \"SYSTEM:F\" /remove:g \"BUILTIN\\Administrators\"");
+
+    public static void SystemOnlyDirectory(string path) =>
+        RunIcacls($"\"{path}\" /inheritance:r /grant:r \"SYSTEM:(OI)(CI)F\" \"Administrators:(OI)(CI)F\"");
 
     public static void UsersReadable(string path) =>
         RunIcacls($"\"{path}\" /inheritance:r /grant:r \"SYSTEM:F\" \"Administrators:F\" \"Users:R\"");

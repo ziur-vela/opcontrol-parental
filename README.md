@@ -57,7 +57,7 @@ dotnet publish src/OpControl.Parental.Client.Windows.Helper -c Release -r win-x6
 Install on a test device with `deploy/install-x1.ps1` (elevated PowerShell). Remove with
 `deploy/uninstall-x1.ps1`.
 
-The service stores the device credential in `C:\ProgramData\OpControlParental\device.json`
+The service stores the device credential in `C:\ProgramData\OpControlParental\private\device.json`
 with an ACL that grants access to SYSTEM and Administrators only. The user-session helper reads
 only `state.json` (Users read) and never sees the credential.
 
