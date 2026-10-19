@@ -100,7 +100,7 @@ else
                 <button class="btn btn-ghost" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Unlock)">Unlock</button>
                 <a class="btn btn-ghost" href="/screen-time">Open profile →</a>
             </div>
-            <div class="muted tiny">Unlock PIN @(_hasPin ? "is set — works offline on the lock screen" : "is not set").</div>
+            <div class="muted tiny">Unlock PIN @(_hasPin ? "is set (works offline on the lock screen)" : "is not set"). <a href="/pin">@(_hasPin ? "Change PIN" : "Set PIN")</a></div>
         </section>
 
         <section class="card">

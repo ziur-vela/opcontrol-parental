@@ -202,7 +202,7 @@ public sealed class HelperContext : ApplicationContext
         };
         dialog.FormClosed += (_, _) => _pinDialog = null;
         _pinDialog = dialog;
-        dialog.Show();
+        ShowOwned(dialog);
         dialog.BringToFront();
         dialog.Activate();
     }
@@ -217,9 +217,16 @@ public sealed class HelperContext : ApplicationContext
                 _ = ApplyOverrideAsync(ticket, option, minutes);
             },
             () => menu?.Close());
-        menu.Show();
+        ShowOwned(menu);
         menu.BringToFront();
         menu.Activate();
+    }
+
+    private void ShowOwned(Form dialog)
+    {
+        var owner = _overlays.Visible ? _overlays.Owner : null;
+        if (owner is { IsDisposed: false }) dialog.Show(owner);
+        else dialog.Show();
     }
 
     private async Task ApplyOverrideAsync(string ticket, string option, int? minutes)

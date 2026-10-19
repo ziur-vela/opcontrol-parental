@@ -14,7 +14,7 @@ public sealed class CountdownForm : Form
         BackColor = Color.FromArgb(20, 23, 29);
         Width = 390;
         Height = 62;
-        Padding = new Padding(14, 10, 14, 10);
+        Padding = new Padding(10, 4, 10, 4);
         var area = Screen.PrimaryScreen!.WorkingArea;
         Location = new Point(area.Right - Width - 16, area.Bottom - Height - 12);
 
@@ -22,11 +22,13 @@ public sealed class CountdownForm : Form
         {
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleCenter,
-            Font = new Font("Segoe UI", 14f, FontStyle.Bold),
+            Font = new Font("Segoe UI Semibold", 10f, FontStyle.Regular),
             ForeColor = Color.FromArgb(0, 200, 83),
             BackColor = Color.Transparent
         };
         Controls.Add(_label);
+        Dpi.ScaleForm(this);
+        Location = new Point(area.Right - Width - 16, area.Bottom - Height - 12);
         Paint += (_, e) =>
         {
             using var pen = new Pen(Color.FromArgb(43, 48, 58), 1);
@@ -43,8 +45,12 @@ public sealed class CountdownForm : Form
         else
             _label.ForeColor = Color.FromArgb(0, 200, 83);
 
+        // Compact pill sized to the text (was a fixed 390x62 box, oversized at 200% scaling).
+        var text_ = TextRenderer.MeasureText(text, _label.Font);
+        var size = new Size(text_.Width + Padding.Horizontal + Dpi.S(this, 8), text_.Height + Padding.Vertical + Dpi.S(this, 4));
+        if (Size != size) Size = size;
         var area = Screen.PrimaryScreen!.WorkingArea;
-        Location = new Point(area.Right - Width - 16, area.Bottom - Height - 12);
+        Location = new Point(area.Right - Width - Dpi.S(this, 12), area.Bottom - Height - Dpi.S(this, 8));
         if (!Visible) Show();
     }
 

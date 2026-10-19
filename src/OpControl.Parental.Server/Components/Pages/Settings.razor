@@ -61,6 +61,15 @@
 </div>
 
 <div class="card">
+    <div class="card-title-row">
+        <h2>Parent override PIN</h2>
+        <span class="pill-soft">@(_hasPin ? "Set" : "Not set")</span>
+    </div>
+    <p class="muted">Used on @(_childName ?? "the child")'s lock screen ("Parent override") to unlock until the next lock cycle or give bonus time. Works offline. Five wrong attempts block it for 60 seconds.</p>
+    <a class="btn btn-primary" href="/pin">@(_hasPin ? "Change or clear PIN" : "Set PIN")</a>
+</div>
+
+<div class="card">
     <h2>Security</h2>
     <p class="muted">Protect parent sign-in with an authenticator app (TOTP).</p>
     <a class="btn btn-primary" href="/account/2fa">Two-factor authentication</a>
@@ -89,6 +98,8 @@
     private string? _from;
     private int _offlineMinutes = 120;
     private bool _hasPassword;
+    private bool _hasPin;
+    private string? _childName;
 
     protected override async Task OnInitializedAsync()
     {
@@ -107,6 +118,16 @@
         _from = settings.FromAddress;
         _offlineMinutes = settings.OfflineAlertMinutes;
         _hasPassword = !string.IsNullOrWhiteSpace(settings.SmtpPasswordProtected);
+        var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
+        var child = await db.Children.AsNoTracking()
+            .Where(c => c.FamilyId == _familyId)
+            .OrderBy(c => c.CreatedUtc)
+            .FirstOrDefaultAsync();
+        if (child is not null)
+        {
+            _childName = child.Name;
+            _hasPin = await scope.ServiceProvider.GetRequiredService<LockService>().HasPinAsync(_familyId, child.Id);
+        }
     }
 
     private async Task SaveAsync()

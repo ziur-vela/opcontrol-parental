@@ -70,6 +70,7 @@ public sealed class PinDialog : Form
         CancelButton = cancel;
 
         Controls.AddRange([title, _pin, _status, _ok, cancel]);
+        Dpi.ScaleForm(this);
         Shown += (_, _) => _pin.Focus();
         KeyDown += async (_, e) =>
         {

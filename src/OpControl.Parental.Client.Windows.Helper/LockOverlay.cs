@@ -10,6 +10,11 @@ public sealed class LockOverlayManager : IDisposable
 
     public bool Visible => _forms.Any(f => f.Visible);
 
+    /// <summary>Lock form on the primary screen; override dialogs are owned by it so they stay above the overlay.</summary>
+    public Form? Owner => _forms.FirstOrDefault(f => f.IsPrimary) ?? _forms.FirstOrDefault();
+
+    private bool DialogOpen => _forms.Any(f => f.OwnedForms.Any(o => o.Visible));
+
     public void Update(RuntimeLockStateDto state)
     {
         if (_forms.Count == 0)
@@ -32,9 +37,13 @@ public sealed class LockOverlayManager : IDisposable
             HelperPaths.LogEvent("lock-window-shown");
         }
 
+        // Setting TopMost re-runs SetWindowPos(HWND_TOPMOST) and lifts the overlay above every other
+        // topmost window. While a parent dialog is open that would bury it (bug: PIN dialog vanished
+        // after ~1 s), so only re-assert when no dialog is showing.
+        var dialogOpen = DialogOpen;
         foreach (var form in _forms)
         {
-            form.TopMost = true;
+            if (!dialogOpen) form.TopMost = true;
             if (!form.Visible) form.Show();
         }
     }
@@ -63,8 +72,11 @@ public sealed class LockForm : Form
     private readonly Label _end;
     public event Action? OverrideClicked;
 
+    public bool IsPrimary { get; }
+
     public LockForm(Screen screen)
     {
+        IsPrimary = screen.Primary;
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.Manual;
         Bounds = screen.Bounds;
@@ -80,7 +92,7 @@ public sealed class LockForm : Form
             ColumnCount = 1,
             RowCount = 8,
             BackColor = Color.Transparent,
-            Padding = new Padding(48)
+            Padding = new Padding(Dpi.S(this, 48))
         };
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 34f));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -95,8 +107,8 @@ public sealed class LockForm : Form
         {
             Image = Logo,
             SizeMode = PictureBoxSizeMode.Zoom,
-            Width = 330,
-            Height = 66,
+            Width = Dpi.S(this, 330),
+            Height = Dpi.S(this, 66),
             Anchor = AnchorStyles.None,
             BackColor = Color.Transparent
         };
@@ -134,9 +146,9 @@ public sealed class LockForm : Form
             Text = "Parent override",
             Font = new Font("Segoe UI", 13f, FontStyle.Underline),
             ForeColor = Color.FromArgb(0, 200, 83),
-            AutoSize = false,
-            Width = 260,
-            Height = 40,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Padding = new Padding(Dpi.S(this, 16), Dpi.S(this, 6), Dpi.S(this, 16), Dpi.S(this, 6)),
             TextAlign = ContentAlignment.MiddleCenter,
             Anchor = AnchorStyles.None,
             BackColor = Color.FromArgb(16, 18, 23),

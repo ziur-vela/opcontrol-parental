@@ -42,6 +42,7 @@ public sealed class OverrideMenu : Form
         cancel.Click += (_, _) => { onCancel(); Close(); };
 
         Controls.AddRange([title, subtitle, unlock, bonus, cancel]);
+        Dpi.ScaleForm(this);
     }
 
     private static Button MakeButton(string text, int x, int y, int width) => new()
@@ -117,6 +118,7 @@ public sealed class BonusDialog : Form
         cancel.Click += (_, _) => Close();
 
         Controls.AddRange([title, quick, label, _custom, give, cancel]);
+        Dpi.ScaleForm(this);
     }
 
     protected override bool ShowWithoutActivation => false;

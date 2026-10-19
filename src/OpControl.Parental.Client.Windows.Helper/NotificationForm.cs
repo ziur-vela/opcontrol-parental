@@ -40,6 +40,7 @@ public sealed class NotificationForm : Form
         Controls.Add(body);
         Controls.Add(heading);
 
+        Dpi.ScaleForm(this);
         var area = Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1920, 1080);
         Location = new Point(area.Right - Width - 24, area.Bottom - Height - 24);
 
