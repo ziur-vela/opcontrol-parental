@@ -6,7 +6,7 @@ Get-Process "OpControl.Parental.Helper" -ErrorAction SilentlyContinue | Stop-Pro
 sc.exe stop OpControlParental | Out-Null
 Start-Sleep -Seconds 2
 sc.exe delete OpControlParental | Out-Null
-Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -like "OpControl Parental Helper*" -or $_.TaskPath -like "*OpControl Parental Helper*" } | Unregister-ScheduledTask -Confirm:$false
+Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -like "OpControl *" -or $_.TaskPath -like "*OpControl*" } | Unregister-ScheduledTask -Confirm:$false
 
 Remove-Item -Recurse -Force $root -ErrorAction SilentlyContinue
 Remove-Item -Recurse -Force $data -ErrorAction SilentlyContinue
