@@ -17,6 +17,8 @@ public sealed class Worker : BackgroundService
     private ClientOptions _options = new();
     private string ClientVersion => typeof(Worker).Assembly.GetName().Version?.ToString() ?? "0.3.0";
 
+    private readonly IServiceProvider _serviceProvider;
+
     public Worker(
         ILogger<Worker> logger,
         EnrollmentClient enrollment,
@@ -25,8 +27,10 @@ public sealed class Worker : BackgroundService
         LockRuntime runtime,
         OverrideSync overrides,
         CategoryCache categories,
-        ClientSettings settings)
+        ClientSettings settings,
+        IServiceProvider serviceProvider)
     {
+        _serviceProvider = serviceProvider;
         _logger = logger;
         _enrollment = enrollment;
         _credentials = credentials;
@@ -40,6 +44,7 @@ public sealed class Worker : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         ClientPaths.EnsureDirectoriesWithAcl();
+        CheckPreviousShutdown();
         _options = ClientOptions.Load();
         _settings.Value = _options;
         _logger.LogInformation("OpControl Parental client starting; server {Server}, monitored account {Account}", _options.ServerUrl, _options.MonitoredAccount);
@@ -74,6 +79,42 @@ public sealed class Worker : BackgroundService
             }
         }
     }
+
+    private void CheckPreviousShutdown()
+    {
+        try
+        {
+            if (!File.Exists(ClientPaths.TamperBaselineFile))
+            {
+                File.WriteAllText(ClientPaths.TamperBaselineFile, DateTime.UtcNow.ToString("o"));
+                if (File.Exists(ClientPaths.CleanShutdownFile)) File.Delete(ClientPaths.CleanShutdownFile);
+                return;
+            }
+            if (File.Exists(ClientPaths.CleanShutdownFile))
+            {
+                File.Delete(ClientPaths.CleanShutdownFile);
+                return;
+            }
+            if (File.Exists(ClientPaths.CredentialFile))
+                QueueTamper("service-stopped", "The client service stopped without a clean shutdown (possible service stop or crash).");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not evaluate previous shutdown state");
+        }
+    }
+
+    private void QueueTamper(string kind, string detail)
+    {
+        try
+        {
+            var dataSync = GetService<DataSyncService>();
+            dataSync?.QueueTamper(new TamperEventDto(kind, detail, DateTime.UtcNow));
+        }
+        catch { }
+    }
+
+    private T? GetService<T>() where T : class => _serviceProvider.GetService(typeof(T)) as T;
 
     private async Task<bool> EnsureCredentialAsync(CancellationToken ct)
     {
@@ -206,6 +247,17 @@ public sealed class Worker : BackgroundService
             await connection.StopAsync(CancellationToken.None);
             await connection.DisposeAsync();
         }
+    }
+
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            Directory.CreateDirectory(ClientPaths.PrivateDirectory);
+            File.WriteAllText(ClientPaths.CleanShutdownFile, DateTime.UtcNow.ToString("o"));
+        }
+        catch { }
+        await base.StopAsync(cancellationToken);
     }
 
     private async Task TryRefreshAsync(CancellationToken ct)

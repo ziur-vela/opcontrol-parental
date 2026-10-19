@@ -22,12 +22,12 @@ Host.CreateDefaultBuilder(args)
         services.AddHttpClient<EnrollmentClient>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(30);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("OpControlParentalClient/0.2");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("OpControlParentalClient/0.4");
         });
         services.AddHttpClient("device", client =>
         {
             client.Timeout = TimeSpan.FromSeconds(30);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("OpControlParentalClient/0.2");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("OpControlParentalClient/0.4");
         });
         services.AddSingleton<ClientSettings>(_ => new ClientSettings { Value = ClientOptions.Load() });
         services.AddSingleton<CredentialStore>();

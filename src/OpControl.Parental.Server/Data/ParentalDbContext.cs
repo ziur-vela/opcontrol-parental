@@ -29,6 +29,12 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<CategoryDomain> CategoryDomains => Set<CategoryDomain>();
     public DbSet<ChildCategory> ChildCategories => Set<ChildCategory>();
+    public DbSet<UsageInterval> UsageIntervals => Set<UsageInterval>();
+    public DbSet<WebsiteUsage> WebsiteUsages => Set<WebsiteUsage>();
+    public DbSet<ScreenTimeLimit> ScreenTimeLimits => Set<ScreenTimeLimit>();
+    public DbSet<Alert> Alerts => Set<Alert>();
+    public DbSet<FamilySettings> FamilySettings => Set<FamilySettings>();
+    public DbSet<ClientTamperEvent> ClientTamperEvents => Set<ClientTamperEvent>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -226,6 +232,60 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
             e.Property(x => x.CodeHash).HasMaxLength(64).IsRequired();
             e.HasIndex(x => x.CodeHash).IsUnique();
             e.HasIndex(x => new { x.FamilyId, x.ChildId });
+        });
+
+        builder.Entity<UsageInterval>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.AppIdentity).HasMaxLength(255).IsRequired();
+            e.Property(x => x.AppDisplayName).HasMaxLength(255).IsRequired();
+            e.HasIndex(x => new { x.FamilyId, x.ChildId, x.StartUtc });
+            e.HasIndex(x => new { x.DeviceId, x.StartUtc });
+            e.HasIndex(x => new { x.ChildId, x.Active, x.StartUtc });
+        });
+
+        builder.Entity<WebsiteUsage>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Domain).HasMaxLength(255).IsRequired();
+            e.HasIndex(x => new { x.FamilyId, x.ChildId, x.StartUtc });
+            e.HasIndex(x => new { x.DeviceId, x.StartUtc });
+        });
+
+        builder.Entity<ScreenTimeLimit>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.ChildId).IsUnique();
+            e.HasIndex(x => x.FamilyId);
+        });
+
+        builder.Entity<Alert>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Type).HasMaxLength(40).IsRequired();
+            e.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Detail).HasMaxLength(500).IsRequired();
+            e.HasIndex(x => new { x.FamilyId, x.CreatedUtc });
+            e.HasIndex(x => new { x.ChildId, x.ReadUtc });
+            e.HasIndex(x => new { x.ChildId, x.Type, x.CreatedUtc });
+            e.HasIndex(x => new { x.EmailedUtc });
+        });
+
+        builder.Entity<FamilySettings>(e =>
+        {
+            e.HasKey(x => x.FamilyId);
+            e.Property(x => x.SmtpHost).HasMaxLength(255);
+            e.Property(x => x.SmtpUsername).HasMaxLength(255);
+            e.Property(x => x.SmtpPasswordProtected).HasMaxLength(1024);
+            e.Property(x => x.FromAddress).HasMaxLength(255);
+        });
+
+        builder.Entity<ClientTamperEvent>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Kind).HasMaxLength(40).IsRequired();
+            e.Property(x => x.Detail).HasMaxLength(500);
+            e.HasIndex(x => new { x.FamilyId, x.ChildId, x.OccurredUtc });
         });
     }
 }

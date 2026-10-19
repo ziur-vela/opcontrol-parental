@@ -5,7 +5,9 @@ foundation (identity, family/child/device model, enrollment, SignalR, dashboard,
 and user-session helper). Job 2 added the lock overlay, schedules, PIN overrides, bonus time and
 2FA. Job 3 adds website filtering through a local DNS resolver, visited-site history, curated
 categories, app inventory/review, real-time app blocking, per-item bonus unlocks and the
-Websites/Apps dashboard pages.
+Websites/Apps dashboard pages. Job 4 adds active screen-time and foreground-app tracking,
+website time (approximate), daily device and per-app limits, always-allowed apps, reports,
+the activity timeline and alerts with optional email delivery.
 
 ## Solution
 

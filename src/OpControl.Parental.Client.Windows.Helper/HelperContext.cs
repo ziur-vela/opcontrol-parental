@@ -8,6 +8,7 @@ public sealed class HelperContext : ApplicationContext
     private readonly LockOverlayManager _overlays;
     private readonly CountdownForm _countdown;
     private readonly KeyboardHook _hook = new();
+    private readonly UsageSampler _usage = new();
     private readonly System.Windows.Forms.Timer _timer;
     private PinDialog? _pinDialog;
     private NotificationForm? _notification;
@@ -15,6 +16,9 @@ public sealed class HelperContext : ApplicationContext
     private DateTime _lastNotificationUtc = DateTime.MinValue;
     private bool _lastVisible;
     private bool _hookInstalled;
+    private bool _wasLocked;
+    private readonly HashSet<int> _warnedThresholds = [];
+    private DateTime _warningDay = DateTime.MinValue;
 
     public HelperContext(string monitored)
     {
@@ -33,6 +37,7 @@ public sealed class HelperContext : ApplicationContext
     {
         CheckNotification();
         var state = HelperPaths.ReadState();
+        _usage.Sample(state);
         if (state is null)
         {
             _overlays.Hide();
@@ -46,6 +51,9 @@ public sealed class HelperContext : ApplicationContext
         {
             _countdown.HideBanner();
             _overlays.Update(state);
+            if (state.Reason == "daily-limit" && !_wasLocked)
+                HelperPaths.LogEvent("daily-limit-lock");
+            _wasLocked = true;
             if (!_hookInstalled && _hook.Install())
             {
                 _hookInstalled = true;
@@ -56,6 +64,7 @@ public sealed class HelperContext : ApplicationContext
             return;
         }
 
+        _wasLocked = false;
         _overlays.Hide();
         _hook.Uninstall();
         if (_hookInstalled)
@@ -65,6 +74,7 @@ public sealed class HelperContext : ApplicationContext
         }
 
         var now = DateTime.UtcNow;
+        CheckDailyWarnings(state);
         if (state.BonusUntilUtc is { } bonus && bonus > now)
         {
             var remaining = bonus - now;
@@ -80,11 +90,65 @@ public sealed class HelperContext : ApplicationContext
             _countdown.UpdateText(text, remaining);
             SetVisible(true, false, state.Reason, text);
         }
+        else if (state.DailyLimitRemainingSeconds is { } dailyLeft && dailyLeft > 0)
+        {
+            var remaining = TimeSpan.FromSeconds(dailyLeft);
+            var text = $"{FormatShort(remaining)} left today";
+            _countdown.UpdateText(text, remaining);
+            SetVisible(true, false, state.Reason, text);
+        }
         else
         {
             _countdown.HideBanner();
             SetVisible(false, false, state.Reason);
         }
+    }
+
+    private void CheckDailyWarnings(RuntimeLockStateDto state)
+    {
+        var today = DateTime.Today;
+        if (today != _warningDay)
+        {
+            _warningDay = today;
+            _warnedThresholds.Clear();
+        }
+
+        if (state.DailyLimitRemainingSeconds is not { } left || left <= 0 || state.BonusUntilUtc is { } bonus && bonus > DateTime.UtcNow)
+            return;
+
+        foreach (var minutes in new[] { 15, 5, 1 })
+        {
+            if (left > minutes * 60 || left <= (minutes - 1) * 60) continue;
+            if (!_warnedThresholds.Add(minutes)) continue;
+            var message = $"{minutes} minute{(minutes == 1 ? "" : "s")} of screen time left today.";
+            ShowNotification("Screen time", message);
+            if (state.SpokenWarnings) Speak(message);
+            HelperPaths.LogEvent($"daily-warning-{minutes}");
+            break;
+        }
+    }
+
+    private void ShowNotification(string title, string message)
+    {
+        try
+        {
+            _notification?.Close();
+            _notification = new NotificationForm(title, message);
+            _notification.Show();
+        }
+        catch { }
+    }
+
+    private static void Speak(string text)
+    {
+        try
+        {
+            var type = Type.GetTypeFromProgID("SAPI.SpVoice");
+            if (type is null) return;
+            dynamic? voice = Activator.CreateInstance(type);
+            voice?.Speak(text, 0);
+        }
+        catch { }
     }
 
     private void CheckNotification()
@@ -117,6 +181,9 @@ public sealed class HelperContext : ApplicationContext
 
     private static string Format(TimeSpan span) =>
         $"{(int)span.TotalHours:00}:{span.Minutes:00}:{span.Seconds:00}";
+
+    private static string FormatShort(TimeSpan span) =>
+        span.TotalHours >= 1 ? $"{(int)span.TotalHours}h {span.Minutes}m" : $"{Math.Max(1, span.Minutes)}m";
 
     private void ShowPinDialog()
     {
@@ -180,6 +247,7 @@ public sealed class HelperContext : ApplicationContext
             _countdown.Dispose();
             _pinDialog?.Dispose();
             _notification?.Dispose();
+            _usage.FlushAll();
         }
         base.Dispose(disposing);
     }

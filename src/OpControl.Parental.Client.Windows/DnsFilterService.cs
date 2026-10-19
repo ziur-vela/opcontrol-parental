@@ -4,15 +4,17 @@ public sealed class DnsFilterService : BackgroundService
 {
     private readonly DnsProxy _proxy;
     private readonly NetworkDnsConfigurator _network;
+    private readonly DataSyncService _sync;
     private readonly ClientSettings _settings;
     private readonly ILogger<DnsFilterService> _logger;
     private bool _filtering;
     private int _ticks;
 
-    public DnsFilterService(DnsProxy proxy, NetworkDnsConfigurator network, ClientSettings settings, ILogger<DnsFilterService> logger)
+    public DnsFilterService(DnsProxy proxy, NetworkDnsConfigurator network, DataSyncService sync, ClientSettings settings, ILogger<DnsFilterService> logger)
     {
         _proxy = proxy;
         _network = network;
+        _sync = sync;
         _settings = settings;
         _logger = logger;
     }
@@ -48,7 +50,11 @@ public sealed class DnsFilterService : BackgroundService
                 }
                 else if (_filtering && _ticks % 15 == 0)
                 {
-                    _network.EnsureApplied();
+                    if (_network.EnsureApplied())
+                        _sync.QueueTamper(new OpControl.Parental.Contracts.TamperEventDto(
+                            "dns-settings-changed",
+                            "The adapter DNS settings were changed while filtering was active and had to be restored.",
+                            DateTime.UtcNow));
                 }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)

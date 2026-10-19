@@ -1,0 +1,221 @@
+@page "/activity"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using OpControl.Parental.Contracts
+@using OpControl.Parental.Server.Data
+@using OpControl.Parental.Server.Services
+@inject AuthenticationStateProvider AuthState
+@inject IServiceScopeFactory Scopes
+
+<PageTitle>Activity · Parental OpControl</PageTitle>
+
+@if (_loading)
+{
+    <div class="card"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>
+}
+else if (_childId == Guid.Empty)
+{
+    <div class="card"><h1>No child yet</h1><p class="muted">Create a child profile first.</p></div>
+}
+else
+{
+    <div class="page-head">
+        <div>
+            <div class="eyebrow">@_childName</div>
+            <h1>Activity</h1>
+            <p class="muted">Lock and unlock, bonus time, PIN overrides, schedules, blocked attempts, new installs and limits.</p>
+        </div>
+        <div class="button-row">
+            <a class="btn btn-ghost" href="/screen-time">Screen time</a>
+            <a class="btn btn-ghost" href="/alerts">Alerts</a>
+        </div>
+    </div>
+
+    <section class="stat-grid">
+        <div class="card stat-card">
+            <div class="eyebrow">Active use today</div>
+            <div class="stat-value">@FormatDuration(_activeToday)</div>
+        </div>
+        <div class="card stat-card">
+            <div class="eyebrow">Idle today</div>
+            <div class="stat-value">@FormatDuration(_idleToday)</div>
+        </div>
+        <div class="card stat-card">
+            <div class="eyebrow">Blocked attempts today</div>
+            <div class="stat-value">@_blockedToday</div>
+        </div>
+        <div class="card stat-card">
+            <div class="eyebrow">Events</div>
+            <div class="stat-value">@_events.Count</div>
+            <div class="muted tiny">Latest 200</div>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="card-title-row">
+            <h2>Timeline</h2>
+            <span class="pill-soft">@_timeZoneId</span>
+        </div>
+        @if (_events.Count == 0)
+        {
+            <p class="muted">No activity recorded yet.</p>
+        }
+        else
+        {
+            <div class="timeline">
+                @foreach (var item in _events)
+                {
+                    <div class="timeline-row">
+                        <div class="timeline-icon @item.Tone">@item.Icon</div>
+                        <div class="timeline-main">
+                            <div class="timeline-title">@item.Title</div>
+                            <div class="muted tiny">@item.Detail</div>
+                        </div>
+                        <div class="muted tiny">@FormatLocal(item.WhenUtc)</div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+}
+
+@code {
+    private sealed record EventRow(DateTime WhenUtc, string Icon, string Tone, string Title, string Detail);
+
+    private Guid _familyId;
+    private Guid _childId;
+    private string _childName = "";
+    private string _timeZoneId = "UTC";
+    private bool _loading = true;
+    private int _activeToday;
+    private int _idleToday;
+    private int _blockedToday;
+    private List<EventRow> _events = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        if (!Guid.TryParse(auth.User.FindFirst("family_id")?.Value, out _familyId))
+        {
+            _loading = false;
+            return;
+        }
+        await RefreshAsync();
+        _loading = false;
+    }
+
+    private async Task RefreshAsync()
+    {
+        using var scope = Scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
+        var child = await db.Children.AsNoTracking().Where(c => c.FamilyId == _familyId).OrderBy(c => c.CreatedUtc).FirstOrDefaultAsync();
+        if (child is null) { _childId = Guid.Empty; return; }
+        _childId = child.Id;
+        _childName = child.Name;
+        _timeZoneId = await db.Devices.AsNoTracking().Where(d => d.ChildId == child.Id).Select(d => d.TimeZoneId).FirstOrDefaultAsync() ?? "UTC";
+        var tz = TimeZoneResolver.Resolve(_timeZoneId);
+        var (start, end) = UsageService.LocalDayBounds(tz, DateTime.UtcNow);
+
+        _activeToday = await db.UsageIntervals.AsNoTracking()
+            .Where(u => u.ChildId == child.Id && u.Active && u.StartUtc >= start && u.StartUtc < end)
+            .SumAsync(u => (int?)u.DurationSeconds) ?? 0;
+        _idleToday = await db.UsageIntervals.AsNoTracking()
+            .Where(u => u.ChildId == child.Id && !u.Active && u.StartUtc >= start && u.StartUtc < end)
+            .SumAsync(u => (int?)u.DurationSeconds) ?? 0;
+        _blockedToday = await db.VisitRecords.AsNoTracking()
+            .CountAsync(v => v.ChildId == child.Id && v.Blocked && v.VisitedUtc >= start && v.VisitedUtc < end);
+
+        var rows = new List<EventRow>();
+        var overrides = await db.OverrideEvents.AsNoTracking()
+            .Where(e => e.FamilyId == _familyId && e.ChildId == child.Id)
+            .OrderByDescending(e => e.CreatedUtc).Take(120).ToListAsync();
+        rows.AddRange(overrides.Select(e => new EventRow(e.CreatedUtc, OverrideIcon(e.Option), OverrideTone(e.Option),
+            OverrideTitle(e.Option), OverrideDetail(e))));
+
+        var blocks = await db.BlockEvents.AsNoTracking()
+            .Where(b => b.FamilyId == _familyId && b.ChildId == child.Id)
+            .OrderByDescending(b => b.OccurredUtc).Take(80).ToListAsync();
+        rows.AddRange(blocks.Select(b => new EventRow(b.OccurredUtc, "⊘", "danger",
+            b.RuleType == "site" ? "Website blocked" : "App blocked", b.DisplayName)));
+
+        var installs = await db.InstalledApps.AsNoTracking()
+            .Where(a => a.FamilyId == _familyId && a.ChildId == child.Id && a.IsNew)
+            .OrderByDescending(a => a.FirstSeenUtc).Take(40).ToListAsync();
+        rows.AddRange(installs.Select(a => new EventRow(a.FirstSeenUtc, "＋", "accent", "New app installed", a.DisplayName)));
+
+        var alerts = await db.Alerts.AsNoTracking()
+            .Where(a => a.FamilyId == _familyId && a.ChildId == child.Id)
+            .OrderByDescending(a => a.CreatedUtc).Take(80).ToListAsync();
+        rows.AddRange(alerts.Select(a => new EventRow(a.CreatedUtc, AlertIcon(a.Type), AlertTone(a.Type), a.Title, a.Detail)));
+
+        var tamper = await db.ClientTamperEvents.AsNoTracking()
+            .Where(t => t.FamilyId == _familyId && t.ChildId == child.Id)
+            .OrderByDescending(t => t.OccurredUtc).Take(40).ToListAsync();
+        rows.AddRange(tamper.Select(t => new EventRow(t.OccurredUtc, "!", "warn", "Client tampering sign", $"{t.Kind}: {t.Detail}")));
+
+        _events = rows.OrderByDescending(r => r.WhenUtc).Take(200).ToList();
+    }
+
+    private string FormatLocal(DateTime utc) =>
+        TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeZoneResolver.Resolve(_timeZoneId)).ToString("MMM d, HH:mm");
+
+    private static string FormatDuration(int seconds)
+    {
+        var span = TimeSpan.FromSeconds(Math.Max(0, seconds));
+        return span.TotalHours >= 1 ? $"{(int)span.TotalHours}h {span.Minutes:00}m" : $"{span.Minutes}m";
+    }
+
+    private static string OverrideIcon(string option) => option switch
+    {
+        "dashboard-lock" or "pin-lock" => "▣",
+        "dashboard-unlock" or "pin-unlock-until-next" => "▢",
+        "schedule-start" or "schedule-end" => "◷",
+        "daily-limit-reached" => "◔",
+        _ => "✦"
+    };
+
+    private static string OverrideTone(string option) => option switch
+    {
+        "daily-limit-reached" => "danger",
+        "schedule-start" or "schedule-end" => "warn",
+        _ => "accent"
+    };
+
+    private static string OverrideTitle(string option) => option switch
+    {
+        "dashboard-unlock" => "Dashboard unlock",
+        "dashboard-bonus" => "Bonus time given",
+        "pin-unlock-until-next" => "PIN override: unlock until next cycle",
+        "pin-bonus" => "PIN override: bonus time",
+        "schedule-start" => "Schedule started",
+        "schedule-end" => "Schedule ended",
+        "daily-limit-reached" => "Daily limit reached",
+        "item-bonus-site" => "Website bonus",
+        "item-bonus-app" => "App bonus",
+        _ => option
+    };
+
+    private static string OverrideDetail(OverrideEvent e) =>
+        e.Option.StartsWith("schedule", StringComparison.Ordinal) ? e.Detail ?? ""
+        : e.Minutes is { } minutes ? $"{minutes} min" + (e.Detail is null ? "" : $" · {e.Detail}")
+        : e.Detail ?? "";
+
+    private static string AlertIcon(string type) => type switch
+    {
+        "new-app" => "＋",
+        "repeated-blocked-site" => "⊘",
+        "pin-override" => "✦",
+        "daily-limit" or "app-limit" => "◔",
+        "device-offline" => "⇄",
+        "tampering" => "!",
+        _ => "◉"
+    };
+
+    private static string AlertTone(string type) => type switch
+    {
+        "repeated-blocked-site" or "daily-limit" or "app-limit" => "danger",
+        "device-offline" or "tampering" => "warn",
+        _ => "accent"
+    };
+}

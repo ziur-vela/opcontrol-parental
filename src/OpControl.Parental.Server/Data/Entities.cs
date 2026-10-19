@@ -107,6 +107,8 @@ public class AppRule
     public bool IsBlocked { get; set; } = true;
     public RuleMode Mode { get; set; } = RuleMode.Always;
     public Guid? ScheduleId { get; set; }
+    public bool AlwaysAllowed { get; set; }
+    public int? DailyLimitMinutes { get; set; }
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
     public Child? Child { get; set; }
@@ -259,6 +261,90 @@ public class AppUsageRecord
     public string AppIdentity { get; set; } = "";
     public DateTime StartedUtc { get; set; } = DateTime.UtcNow;
     public int DurationSeconds { get; set; }
+}
+
+public class UsageInterval
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid FamilyId { get; set; }
+    public Guid ChildId { get; set; }
+    public Guid DeviceId { get; set; }
+    public string AppIdentity { get; set; } = "";
+    public string AppDisplayName { get; set; } = "";
+    public DateTime StartUtc { get; set; }
+    public int DurationSeconds { get; set; }
+    public bool Active { get; set; } = true;
+    public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
+}
+
+public class WebsiteUsage
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid FamilyId { get; set; }
+    public Guid ChildId { get; set; }
+    public Guid DeviceId { get; set; }
+    public string Domain { get; set; } = "";
+    public DateTime StartUtc { get; set; }
+    public int DurationSeconds { get; set; }
+    public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
+}
+
+public class ScreenTimeLimit
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid FamilyId { get; set; }
+    public Guid ChildId { get; set; }
+    public bool Enabled { get; set; }
+    public bool SpokenWarnings { get; set; }
+    public int MondayMinutes { get; set; } = 120;
+    public int TuesdayMinutes { get; set; } = 120;
+    public int WednesdayMinutes { get; set; } = 120;
+    public int ThursdayMinutes { get; set; } = 120;
+    public int FridayMinutes { get; set; } = 120;
+    public int SaturdayMinutes { get; set; } = 240;
+    public int SundayMinutes { get; set; } = 240;
+    public Guid? UpdatedByParentId { get; set; }
+    public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
+}
+
+public class Alert
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid FamilyId { get; set; }
+    public Guid ChildId { get; set; }
+    public Guid? DeviceId { get; set; }
+    public string Type { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Detail { get; set; } = "";
+    public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
+    public DateTime? ReadUtc { get; set; }
+    public DateTime? EmailedUtc { get; set; }
+}
+
+public class FamilySettings
+{
+    public Guid FamilyId { get; set; }
+    public bool AlertEmailsEnabled { get; set; }
+    public string? SmtpHost { get; set; }
+    public int SmtpPort { get; set; } = 587;
+    public bool SmtpUseSsl { get; set; } = true;
+    public string? SmtpUsername { get; set; }
+    public string? SmtpPasswordProtected { get; set; }
+    public string? FromAddress { get; set; }
+    public int OfflineAlertMinutes { get; set; } = 120;
+    public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
+}
+
+public class ClientTamperEvent
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid FamilyId { get; set; }
+    public Guid ChildId { get; set; }
+    public Guid DeviceId { get; set; }
+    public string Kind { get; set; } = "";
+    public string? Detail { get; set; }
+    public DateTime OccurredUtc { get; set; }
+    public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
 }
 
 public class EnrollmentCode

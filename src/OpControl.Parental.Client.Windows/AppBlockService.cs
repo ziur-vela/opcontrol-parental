@@ -14,6 +14,7 @@ public sealed class AppBlockService : BackgroundService
     private readonly HashSet<int> _handled = [];
     private ManagementEventWatcher? _watcher;
     private bool _fallbackPolling;
+    private int _ticks;
 
     public AppBlockService(LockRuntime runtime, DataSyncService sync, ClientSettings settings, ILogger<AppBlockService> logger)
     {
@@ -32,7 +33,8 @@ public sealed class AppBlockService : BackgroundService
         {
             try
             {
-                if (_fallbackPolling || _watcher is null)
+                _ticks++;
+                if (_fallbackPolling || _watcher is null || _ticks % 3 == 0)
                     ScanRunningProcesses();
             }
             catch (Exception ex)
@@ -135,14 +137,13 @@ public sealed class AppBlockService : BackgroundService
 
                 var identity = AppIdentity.ForProcess(process, path);
                 if (identity.Length == 0) return;
-                var blocked = PolicyRules.IsAppBlocked(state, identity, path, TimeZoneInfo.Local, DateTime.UtcNow);
-                if (!blocked) return;
+                if (!_runtime.IsAppBlocked(identity, path, out var reason)) return;
 
                 var name = string.IsNullOrWhiteSpace(file) ? processName : file;
                 try
                 {
                     process.Kill(entireProcessTree: true);
-                    _logger.LogInformation("Blocked app {App} ({Identity}) in session {Session}", name, identity, monitored);
+                    _logger.LogInformation("Blocked app {App} ({Identity}) in session {Session} reason={Reason}", name, identity, monitored, reason);
                 }
                 catch (Exception ex)
                 {
@@ -150,7 +151,7 @@ public sealed class AppBlockService : BackgroundService
                 }
 
                 _sync.RecordBlockEvent("app", identity, name);
-                WriteNotification("This app is blocked", name);
+                WriteNotification(reason == "daily-limit" ? "Daily limit reached for this app" : "This app is blocked", name);
                 _handled.Add(pid);
             }
         }

@@ -5,7 +5,7 @@ public sealed record LockEvaluation(bool IsLocked, string Reason, string? Schedu
 public static class LockRules
 {
     public static LockEvaluation Evaluate(DeviceStateDto state, TimeZoneInfo tz, DateTime nowUtc) =>
-        Evaluate(state.ManualLock, state.UnlockUntilUtc, state.BonusUntilUtc, state.Schedules, tz, nowUtc);
+        Evaluate(state.ManualLock, state.UnlockUntilUtc, state.BonusUntilUtc, state.Schedules, tz, nowUtc, state.DailyLimit);
 
     public static LockEvaluation Evaluate(
         bool manualLock,
@@ -13,7 +13,8 @@ public static class LockRules
         DateTime? bonusUntilUtc,
         IReadOnlyList<ScheduleDto> schedules,
         TimeZoneInfo tz,
-        DateTime nowUtc)
+        DateTime nowUtc,
+        DailyLimitDto? dailyLimit = null)
     {
         if (bonusUntilUtc is { } bonus && bonus > nowUtc)
             return new LockEvaluation(false, "bonus", null, bonus);
@@ -26,7 +27,24 @@ public static class LockRules
         if (schedule is not null)
             return new LockEvaluation(true, "schedule", schedule.Name, CurrentScheduleEnd(schedule, tz, nowUtc));
 
+        if (DailyLimitReached(dailyLimit, nowUtc) && dailyLimit is not null)
+            return new LockEvaluation(true, "daily-limit", null, dailyLimit.DayEndUtc);
+
         return new LockEvaluation(false, "unlocked", null, null);
+    }
+
+    public static bool DailyLimitReached(DailyLimitDto? dailyLimit, DateTime nowUtc) =>
+        dailyLimit is { Enabled: true, TodayMinutes: > 0 }
+        && nowUtc >= dailyLimit.DayStartUtc
+        && nowUtc < dailyLimit.DayEndUtc
+        && dailyLimit.UsedTodaySeconds >= dailyLimit.TodayMinutes * 60;
+
+    public static int? DailyLimitRemainingSeconds(DailyLimitDto? dailyLimit, DateTime nowUtc)
+    {
+        if (dailyLimit is not { Enabled: true, TodayMinutes: > 0 }) return null;
+        if (nowUtc >= dailyLimit.DayEndUtc) return dailyLimit.TodayMinutes * 60;
+        if (nowUtc < dailyLimit.DayStartUtc) return dailyLimit.TodayMinutes * 60;
+        return Math.Max(0, dailyLimit.TodayMinutes * 60 - dailyLimit.UsedTodaySeconds);
     }
 
     public static DateTime? NextLockUtc(

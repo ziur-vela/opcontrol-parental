@@ -152,11 +152,66 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("OpControl.Parental.Server.Data.Alert", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ChildId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Detail")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid?>("DeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("EmailedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ReadUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmailedUtc");
+
+                    b.HasIndex("ChildId", "ReadUtc");
+
+                    b.HasIndex("FamilyId", "CreatedUtc");
+
+                    b.HasIndex("ChildId", "Type", "CreatedUtc");
+
+                    b.ToTable("Alerts");
+                });
+
             modelBuilder.Entity("OpControl.Parental.Server.Data.AppRule", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<bool>("AlwaysAllowed")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("AppIdentity")
                         .IsRequired()
@@ -168,6 +223,9 @@ namespace OpControl.Parental.Server.Data.Migrations
 
                     b.Property<DateTime>("CreatedUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DailyLimitMinutes")
+                        .HasColumnType("integer");
 
                     b.Property<string>("DisplayName")
                         .IsRequired()
@@ -402,6 +460,43 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.ToTable("ChildCategories");
                 });
 
+            modelBuilder.Entity("OpControl.Parental.Server.Data.ClientTamperEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ChildId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Detail")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime>("OccurredUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FamilyId", "ChildId", "OccurredUtc");
+
+                    b.ToTable("ClientTamperEvents");
+                });
+
             modelBuilder.Entity("OpControl.Parental.Server.Data.Device", b =>
                 {
                     b.Property<Guid>("Id")
@@ -558,6 +653,48 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Families");
+                });
+
+            modelBuilder.Entity("OpControl.Parental.Server.Data.FamilySettings", b =>
+                {
+                    b.Property<Guid>("FamilyId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("AlertEmailsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("FromAddress")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("OfflineAlertMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SmtpHost")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("SmtpPasswordProtected")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<int>("SmtpPort")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("SmtpUseSsl")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SmtpUsername")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("UpdatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("FamilyId");
+
+                    b.ToTable("FamilySettings");
                 });
 
             modelBuilder.Entity("OpControl.Parental.Server.Data.InstalledApp", b =>
@@ -955,6 +1092,109 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.ToTable("ScheduleRuntimeStates");
                 });
 
+            modelBuilder.Entity("OpControl.Parental.Server.Data.ScreenTimeLimit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ChildId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("FridayMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MondayMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SaturdayMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("SpokenWarnings")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("SundayMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ThursdayMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TuesdayMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("UpdatedByParentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("WednesdayMinutes")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChildId")
+                        .IsUnique();
+
+                    b.HasIndex("FamilyId");
+
+                    b.ToTable("ScreenTimeLimits");
+                });
+
+            modelBuilder.Entity("OpControl.Parental.Server.Data.UsageInterval", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("AppDisplayName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("AppIdentity")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid>("ChildId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DurationSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("StartUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceId", "StartUtc");
+
+                    b.HasIndex("ChildId", "Active", "StartUtc");
+
+                    b.HasIndex("FamilyId", "ChildId", "StartUtc");
+
+                    b.ToTable("UsageIntervals");
+                });
+
             modelBuilder.Entity("OpControl.Parental.Server.Data.VisitRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1035,6 +1275,44 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.HasIndex("FamilyId", "ChildId", "Domain");
 
                     b.ToTable("WebsiteRules");
+                });
+
+            modelBuilder.Entity("OpControl.Parental.Server.Data.WebsiteUsage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ChildId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Domain")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("DurationSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("StartUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceId", "StartUtc");
+
+                    b.HasIndex("FamilyId", "ChildId", "StartUtc");
+
+                    b.ToTable("WebsiteUsages");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>

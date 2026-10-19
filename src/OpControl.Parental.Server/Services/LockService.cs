@@ -19,14 +19,18 @@ public sealed class LockService
     private readonly IHubContext<ParentalHub> _hub;
     private readonly DashboardEventBus _events;
     private readonly RuleService _rules;
+    private readonly UsageService _usage;
+    private readonly AlertService _alerts;
     private readonly ILogger<LockService> _logger;
 
-    public LockService(ParentalDbContext db, IHubContext<ParentalHub> hub, DashboardEventBus events, RuleService rules, ILogger<LockService> logger)
+    public LockService(ParentalDbContext db, IHubContext<ParentalHub> hub, DashboardEventBus events, RuleService rules, UsageService usage, AlertService alerts, ILogger<LockService> logger)
     {
         _db = db;
         _hub = hub;
         _events = events;
         _rules = rules;
+        _usage = usage;
+        _alerts = alerts;
         _logger = logger;
     }
 
@@ -49,7 +53,9 @@ public sealed class LockService
         var state = await EnsureLockStateAsync(familyId, childId, ct);
         var schedules = await LoadScheduleDtosAsync(familyId, childId, ct);
         var zone = ResolveTimeZone(timeZoneId ?? await FirstDeviceTimeZoneAsync(familyId, childId, ct));
-        return BuildDto(state, schedules, zone, DateTime.UtcNow);
+        var now = DateTime.UtcNow;
+        var daily = await _usage.BuildDailyLimitAsync(familyId, childId, zone, now, ct);
+        return BuildDto(state, schedules, zone, now, daily);
     }
 
     public async Task<DeviceStateDto> GetDeviceStateAsync(Guid familyId, Guid childId, CancellationToken ct = default)
@@ -60,10 +66,15 @@ public sealed class LockService
         var schedules = await LoadScheduleDtosAsync(familyId, childId, ct);
         var parentName = await ParentDisplayNameAsync(familyId, ct);
         var policy = await _rules.GetDevicePolicyAsync(familyId, childId, ct);
+        var tz = ResolveTimeZone(await FirstDeviceTimeZoneAsync(familyId, childId, ct));
+        var now = DateTime.UtcNow;
+        var dailyLimit = await _usage.BuildDailyLimitAsync(familyId, childId, tz, now, ct);
+        var appUsage = await _usage.AppUsageTodayAsync(familyId, childId, tz, now, ct);
+        var limitSettings = await _usage.EnsureLimitAsync(familyId, childId, ct);
         return new DeviceStateDto(
             childId, child.Name, parentName, state.ManualLock, state.UnlockUntilUtc, state.BonusUntilUtc,
             state.BonusMinutes, state.OverridePinHash, schedules, policy.Sites, policy.Apps, policy.Bonuses,
-            policy.Categories, DateTime.UtcNow);
+            policy.Categories, now, appUsage, dailyLimit, limitSettings.SpokenWarnings);
     }
 
     public async Task<LockStateDto> ApplyAsync(Guid familyId, Guid childId, Guid? parentId, LockAction action, int? minutes = null, CancellationToken ct = default)
@@ -122,7 +133,7 @@ public sealed class LockService
         state.UpdatedUtc = now;
         await _db.SaveChangesAsync(ct);
 
-        var dto = BuildDto(state, schedules, zone, now);
+        var dto = BuildDto(state, schedules, zone, now, await _usage.BuildDailyLimitAsync(familyId, childId, zone, now, ct));
         _events.PublishLockState(dto);
         await PublishDeviceStateAsync(familyId, childId, ct);
         _logger.LogInformation("Lock action {Action} applied to child {ChildId} (locked={Locked})", action, childId, dto.IsLocked);
@@ -176,7 +187,12 @@ public sealed class LockService
         });
         await _db.SaveChangesAsync(ct);
 
-        var dto = BuildDto(state, schedules, zone, now);
+        await _alerts.AddAsync(device.FamilyId, device.ChildId, device.Id, "pin-override",
+            "Override PIN used",
+            $"{option} was used on {device.Name}" + (request.Minutes is { } m ? $" for {m} minutes." : "."),
+            TimeSpan.FromMinutes(1), ct);
+
+        var dto = BuildDto(state, schedules, zone, now, await _usage.BuildDailyLimitAsync(device.FamilyId, device.ChildId, zone, now, ct));
         _events.PublishLockState(dto);
         await PublishDeviceStateAsync(device.FamilyId, device.ChildId, ct);
         _logger.LogInformation("Device PIN override {Option} applied to child {ChildId}", option, device.ChildId);
@@ -259,9 +275,9 @@ public sealed class LockService
             .FirstOrDefaultAsync(ct);
     }
 
-    private static LockStateDto BuildDto(LockState state, IReadOnlyList<ScheduleDto> schedules, TimeZoneInfo tz, DateTime now)
+    private static LockStateDto BuildDto(LockState state, IReadOnlyList<ScheduleDto> schedules, TimeZoneInfo tz, DateTime now, DailyLimitDto? daily = null)
     {
-        var evaluation = LockRules.Evaluate(state.ManualLock, state.UnlockUntilUtc, state.BonusUntilUtc, schedules, tz, now);
+        var evaluation = LockRules.Evaluate(state.ManualLock, state.UnlockUntilUtc, state.BonusUntilUtc, schedules, tz, now, daily);
         return new LockStateDto(
             state.ChildId,
             evaluation.IsLocked,

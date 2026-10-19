@@ -91,9 +91,10 @@ public sealed class NetworkDnsConfigurator
         }
     }
 
-    public void EnsureApplied()
+    public bool EnsureApplied()
     {
-        if (!OperatingSystem.IsWindows() || !IsApplied) return;
+        if (!OperatingSystem.IsWindows() || !IsApplied) return false;
+        var changed = false;
         lock (_gate)
         {
             foreach (var nic in EligibleInterfaces())
@@ -102,9 +103,11 @@ public sealed class NetworkDnsConfigurator
                 {
                     _logger.LogInformation("Re-applying local DNS filter to {Interface}", nic.Name);
                     SetLoopback(nic.Name, _ipv4, _ipv6);
+                    changed = true;
                 }
             }
         }
+        return changed;
     }
 
     public void Restore()
@@ -170,10 +173,52 @@ public sealed class NetworkDnsConfigurator
         };
     }
 
-    private static bool HasLoopback(NetworkInterface nic)
+    private bool HasLoopback(NetworkInterface nic)
     {
+        var ipv4 = QueryDnsServers(nic.Name, "ipv4");
+        var ipv6 = QueryDnsServers(nic.Name, "ipv6");
+        if (ipv4 is not null || ipv6 is not null)
+        {
+            var ipv4Ok = !_ipv4 || ipv4 is null || ipv4.Count == 0 || ipv4.Contains("127.0.0.1");
+            var ipv6Ok = !_ipv6 || ipv6 is null || ipv6.Count == 0 || ipv6.Contains("::1");
+            return ipv4Ok && ipv6Ok;
+        }
+
         var addresses = nic.GetIPProperties().DnsAddresses;
         return addresses.Any(a => IPAddress.IsLoopback(a));
+    }
+
+    private static List<string>? QueryDnsServers(string interfaceName, string family)
+    {
+        try
+        {
+            using var process = Process.Start(new ProcessStartInfo
+            {
+                FileName = "netsh.exe",
+                Arguments = $"interface {family} show dnsservers name=\"{interfaceName}\"",
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            });
+            if (process is null) return null;
+            var output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit(5000);
+            if (process.ExitCode != 0) return null;
+            var servers = new List<string>();
+            foreach (var line in output.Split('\n'))
+            {
+                var text = line.Trim();
+                var colon = text.IndexOf(':');
+                if (colon < 0) continue;
+                var value = text[(colon + 1)..].Trim();
+                if (value.Length == 0 || value.StartsWith("Register", StringComparison.OrdinalIgnoreCase)) continue;
+                if (text.Contains("DNS Servers", StringComparison.OrdinalIgnoreCase) || text.Contains("Statically Configured", StringComparison.OrdinalIgnoreCase))
+                    servers.AddRange(value.Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries));
+            }
+            return servers;
+        }
+        catch { return null; }
     }
 
     private void SetLoopback(string name, bool ipv4 = true, bool ipv6 = true)

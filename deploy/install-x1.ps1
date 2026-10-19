@@ -31,6 +31,7 @@ $config = [ordered]@{
     OsAccountName    = $MonitoredAccount
     MonitoredAccount = $MonitoredAccount
     HelperPath       = "$root\Helper\OpControl.Parental.Helper.exe"
+    IdleThresholdSeconds = 180
 } | ConvertTo-Json
 Set-Content -Path "$data\config.json" -Value $config -Encoding UTF8
 icacls "$data\config.json" /inheritance:r /grant:r "SYSTEM:F" "Administrators:F" | Out-Null

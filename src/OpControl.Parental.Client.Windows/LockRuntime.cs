@@ -13,15 +13,19 @@ public sealed class LockRuntime
     private readonly object _gate = new();
     private readonly DeviceStateStore _store;
     private readonly StateStore _writer;
+    private readonly ClientSettings _settings;
     private readonly ILogger<LockRuntime> _logger;
     private DeviceStateDto? _state;
     private RuntimeLockStateDto? _runtime;
     private string _policyFingerprint = "";
+    private int _localActiveSeconds;
+    private readonly Dictionary<string, int> _localAppSeconds = new(StringComparer.OrdinalIgnoreCase);
 
-    public LockRuntime(DeviceStateStore store, StateStore writer, ILogger<LockRuntime> logger)
+    public LockRuntime(DeviceStateStore store, StateStore writer, ClientSettings settings, ILogger<LockRuntime> logger)
     {
         _store = store;
         _writer = writer;
+        _settings = settings;
         _logger = logger;
     }
 
@@ -52,6 +56,8 @@ public sealed class LockRuntime
             var policyChanged = _policyFingerprint.Length > 0 && fingerprint != _policyFingerprint;
             _policyFingerprint = fingerprint;
             _state = state;
+            _localActiveSeconds = 0;
+            _localAppSeconds.Clear();
             _store.Save(state);
             ComputeAndWriteLocked();
             if (policyChanged) DnsCache.Flush(_logger);
@@ -100,6 +106,57 @@ public sealed class LockRuntime
         }
     }
 
+    public void AddLocalUsage(string identity, int seconds, bool alwaysAllowed = false)
+    {
+        if (seconds <= 0) return;
+        lock (_gate)
+        {
+            if (alwaysAllowed)
+                _localAppSeconds.TryAdd(identity, 0);
+            else
+                _localActiveSeconds += seconds;
+            if (!string.IsNullOrWhiteSpace(identity))
+                _localAppSeconds[identity] = _localAppSeconds.GetValueOrDefault(identity) + seconds;
+        }
+    }
+
+    public bool IsAppBlocked(string identity, string? path, out string? reason)
+    {
+        lock (_gate)
+        {
+            reason = null;
+            var state = AdjustedStateLocked();
+            if (state is null) return false;
+            return PolicyRules.IsAppBlocked(state, identity, path, TimeZoneInfo.Local, DateTime.UtcNow, out reason);
+        }
+    }
+
+    private DeviceStateDto? AdjustedStateLocked()
+    {
+        if (_state is null) return null;
+        var now = DateTime.UtcNow;
+        var daily = _state.DailyLimit;
+        if (daily is not null && now >= daily.DayEndUtc)
+            daily = daily with { UsedTodaySeconds = 0, DayStartUtc = daily.DayEndUtc, DayEndUtc = daily.DayEndUtc.AddDays(1) };
+        if (daily is not null)
+            daily = daily with { UsedTodaySeconds = Math.Max(0, daily.UsedTodaySeconds) + _localActiveSeconds };
+
+        var usage = (_state.AppUsage ?? []).ToList();
+        foreach (var pair in _localAppSeconds)
+        {
+            var index = usage.FindIndex(u => u.Identity.Trim().Equals(pair.Key, StringComparison.OrdinalIgnoreCase));
+            if (index >= 0)
+                usage[index] = usage[index] with { UsedTodaySeconds = usage[index].UsedTodaySeconds + pair.Value };
+            else
+            {
+                var rule = _state.AppRules.FirstOrDefault(r => PolicyRules.MatchesApp(r.AppIdentity, pair.Key, null));
+                usage.Add(new AppDailyUsageDto(pair.Key, pair.Value, rule?.DailyLimitMinutes, rule?.AlwaysAllowed ?? false));
+            }
+        }
+
+        return _state with { DailyLimit = daily, AppUsage = usage };
+    }
+
     public RuntimeLockStateDto? ComputeAndWrite()
     {
         lock (_gate)
@@ -112,20 +169,25 @@ public sealed class LockRuntime
     {
         if (_state is null) return null;
         var now = DateTime.UtcNow;
-        var evaluation = LockRules.Evaluate(_state, TimeZoneInfo.Local, now);
-        var next = LockRules.NextLockUtc(_state.ManualLock, _state.UnlockUntilUtc, _state.BonusUntilUtc, _state.Schedules, TimeZoneInfo.Local, now);
+        var state = AdjustedStateLocked() ?? _state;
+        var evaluation = LockRules.Evaluate(state, TimeZoneInfo.Local, now);
+        var next = LockRules.NextLockUtc(state.ManualLock, state.UnlockUntilUtc, state.BonusUntilUtc, state.Schedules, TimeZoneInfo.Local, now);
         var runtime = new RuntimeLockStateDto(
-            _state.ChildId,
-            _state.ChildName,
-            _state.ParentDisplayName,
+            state.ChildId,
+            state.ChildName,
+            state.ParentDisplayName,
             evaluation.IsLocked,
             evaluation.Reason,
             evaluation.ScheduleName,
             evaluation.EndsUtc,
             next,
-            _state.BonusUntilUtc,
-            _state.BonusMinutes,
-            now);
+            state.BonusUntilUtc,
+            state.BonusMinutes,
+            now,
+            LockRules.DailyLimitRemainingSeconds(state.DailyLimit, now),
+            state.DailyLimit is { Enabled: true } ? state.DailyLimit.TodayMinutes : null,
+            state.SpokenWarnings,
+            _settings.Value.IdleThresholdSeconds);
         var changed = _runtime is null
             || _runtime.IsLocked != runtime.IsLocked
             || _runtime.Reason != runtime.Reason
@@ -133,7 +195,9 @@ public sealed class LockRuntime
             || _runtime.EndsUtc != runtime.EndsUtc
             || _runtime.NextLockUtc != runtime.NextLockUtc
             || _runtime.BonusUntilUtc != runtime.BonusUntilUtc
-            || _runtime.BonusMinutes != runtime.BonusMinutes;
+            || _runtime.BonusMinutes != runtime.BonusMinutes
+            || _runtime.DailyLimitRemainingSeconds != runtime.DailyLimitRemainingSeconds
+            || _runtime.DailyLimitMinutes != runtime.DailyLimitMinutes;
         _runtime = runtime;
         _writer.Save(runtime);
         if (changed)

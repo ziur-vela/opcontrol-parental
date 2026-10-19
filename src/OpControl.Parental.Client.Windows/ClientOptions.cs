@@ -11,6 +11,7 @@ public sealed class ClientOptions
     public string? OsAccountName { get; set; }
     public string MonitoredAccount { get; set; } = "Emma";
     public string? HelperPath { get; set; }
+    public int IdleThresholdSeconds { get; set; } = 180;
 
     public static ClientOptions Load()
     {
@@ -29,7 +30,8 @@ public sealed class ClientOptions
             DeviceName = DeviceName,
             OsAccountName = OsAccountName,
             MonitoredAccount = MonitoredAccount,
-            HelperPath = HelperPath
+            HelperPath = HelperPath,
+            IdleThresholdSeconds = IdleThresholdSeconds
         };
         ClientPaths.EnsureDataDirectory();
         File.WriteAllText(ClientPaths.ConfigFile, JsonSerializer.Serialize(copy, JsonOptions));
@@ -60,6 +62,12 @@ public static class ClientPaths
     public static string DnsStateFile => Path.Combine(PrivateDirectory, "dns-state.json");
     public static string VisitQueueFile => Path.Combine(PrivateDirectory, "visit-queue.jsonl");
     public static string BlockEventQueueFile => Path.Combine(PrivateDirectory, "block-event-queue.jsonl");
+    public static string UsageQueueFile => Path.Combine(UserDirectory, "usage-queue.jsonl");
+    public static string WebsiteUsageQueueFile => Path.Combine(UserDirectory, "website-usage-queue.jsonl");
+    public static string LastVisitFile => Path.Combine(PublicDirectory, "last-visit.json");
+    public static string TamperQueueFile => Path.Combine(PrivateDirectory, "tamper-queue.jsonl");
+    public static string CleanShutdownFile => Path.Combine(PrivateDirectory, "clean-shutdown.json");
+    public static string TamperBaselineFile => Path.Combine(PrivateDirectory, "tamper-baseline.json");
     public static string InventorySnapshotFile => Path.Combine(PrivateDirectory, "app-inventory.json");
     public static string InventoryHashFile => Path.Combine(PrivateDirectory, "app-inventory.hash");
     public static string CategoryCacheFile => Path.Combine(PrivateDirectory, "categories.json");

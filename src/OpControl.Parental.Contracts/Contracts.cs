@@ -54,7 +54,23 @@ public sealed record DeviceStateDto(
     IReadOnlyList<AppRuleDto> AppRules,
     IReadOnlyList<ItemBonusDto> ItemBonuses,
     IReadOnlyList<CategoryToggleDto> Categories,
-    DateTime ServerUtc);
+    DateTime ServerUtc,
+    IReadOnlyList<AppDailyUsageDto>? AppUsage = null,
+    DailyLimitDto? DailyLimit = null,
+    bool SpokenWarnings = false);
+
+public sealed record DailyLimitDto(
+    bool Enabled,
+    int TodayMinutes,
+    int UsedTodaySeconds,
+    DateTime DayStartUtc,
+    DateTime DayEndUtc);
+
+public sealed record AppDailyUsageDto(
+    string Identity,
+    int UsedTodaySeconds,
+    int? LimitMinutes,
+    bool AlwaysAllowed);
 
 public sealed record WebsiteRuleDto(
     Guid Id,
@@ -72,7 +88,9 @@ public sealed record AppRuleDto(
     bool IsBlocked,
     RuleMode Mode,
     Guid? ScheduleId,
-    DateTime UpdatedUtc);
+    DateTime UpdatedUtc,
+    int? DailyLimitMinutes = null,
+    bool AlwaysAllowed = false);
 
 public sealed record ItemBonusDto(
     string RuleType,
@@ -162,7 +180,37 @@ public sealed record RuntimeLockStateDto(
     DateTime? NextLockUtc,
     DateTime? BonusUntilUtc,
     int? BonusMinutes,
-    DateTime UpdatedUtc);
+    DateTime UpdatedUtc,
+    int? DailyLimitRemainingSeconds = null,
+    int? DailyLimitMinutes = null,
+    bool SpokenWarnings = false,
+    int? IdleThresholdSeconds = null);
+
+public sealed record UsageIntervalDto(
+    Guid Id,
+    string AppIdentity,
+    string AppDisplayName,
+    DateTime StartUtc,
+    int DurationSeconds,
+    bool Active);
+
+public sealed record WebsiteUsageDto(
+    Guid Id,
+    string Domain,
+    DateTime StartUtc,
+    int DurationSeconds);
+
+public sealed record UsageBatchRequest(
+    IReadOnlyList<UsageIntervalDto> Intervals,
+    IReadOnlyList<WebsiteUsageDto>? Sites = null);
+
+public sealed record TamperEventDto(
+    string Kind,
+    string? Detail,
+    DateTime OccurredUtc);
+
+public sealed record TamperEventRequest(
+    IReadOnlyList<TamperEventDto> Events);
 
 public sealed record DeviceStatusDto(
     Guid DeviceId,

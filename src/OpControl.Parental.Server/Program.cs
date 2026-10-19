@@ -86,11 +86,12 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
 });
 
+var dataProtection = builder.Services.AddDataProtection();
 var dataProtectionPath = builder.Configuration["DataProtection:Path"];
 if (!string.IsNullOrWhiteSpace(dataProtectionPath))
 {
     Directory.CreateDirectory(dataProtectionPath);
-    builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(dataProtectionPath));
+    dataProtection.PersistKeysToFileSystem(new DirectoryInfo(dataProtectionPath));
 }
 
 builder.Services.AddMemoryCache();
@@ -101,12 +102,15 @@ builder.Services.AddScoped<DeviceAuthService>();
 builder.Services.AddScoped<EnrollmentService>();
 builder.Services.AddScoped<LockService>();
 builder.Services.AddScoped<RuleService>();
+builder.Services.AddScoped<UsageService>();
+builder.Services.AddScoped<AlertService>();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<DashboardEventBus>();
 builder.Services.AddSingleton<DevicePresenceService>();
 builder.Services.AddHostedService<LockExpiryService>();
 builder.Services.AddHostedService<CategoryRefreshService>();
 builder.Services.AddHostedService<ScheduleTransitionService>();
+builder.Services.AddHostedService<UsageLimitService>();
 
 var app = builder.Build();
 
@@ -295,6 +299,45 @@ app.MapPost("/api/children/{childId:guid}/item-bonus", async (Guid childId, Item
     catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
 }).RequireAuthorization();
 
+app.MapPost("/api/children/{childId:guid}/screen-time-limit", async (Guid childId, ScreenTimeLimitRequest request, HttpContext context, IAntiforgery antiforgery, FamilyScope family, UsageService usage, LockService locks, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    try
+    {
+        await usage.SetLimitAsync(family.FamilyId, childId, family.ParentId, request.Enabled, request.SpokenWarnings,
+            request.Monday, request.Tuesday, request.Wednesday, request.Thursday, request.Friday, request.Saturday, request.Sunday, ct);
+        await locks.PublishDeviceStateAsync(family.FamilyId, childId, ct);
+        return Results.Ok(new { ok = true });
+    }
+    catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/children/{childId:guid}/app-limit", async (Guid childId, AppLimitRequest request, HttpContext context, IAntiforgery antiforgery, FamilyScope family, RuleService rules, LockService locks, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    try
+    {
+        await rules.SetAppLimitAsync(family.FamilyId, childId, family.ParentId, request.Identity, request.DisplayName, request.Publisher, request.Minutes, request.AlwaysAllowed, ct);
+        await locks.PublishDeviceStateAsync(family.FamilyId, childId, ct);
+        return Results.Ok(new { ok = true });
+    }
+    catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/children/{childId:guid}/alerts/{alertId:guid}/read", async (Guid childId, Guid alertId, HttpContext context, IAntiforgery antiforgery, FamilyScope family, AlertService alerts, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    await alerts.MarkReadAsync(family.FamilyId, childId, alertId, ct);
+    return Results.Ok(new { ok = true });
+}).RequireAuthorization();
+
+app.MapPost("/api/children/{childId:guid}/alerts/read-all", async (Guid childId, HttpContext context, IAntiforgery antiforgery, FamilyScope family, AlertService alerts, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    await alerts.MarkAllReadAsync(family.FamilyId, childId, ct);
+    return Results.Ok(new { ok = true });
+}).RequireAuthorization();
+
 app.MapPost("/api/children/{childId:guid}/categories/{key}", async (Guid childId, string key, CategoryToggleRequest request, HttpContext context, IAntiforgery antiforgery, FamilyScope family, RuleService rules, LockService locks, CancellationToken ct) =>
 {
     await antiforgery.ValidateRequestAsync(context);
@@ -328,6 +371,22 @@ app.MapPost("/api/device/block-events", async (BlockEventRequest request, Claims
     var device = await DeviceFromClaimsAsync(user, db, ct);
     if (device is null) return Results.Unauthorized();
     await rules.SyncBlockEventsAsync(device, request, ct);
+    return Results.Ok(new { ok = true });
+}).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
+
+app.MapPost("/api/device/usage", async (UsageBatchRequest request, ClaimsPrincipal user, ParentalDbContext db, UsageService usage, CancellationToken ct) =>
+{
+    var device = await DeviceFromClaimsAsync(user, db, ct);
+    if (device is null) return Results.Unauthorized();
+    await usage.SyncUsageAsync(device, request, ct);
+    return Results.Ok(new { ok = true });
+}).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
+
+app.MapPost("/api/device/tamper", async (TamperEventRequest request, ClaimsPrincipal user, ParentalDbContext db, RuleService rules, CancellationToken ct) =>
+{
+    var device = await DeviceFromClaimsAsync(user, db, ct);
+    if (device is null) return Results.Unauthorized();
+    await rules.SyncTamperEventsAsync(device, request, ct);
     return Results.Ok(new { ok = true });
 }).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
 
@@ -375,3 +434,5 @@ public sealed record AppRuleRequest(string Identity, string DisplayName, string?
 public sealed record CategoryToggleRequest(bool Enabled);
 public sealed record EnrollmentCodeRequest(Guid ChildId);
 public sealed record PinRequest(string Pin);
+public sealed record ScreenTimeLimitRequest(bool Enabled, bool SpokenWarnings, int Monday, int Tuesday, int Wednesday, int Thursday, int Friday, int Saturday, int Sunday);
+public sealed record AppLimitRequest(string Identity, string DisplayName, string? Publisher, int? Minutes, bool AlwaysAllowed);

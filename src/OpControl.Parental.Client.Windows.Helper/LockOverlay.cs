@@ -183,11 +183,14 @@ public sealed class LockForm : Form
         {
             "manual" => $"Locked by {state.ParentDisplayName ?? "a parent"}",
             "schedule" => $"Locked by {(string.IsNullOrWhiteSpace(state.ScheduleName) ? "a schedule" : state.ScheduleName)}",
+            "daily-limit" => "Daily limit reached",
             _ => "This device is locked"
         };
-        _end.Text = state.EndsUtc is { } ends
-            ? $"Unlocks {ends.ToLocalTime():h:mm tt}"
-            : "Ask a parent to unlock this device.";
+        _end.Text = state.Reason == "daily-limit"
+            ? "Screen time resets at local midnight."
+            : state.EndsUtc is { } ends
+                ? $"Unlocks {ends.ToLocalTime():h:mm tt}"
+                : "Ask a parent to unlock this device.";
     }
 
     protected override bool ShowWithoutActivation => true;

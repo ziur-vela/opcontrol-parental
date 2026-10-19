@@ -1,0 +1,169 @@
+@page "/alerts"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using OpControl.Parental.Server.Data
+@using OpControl.Parental.Server.Services
+@inject AuthenticationStateProvider AuthState
+@inject IServiceScopeFactory Scopes
+
+<PageTitle>Alerts · Parental OpControl</PageTitle>
+
+@if (_loading)
+{
+    <div class="card"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>
+}
+else if (_childId == Guid.Empty)
+{
+    <div class="card"><h1>No child yet</h1><p class="muted">Create a child profile first.</p></div>
+}
+else
+{
+    <div class="page-head">
+        <div>
+            <div class="eyebrow">@_childName</div>
+            <h1>Alerts</h1>
+            <p class="muted">New installs, repeated blocked attempts, PIN overrides, limits reached, offline devices and tampering signs.</p>
+        </div>
+        <div class="button-row">
+            <a class="btn btn-ghost" href="/settings">Email settings</a>
+            <button class="btn btn-primary" disabled="@(_unread == 0)" @onclick="MarkAllReadAsync">Mark all read</button>
+        </div>
+    </div>
+
+    @if (_error is not null)
+    {
+        <div class="alert danger">@_error</div>
+    }
+
+    <section class="card">
+        <div class="card-title-row">
+            <h2>All alerts</h2>
+            <div class="chip-row">
+                <button class="chip @(_unreadOnly ? "" : "active")" @onclick="() => SetFilter(false)">All</button>
+                <button class="chip @(_unreadOnly ? "active" : "")" @onclick="() => SetFilter(true)">Unread (@_unread)</button>
+            </div>
+        </div>
+
+        @if (_alerts.Count == 0)
+        {
+            <p class="muted">No alerts for this filter.</p>
+        }
+        else
+        {
+            <div class="alert-list">
+                @foreach (var alert in _alerts)
+                {
+                    <div class="alert-row @(alert.ReadUtc is null ? "unread" : "")">
+                        <div class="timeline-icon @Tone(alert.Type)">@Icon(alert.Type)</div>
+                        <div class="timeline-main">
+                            <div class="timeline-title">@alert.Title</div>
+                            <div class="muted tiny">@alert.Detail</div>
+                        </div>
+                        <div class="alert-meta">
+                            <div class="muted tiny">@FormatLocal(alert.CreatedUtc)</div>
+                            @if (alert.ReadUtc is null)
+                            {
+                                <button class="ghost-btn" @onclick="() => MarkReadAsync(alert.Id)">Mark read</button>
+                            }
+                            else
+                            {
+                                <span class="pill-soft">Read</span>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+}
+
+@code {
+    private Guid _familyId;
+    private Guid _childId;
+    private string _childName = "";
+    private string _timeZoneId = "UTC";
+    private bool _loading = true;
+    private bool _unreadOnly;
+    private int _unread;
+    private string? _error;
+    private List<Alert> _alerts = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        if (!Guid.TryParse(auth.User.FindFirst("family_id")?.Value, out _familyId))
+        {
+            _loading = false;
+            return;
+        }
+        await RefreshAsync();
+        _loading = false;
+    }
+
+    private async Task SetFilter(bool unreadOnly)
+    {
+        _unreadOnly = unreadOnly;
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        using var scope = Scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
+        var child = await db.Children.AsNoTracking().Where(c => c.FamilyId == _familyId).OrderBy(c => c.CreatedUtc).FirstOrDefaultAsync();
+        if (child is null) { _childId = Guid.Empty; return; }
+        _childId = child.Id;
+        _childName = child.Name;
+        _timeZoneId = await db.Devices.AsNoTracking().Where(d => d.ChildId == child.Id).Select(d => d.TimeZoneId).FirstOrDefaultAsync() ?? "UTC";
+        var alerts = scope.ServiceProvider.GetRequiredService<AlertService>();
+        _unread = await alerts.UnreadCountAsync(_familyId, _childId);
+        _alerts = await alerts.GetAlertsAsync(_familyId, _childId, 200, _unreadOnly);
+    }
+
+    private async Task MarkReadAsync(Guid alertId)
+    {
+        await RunAsync(alerts => alerts.MarkReadAsync(_familyId, _childId, alertId));
+    }
+
+    private async Task MarkAllReadAsync()
+    {
+        await RunAsync(alerts => alerts.MarkAllReadAsync(_familyId, _childId));
+    }
+
+    private async Task RunAsync(Func<AlertService, Task> action)
+    {
+        _error = null;
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            await action(scope.ServiceProvider.GetRequiredService<AlertService>());
+            await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private string FormatLocal(DateTime utc) =>
+        TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeZoneResolver.Resolve(_timeZoneId)).ToString("MMM d, HH:mm");
+
+    private static string Icon(string type) => type switch
+    {
+        "new-app" => "＋",
+        "repeated-blocked-site" => "⊘",
+        "pin-override" => "✦",
+        "daily-limit" or "app-limit" => "◔",
+        "device-offline" => "⇄",
+        "tampering" => "!",
+        _ => "◉"
+    };
+
+    private static string Tone(string type) => type switch
+    {
+        "repeated-blocked-site" or "daily-limit" or "app-limit" => "danger",
+        "device-offline" or "tampering" => "warn",
+        _ => "accent"
+    };
+}

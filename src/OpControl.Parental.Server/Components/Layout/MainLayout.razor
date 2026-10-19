@@ -1,4 +1,11 @@
 @inherits LayoutComponentBase
+@using Microsoft.EntityFrameworkCore
+@using OpControl.Parental.Server.Data
+@using OpControl.Parental.Server.Services
+@inject AuthenticationStateProvider AuthState
+@inject IServiceScopeFactory Scopes
+@inject DashboardEventBus Events
+@implements IDisposable
 
 <div class="app-shell">
     <aside class="sidebar">
@@ -9,6 +16,12 @@
         <nav class="nav">
             <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
                 <span class="nav-ico">⌂</span> Home
+            </NavLink>
+            <NavLink class="nav-link" href="/screen-time">
+                <span class="nav-ico">◔</span> Screen time
+            </NavLink>
+            <NavLink class="nav-link" href="/activity">
+                <span class="nav-ico">≡</span> Activity
             </NavLink>
             <NavLink class="nav-link" href="/websites">
                 <span class="nav-ico">◎</span> Websites
@@ -22,6 +35,13 @@
             <NavLink class="nav-link" href="/schedules">
                 <span class="nav-ico">◷</span> Schedules
             </NavLink>
+            <NavLink class="nav-link" href="/alerts">
+                <span class="nav-ico">◉</span> Alerts
+                @if (_unread > 0)
+                {
+                    <span class="nav-count">@_unread</span>
+                }
+            </NavLink>
             <NavLink class="nav-link" href="/add-device">
                 <span class="nav-ico">＋</span> Add device
             </NavLink>
@@ -30,8 +50,8 @@
             </NavLink>
         </nav>
         <div class="sidebar-foot">
-            <div class="pill-soft">Job 3</div>
-            <div class="muted small">Website + app blocking, categories and visit history.</div>
+            <div class="pill-soft">Job 4</div>
+            <div class="muted small">Usage, screen time limits, reports and alerts.</div>
         </div>
     </aside>
 
@@ -60,3 +80,37 @@
 <form id="af-form" method="post" class="hidden-form" aria-hidden="true">
     <AntiforgeryToken />
 </form>
+
+@code {
+    private int _unread;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Events.AlertChanged += OnAlertChanged;
+        await RefreshAsync();
+    }
+
+    private void OnAlertChanged(OpControl.Parental.Server.Data.Alert alert) =>
+        _ = InvokeAsync(async () => { await RefreshAsync(); StateHasChanged(); });
+
+    private async Task RefreshAsync()
+    {
+        try
+        {
+            var auth = await AuthState.GetAuthenticationStateAsync();
+            if (!Guid.TryParse(auth.User.FindFirst("family_id")?.Value, out var familyId)) return;
+            using var scope = Scopes.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
+            var child = await db.Children.AsNoTracking()
+                .Where(c => c.FamilyId == familyId)
+                .OrderBy(c => c.CreatedUtc)
+                .Select(c => (Guid?)c.Id)
+                .FirstOrDefaultAsync();
+            if (child is not { } childId) return;
+            _unread = await db.Alerts.AsNoTracking().CountAsync(a => a.FamilyId == familyId && a.ChildId == childId && a.ReadUtc == null);
+        }
+        catch { }
+    }
+
+    public void Dispose() => Events.AlertChanged -= OnAlertChanged;
+}

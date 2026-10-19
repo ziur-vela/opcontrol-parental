@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 @using Microsoft.EntityFrameworkCore
+@using OpControl.Parental.Contracts
 @using OpControl.Parental.Server.Data
 @using OpControl.Parental.Server.Services
 @inject AuthenticationStateProvider AuthState
@@ -24,10 +25,11 @@ else
     <div class="page-head">
         <div>
             <div class="eyebrow">@_familyName</div>
-            <h1>@_childName</h1>
-            <p class="muted">Lock state applies to every device assigned to this child.</p>
+            <h1>@Greeting, @(_parentName ?? "parent")</h1>
+            <p class="muted">@DateTime.Now.ToString("dddd, MMMM d") · @_devices.Count(d => d.Online) of @_devices.Count device@(_devices.Count == 1 ? "" : "s") online</p>
         </div>
         <div class="button-row">
+            <a class="btn btn-ghost" href="/screen-time">Screen time</a>
             <a class="btn btn-ghost" href="/schedules">Schedules</a>
             <a class="btn btn-ghost" href="/add-device">Add device</a>
         </div>
@@ -38,61 +40,123 @@ else
         <div class="alert danger">@_error</div>
     }
 
-    <section class="quick-grid">
-        <a class="card quick-card" href="/websites">
-            <div class="eyebrow">Sites blocked today</div>
-            <div class="quick-number">@_sitesBlockedToday</div>
-            <div class="muted tiny">Blocked attempts recorded on @_childName's devices today.</div>
-            <span class="quick-link">Open websites →</span>
+    <section class="stat-grid">
+        <a class="card stat-card" href="/screen-time">
+            <div class="eyebrow">Screen time today</div>
+            <div class="stat-value">@FormatDuration(_usedTodaySeconds)</div>
+            <div class="muted tiny">@(_limitMinutes > 0 ? $"of {_limitMinutes} min limit" : "No daily limit set")</div>
         </a>
-        <a class="card quick-card" href="/apps">
-            <div class="eyebrow">New apps to review</div>
-            <div class="quick-number">@_newAppsCount</div>
-            <div class="muted tiny">Installed since the last review across @_childName's devices.</div>
-            <span class="quick-link">Review apps →</span>
+        <a class="card stat-card" href="/devices">
+            <div class="eyebrow">Devices online</div>
+            <div class="stat-value">@_devices.Count(d => d.Online) of @_devices.Count</div>
+            <div class="muted tiny">@_devices.Count(d => !d.Online) offline</div>
+        </a>
+        <a class="card stat-card" href="/websites">
+            <div class="eyebrow">Blocked attempts</div>
+            <div class="stat-value">@_blockedAttempts</div>
+            <div class="muted tiny">Today · @_blockedDomains distinct site@(_blockedDomains == 1 ? "" : "s")</div>
+        </a>
+        <a class="card stat-card" href="/schedules">
+            <div class="eyebrow">Next schedule</div>
+            <div class="stat-value">@NextScheduleTime</div>
+            <div class="muted tiny">@NextScheduleLabel</div>
         </a>
     </section>
 
-    <section class="grid-2">
-        <div class="card hero-card">
-            <div class="hero-top">
-                <div class="shield">🛡</div>
-                <div>
-                    <div class="eyebrow">Device lock</div>
-                    <div class="lock-status @(_state?.IsLocked == true ? "locked" : "unlocked")">@StateHeadline</div>
-                    <div class="muted small">@ReasonText</div>
-                    @if (EndsText is not null)
-                    {
-                        <div class="muted tiny">@EndsText</div>
-                    }
+    <div class="grid-2 home-grid">
+        <section class="card child-card">
+            <div class="child-head">
+                <div class="avatar">@Initials(_childName)</div>
+                <div class="child-id">
+                    <div class="child-name">@_childName</div>
+                    <div class="muted tiny">@DeviceSummary · @StatusText</div>
+                </div>
+                <div class="button-row">
+                    <span class="pill-soft @(_isOnline ? "online-pill" : "")">@(_isOnline ? "Online" : "Offline")</span>
+                    <span class="pill-soft">@(_state?.IsLocked == true ? "Locked" : "Unlocked")</span>
                 </div>
             </div>
-            @if (CountdownText is not null)
-            {
-                <div class="countdown">@CountdownText</div>
-            }
-            <div class="button-row">
-                <button class="btn btn-danger" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Lock)">Lock</button>
-                <button class="btn btn-primary" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Unlock)">Unlock (until next cycle)</button>
-            </div>
-            <div class="bonus-row">
-                <span class="muted small">Bonus</span>
-                <button class="btn btn-accent" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Bonus, 15)">15 min</button>
-                <button class="btn btn-accent" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Bonus, 30)">30 min</button>
-                <button class="btn btn-accent" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Bonus, 60)">60 min</button>
-                <input type="number" min="1" max="1440" @bind="_customBonus" class="mini-input" />
-                <button class="btn btn-ghost" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Bonus, _customBonus)">Custom</button>
-            </div>
-            <div class="button-row">
-                <a class="btn btn-ghost" href="/pin">@(_hasPin ? "Change override PIN" : "Set override PIN")</a>
-            </div>
-            <div class="muted tiny">Server time @DateTime.UtcNow.ToString("u")</div>
-        </div>
 
-        <div class="card">
+            <div class="screen-time-block">
+                <div class="card-title-row">
+                    <div class="eyebrow">Screen time</div>
+                    <div class="muted small">@FormatDuration(_usedTodaySeconds) / @(_limitMinutes > 0 ? $"{_limitMinutes} min" : "no limit")</div>
+                </div>
+                <div class="progress-track large">
+                    <div class="progress-fill" style="width:@ScreenPercent()%"></div>
+                </div>
+                <div class="muted tiny">@RemainingText</div>
+            </div>
+
+            <div class="lock-banner @(_state?.IsLocked == true ? "locked" : "unlocked")">
+                <span>@StateHeadline</span>
+                <span class="muted tiny">@ReasonText</span>
+            </div>
+
+            <div class="button-row">
+                <button class="btn btn-primary" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Lock)">Lock now</button>
+                <button class="btn btn-accent" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Bonus, 15)">+15 min</button>
+                <button class="btn btn-accent" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Bonus, 30)">+30 min</button>
+                <button class="btn btn-ghost" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Unlock)">Unlock</button>
+                <a class="btn btn-ghost" href="/screen-time">Open profile →</a>
+            </div>
+            <div class="muted tiny">Unlock PIN @(_hasPin ? "is set — works offline on the lock screen" : "is not set").</div>
+        </section>
+
+        <section class="card">
+            <div class="card-title-row">
+                <h2>Today's alerts</h2>
+                <a class="ghost-btn" href="/alerts">View all</a>
+            </div>
+            @if (_alerts.Count == 0)
+            {
+                <p class="muted">No alerts today.</p>
+            }
+            else
+            {
+                <div class="alert-list compact">
+                    @foreach (var alert in _alerts)
+                    {
+                        <a class="alert-row" href="/alerts">
+                            <div class="timeline-icon @Tone(alert.Type)">@Icon(alert.Type)</div>
+                            <div class="timeline-main">
+                                <div class="timeline-title">@alert.Title</div>
+                                <div class="muted tiny">@alert.Detail</div>
+                            </div>
+                            <div class="muted tiny">@FormatLocal(alert.CreatedUtc)</div>
+                        </a>
+                    }
+                </div>
+            }
+            <div class="micro-stats">
+                <div><div class="eyebrow">Top app today</div><div class="small">@(_topApps.FirstOrDefault()?.DisplayName ?? "No usage yet")</div></div>
+                <div><div class="eyebrow">Always blocked</div><div class="small">@_sitesBlockedCount sites · @_appsBlockedCount apps · @_categoriesEnabled categories</div></div>
+            </div>
+        </section>
+    </div>
+
+    <section class="card">
+        <div class="card-title-row">
+            <h2>Today's schedule</h2>
+            <a class="ghost-btn" href="/schedules">All schedules</a>
+        </div>
+        <div class="schedule-bar">
+            @foreach (var segment in _scheduleSegments)
+            {
+                <div class="schedule-segment" style="left:@segment.Left%;width:@segment.Width%" title="@segment.Label">@segment.Label</div>
+            }
+            <div class="schedule-now" style="left:@NowPercent()%"></div>
+        </div>
+        <div class="schedule-ticks">
+            <span>12 AM</span><span>6 AM</span><span>12 PM</span><span>6 PM</span><span>12 AM</span>
+        </div>
+    </section>
+
+    <div class="grid-2">
+        <section class="card">
             <div class="card-title-row">
                 <h2>Devices</h2>
-                <span class="pill-soft">@_devices.Count(d => d.Online) online</span>
+                <span class="pill-soft">@_devices.Count</span>
             </div>
             @if (_devices.Count == 0)
             {
@@ -107,8 +171,7 @@ else
                             <span class="status-dot @(device.Online ? "online" : "offline")"></span>
                             <div class="device-main">
                                 <div class="device-name">@device.Name</div>
-                                <div class="muted tiny">@device.Platform · @(device.TimeZoneId ?? "UTC") · @(device.OsAccountName ?? "account not reported")</div>
-                                <div class="muted tiny">@(string.IsNullOrWhiteSpace(device.ClientVersion) ? "version unknown" : "client " + device.ClientVersion)</div>
+                                <div class="muted tiny">@device.Platform · @(device.OsAccountName ?? "account not reported") · @(string.IsNullOrWhiteSpace(device.ClientVersion) ? "version unknown" : "client " + device.ClientVersion)</div>
                             </div>
                             <div class="device-meta">
                                 <div class="small">@(device.Online ? "Online" : "Offline")</div>
@@ -118,37 +181,39 @@ else
                     }
                 </div>
             }
-        </div>
-    </section>
+        </section>
 
-    <section class="card">
-        <div class="card-title-row">
-            <h2>Activity history</h2>
-            <span class="pill-soft">Latest 15</span>
-        </div>
-        @if (_history.Count == 0 && _blockHistory.Count == 0)
-        {
-            <p class="muted">No activity recorded yet.</p>
-        }
-        else
-        {
-            <div class="history-list">
-                @foreach (var item in _activity)
-                {
-                    <div class="history-row">
-                        <div>
-                            <div class="small">@item.Label</div>
-                            <div class="muted tiny">@item.When.ToLocalTime().ToString("MMM d, HH:mm")</div>
-                        </div>
-                        <div class="muted small">@item.Detail</div>
-                    </div>
-                }
+        <section class="card">
+            <div class="card-title-row">
+                <h2>Top apps today</h2>
+                <a class="ghost-btn" href="/screen-time">Report</a>
             </div>
-        }
-    </section>
+            @if (_topApps.Count == 0)
+            {
+                <p class="muted">No usage recorded today.</p>
+            }
+            else
+            {
+                <div class="usage-bars">
+                    @foreach (var app in _topApps)
+                    {
+                        <div class="usage-row">
+                            <div class="usage-main">
+                                <div class="usage-title">@app.DisplayName <span class="muted tiny">@FormatDuration(app.Seconds)</span></div>
+                                <div class="usage-track"><div class="usage-fill" style="width:@TopAppPercent(app.Seconds)%"></div></div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+    </div>
 }
 
 @code {
+    private sealed record AppRow(string DisplayName, int Seconds);
+    private sealed record Segment(double Left, double Width, string Label);
+
     private Guid _familyId;
     private Guid _childId;
     private string _familyName = "";
@@ -156,19 +221,26 @@ else
     private string? _parentName;
     private LockStateDto? _state;
     private List<DeviceStatusDto> _devices = [];
-    private List<OverrideEventDto> _history = [];
-    private List<BlockEventDto> _blockHistory = [];
-    private List<ActivityRow> _activity = [];
-    private sealed record ActivityRow(string Label, DateTime When, string Detail);
+    private List<Alert> _alerts = [];
+    private List<AppRow> _topApps = [];
+    private List<ScheduleDto> _schedules = [];
+    private List<Segment> _scheduleSegments = [];
     private bool _loading = true;
     private bool _busy;
     private bool _hasPin;
-    private int _sitesBlockedToday;
-    private int _newAppsCount;
-    private int _customBonus = 20;
+    private int _usedTodaySeconds;
+    private int _limitMinutes;
+    private int _blockedAttempts;
+    private int _blockedDomains;
+    private int _sitesBlockedCount;
+    private int _appsBlockedCount;
+    private int _categoriesEnabled;
+    private string _timeZoneId = "UTC";
     private string? _error;
     private Timer? _timer;
     private int _ticks;
+
+    private bool _isOnline => _devices.Any(d => d.Online);
 
     protected override async Task OnInitializedAsync()
     {
@@ -224,42 +296,54 @@ else
         _familyName = family?.Name ?? "";
         _parentName = await db.Users.AsNoTracking()
             .Where(u => u.FamilyId == _familyId)
-            .OrderBy(u => u.RoleInFamily == OpControl.Parental.Contracts.FamilyRole.Owner ? 0 : 1)
+            .OrderBy(u => u.RoleInFamily == FamilyRole.Owner ? 0 : 1)
             .Select(u => u.DisplayName)
             .FirstOrDefaultAsync();
 
         var locks = scope.ServiceProvider.GetRequiredService<LockService>();
+        var usage = scope.ServiceProvider.GetRequiredService<UsageService>();
         _state = await locks.GetStateAsync(_familyId, _childId, null);
         _hasPin = await locks.HasPinAsync(_familyId, _childId);
 
-        var tzId = await db.Devices.AsNoTracking().Where(d => d.ChildId == _childId).Select(d => d.TimeZoneId).FirstOrDefaultAsync() ?? "UTC";
-        var tz = TimeZoneResolver.Resolve(tzId);
-        var localToday = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
-        var dayStart = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(localToday, DateTimeKind.Unspecified), tz);
-        var dayEnd = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(localToday.AddDays(1), DateTimeKind.Unspecified), tz);
-        _sitesBlockedToday = await db.VisitRecords.AsNoTracking()
-            .Where(v => v.FamilyId == _familyId && v.ChildId == _childId && v.Blocked && v.VisitedUtc >= dayStart && v.VisitedUtc < dayEnd)
-            .Select(v => v.Domain)
-            .Distinct()
-            .CountAsync();
-        _newAppsCount = await db.InstalledApps.AsNoTracking()
-            .Where(a => a.FamilyId == _familyId && a.ChildId == _childId && a.IsNew && a.ReviewedUtc == null && a.RemovedUtc == null)
-            .Select(a => a.Identity)
-            .Distinct()
-            .CountAsync();
+        _timeZoneId = await db.Devices.AsNoTracking().Where(d => d.ChildId == _childId).Select(d => d.TimeZoneId).FirstOrDefaultAsync() ?? "UTC";
+        var tz = TimeZoneResolver.Resolve(_timeZoneId);
+        var now = DateTime.UtcNow;
+        var daily = await usage.BuildDailyLimitAsync(_familyId, _childId, tz, now);
+        _usedTodaySeconds = daily.UsedTodaySeconds;
+        _limitMinutes = daily.Enabled ? daily.TodayMinutes : 0;
 
-        _history = await locks.GetHistoryAsync(_familyId, _childId);
-        _blockHistory = await db.BlockEvents.AsNoTracking()
-            .Where(b => b.FamilyId == _familyId && b.ChildId == _childId)
-            .OrderByDescending(b => b.OccurredUtc)
-            .Take(15)
-            .Select(b => new BlockEventDto(b.RuleType, b.Identity, b.DisplayName, b.OccurredUtc))
+        var (dayStart, dayEnd) = UsageService.LocalDayBounds(tz, now);
+        _blockedAttempts = await db.VisitRecords.AsNoTracking()
+            .CountAsync(v => v.FamilyId == _familyId && v.ChildId == _childId && v.Blocked && v.VisitedUtc >= dayStart && v.VisitedUtc < dayEnd);
+        _blockedDomains = await db.VisitRecords.AsNoTracking()
+            .Where(v => v.FamilyId == _familyId && v.ChildId == _childId && v.Blocked && v.VisitedUtc >= dayStart && v.VisitedUtc < dayEnd)
+            .Select(v => v.Domain).Distinct().CountAsync();
+
+        _sitesBlockedCount = await db.WebsiteRules.AsNoTracking().CountAsync(r => r.FamilyId == _familyId && r.ChildId == _childId && r.IsBlocked && r.Mode == RuleMode.Always);
+        _appsBlockedCount = await db.AppRules.AsNoTracking().CountAsync(r => r.FamilyId == _familyId && r.ChildId == _childId && r.IsBlocked && r.Mode == RuleMode.Always);
+        _categoriesEnabled = await db.ChildCategories.AsNoTracking().CountAsync(c => c.FamilyId == _familyId && c.ChildId == _childId && c.Enabled);
+
+        var intervals = await db.UsageIntervals.AsNoTracking()
+            .Where(u => u.FamilyId == _familyId && u.ChildId == _childId && u.Active && u.StartUtc >= dayStart && u.StartUtc < dayEnd && u.AppIdentity != "")
+            .Select(u => new { u.AppIdentity, u.AppDisplayName, u.DurationSeconds })
             .ToListAsync();
-        _activity = _history.Select(h => new ActivityRow(HistoryLabel(h.Option, h.Detail), h.CreatedUtc, h.Minutes is null ? "" : $"{h.Minutes} min"))
-            .Concat(_blockHistory.Select(b => new ActivityRow(b.RuleType == "site" ? "Website blocked" : "App blocked", b.OccurredUtc, b.DisplayName)))
-            .OrderByDescending(a => a.When)
-            .Take(15)
+        _topApps = intervals.GroupBy(i => i.AppIdentity, StringComparer.OrdinalIgnoreCase)
+            .Select(g => new AppRow(
+                g.Select(i => i.AppDisplayName).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n)) ?? g.Key,
+                g.Sum(i => i.DurationSeconds)))
+            .OrderByDescending(a => a.Seconds)
+            .Take(4)
             .ToList();
+
+        _schedules = await db.Schedules.AsNoTracking()
+            .Where(s => s.FamilyId == _familyId && s.ChildId == _childId)
+            .OrderBy(s => s.StartMinutes)
+            .Select(s => new ScheduleDto(s.Id, s.Name, s.DaysMask, s.StartMinutes, s.EndMinutes, s.IsEnabled))
+            .ToListAsync();
+        BuildScheduleSegments(tz, now);
+
+        var alerts = scope.ServiceProvider.GetRequiredService<AlertService>();
+        _alerts = await alerts.GetAlertsAsync(_familyId, _childId, 5);
 
         var devices = await db.Devices.AsNoTracking()
             .Where(d => d.FamilyId == _familyId && d.ChildId == _childId)
@@ -275,6 +359,29 @@ else
             d.Id, d.ChildId, d.Name, d.Platform,
             Presence.IsOnline(d.Id), d.LastSeenUtc, d.TimeZoneId,
             accounts.GetValueOrDefault(d.Id), d.ClientVersion)).ToList();
+    }
+
+    private void BuildScheduleSegments(TimeZoneInfo tz, DateTime nowUtc)
+    {
+        _scheduleSegments = [];
+        var local = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, tz);
+        var day = (int)local.DayOfWeek;
+        var previous = (day + 6) % 7;
+        foreach (var schedule in _schedules.Where(s => s.IsEnabled))
+        {
+            if (schedule.StartMinutes <= schedule.EndMinutes)
+            {
+                if ((schedule.DaysMask & (1 << day)) == 0) continue;
+                _scheduleSegments.Add(new Segment(schedule.StartMinutes / 14.4, (schedule.EndMinutes - schedule.StartMinutes) / 14.4, schedule.Name));
+            }
+            else
+            {
+                if ((schedule.DaysMask & (1 << previous)) != 0)
+                    _scheduleSegments.Add(new Segment(0, schedule.EndMinutes / 14.4, schedule.Name));
+                if ((schedule.DaysMask & (1 << day)) != 0)
+                    _scheduleSegments.Add(new Segment(schedule.StartMinutes / 14.4, (1440 - schedule.StartMinutes) / 14.4, schedule.Name));
+            }
+        }
     }
 
     private async Task ApplyAsync(LockAction action, int? minutes = null)
@@ -300,9 +407,33 @@ else
         }
     }
 
+    private string Greeting => DateTime.Now.Hour switch
+    {
+        < 12 => "Good morning",
+        < 18 => "Good afternoon",
+        _ => "Good evening"
+    };
+
+    private string DeviceSummary => _devices.Count switch
+    {
+        0 => "No devices",
+        1 => _devices[0].Name,
+        _ => $"{_devices.Count} devices"
+    };
+
+    private string StatusText => _state?.Reason switch
+    {
+        "schedule" => $"Schedule: {_state.ScheduleName}",
+        "daily-limit" => "Daily limit reached",
+        "manual" => "Manually locked",
+        "bonus" => "Bonus time",
+        "override" => "Unlocked until next cycle",
+        _ => "Following rules"
+    };
+
     private string StateHeadline => _state?.IsLocked == true
         ? "Locked"
-        : _state?.Reason == "bonus" ? "Bonus time" : "Unlocked";
+        : _state?.Reason == "bonus" ? "Bonus time active" : "Unlocked";
 
     private string ReasonText => _state?.Reason switch
     {
@@ -310,41 +441,72 @@ else
         "override" => "Unlocked until the next lock cycle.",
         "manual" => $"Locked by {_parentName ?? "a parent"}.",
         "schedule" => $"Locked by {(string.IsNullOrWhiteSpace(_state.ScheduleName) ? "a schedule" : _state.ScheduleName)}.",
+        "daily-limit" => "Daily limit reached. Resets at local midnight.",
         _ => "No lock is active."
     };
 
-    private string? EndsText => _state?.EndsUtc is { } ends
-        ? (_state.IsLocked ? $"Unlocks {FormatUtc(ends)}" : $"Until {FormatUtc(ends)}")
-        : null;
-
-    private string? CountdownText
+    private string RemainingText
     {
         get
         {
-            var now = DateTime.UtcNow;
-            if (_state?.BonusUntilUtc is { } bonus && bonus > now)
-                return $"Bonus {Format(bonus - now)} left";
-            if (_state?.UnlockUntilUtc is { } unlock && unlock > now)
-                return $"Unlock ends in {Format(unlock - now)}";
-            return null;
+            if (_limitMinutes <= 0) return "No daily limit is set.";
+            var remaining = Math.Max(0, _limitMinutes * 60 - _usedTodaySeconds);
+            return remaining == 0 ? "Daily limit reached — device locked until midnight." : $"{FormatDuration(remaining)} left today.";
         }
     }
 
-    private static string Format(TimeSpan span) => $"{(int)span.TotalHours:00}:{span.Minutes:00}:{span.Seconds:00}";
-    private static string FormatUtc(DateTime utc) => utc.ToLocalTime().ToString("MMM d, HH:mm");
+    private string NextScheduleTime
+    {
+        get
+        {
+            var active = LockRules.ActiveSchedule(_schedules, TimeZoneResolver.Resolve(_timeZoneId), DateTime.UtcNow);
+            var next = LockRules.NextScheduleStart(_schedules, TimeZoneResolver.Resolve(_timeZoneId), DateTime.UtcNow);
+            if (active is not null) return FormatTimeLocal(LockRules.CurrentScheduleEnd(active, TimeZoneResolver.Resolve(_timeZoneId), DateTime.UtcNow));
+            return next is { } value ? FormatTimeLocal(value) : "None";
+        }
+    }
+
+    private string NextScheduleLabel
+    {
+        get
+        {
+            var active = LockRules.ActiveSchedule(_schedules, TimeZoneResolver.Resolve(_timeZoneId), DateTime.UtcNow);
+            if (active is not null) return $"{active.Name} until";
+            var next = LockRules.NextScheduleStart(_schedules, TimeZoneResolver.Resolve(_timeZoneId), DateTime.UtcNow);
+            return next is null ? "No schedule set" : "Next lock";
+        }
+    }
+
+    private int ScreenPercent() => _limitMinutes <= 0 ? 0 : Math.Clamp((int)(_usedTodaySeconds * 100.0 / (_limitMinutes * 60)), 0, 100);
+    private int TopAppPercent(int seconds) { var max = _topApps.Count == 0 ? 0 : _topApps.Max(a => a.Seconds); return max <= 0 ? 0 : Math.Max(2, (int)(seconds * 100.0 / max)); }
+    private double NowPercent() => DateTime.Now.TimeOfDay.TotalMinutes / 14.4;
+    private static string Initials(string name) => name.Length == 0 ? "?" : name[..1].ToUpperInvariant();
+
+    private string FormatLocal(DateTime utc) =>
+        TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeZoneResolver.Resolve(_timeZoneId)).ToString("h:mm tt");
+
+    private string FormatTimeLocal(DateTime? utc) =>
+        utc is { } value ? TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(value, DateTimeKind.Utc), TimeZoneResolver.Resolve(_timeZoneId)).ToString("h:mm tt") : "—";
+
+    private static string FormatDuration(int seconds)
+    {
+        var span = TimeSpan.FromSeconds(Math.Max(0, seconds));
+        return span.TotalHours >= 1 ? $"{(int)span.TotalHours}h {span.Minutes:00}m" : $"{span.Minutes}m";
+    }
+
     private static string LastSeen(DateTime? utc) => utc is null ? "never" : utc.Value.ToLocalTime().ToString("MMM d, HH:mm");
 
-    private static string HistoryLabel(string option, string? detail = null) => option switch
+    private static string Icon(string type) => type switch
     {
-        "dashboard-unlock" => "Dashboard unlock",
-        "dashboard-bonus" => "Dashboard bonus",
-        "pin-unlock-until-next" => "PIN override: unlock until next cycle",
-        "pin-bonus" => "PIN override: bonus time",
-        "schedule-start" => $"Schedule started: {detail}",
-        "schedule-end" => $"Schedule ended: {detail}",
-        "item-bonus-site" => $"Website bonus: {detail}",
-        "item-bonus-app" => $"App bonus: {detail}",
-        _ => option
+        "new-app" => "＋", "repeated-blocked-site" => "⊘", "pin-override" => "✦",
+        "daily-limit" or "app-limit" => "◔", "device-offline" => "⇄", "tampering" => "!", _ => "◉"
+    };
+
+    private static string Tone(string type) => type switch
+    {
+        "repeated-blocked-site" or "daily-limit" or "app-limit" => "danger",
+        "device-offline" or "tampering" => "warn",
+        _ => "accent"
     };
 
     public ValueTask DisposeAsync()

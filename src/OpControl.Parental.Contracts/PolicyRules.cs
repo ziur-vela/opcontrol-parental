@@ -33,27 +33,51 @@ public static class PolicyRules
     }
 
     public static bool IsAppBlocked(DeviceStateDto state, string identity, string? path, TimeZoneInfo tz, DateTime nowUtc)
+        => IsAppBlocked(state, identity, path, tz, nowUtc, out _);
+
+    public static bool IsAppBlocked(DeviceStateDto state, string identity, string? path, TimeZoneInfo tz, DateTime nowUtc, out string? reason)
     {
+        reason = null;
         identity = identity.Trim().ToLowerInvariant();
         if (identity.Length == 0) return false;
+
+        if (IsAppAlwaysAllowed(state, identity, path))
+            return false;
 
         if (HasItemBonus(state, "app", identity, nowUtc))
             return false;
 
-        foreach (var rule in state.AppRules.Where(r => !r.IsBlocked))
+        if (IsAppLimitExceeded(state, identity))
         {
-            if (MatchesApp(rule.AppIdentity, identity, path))
-                return false;
+            reason = "daily-limit";
+            return true;
         }
 
         foreach (var rule in state.AppRules.Where(r => r.IsBlocked))
         {
             if (!MatchesApp(rule.AppIdentity, identity, path)) continue;
             if (rule.Mode == RuleMode.Always || ScheduleActive(state.Schedules, rule.ScheduleId, tz, nowUtc))
+            {
+                reason = "rule";
                 return true;
+            }
         }
 
         return false;
+    }
+
+    public static bool IsAppAlwaysAllowed(DeviceStateDto state, string identity, string? path)
+    {
+        identity = identity.Trim().ToLowerInvariant();
+        if (identity.Length == 0) return false;
+        return state.AppRules.Any(r => r.AlwaysAllowed && MatchesApp(r.AppIdentity, identity, path));
+    }
+
+    public static bool IsAppLimitExceeded(DeviceStateDto state, string identity)
+    {
+        identity = identity.Trim().ToLowerInvariant();
+        var usage = state.AppUsage?.FirstOrDefault(u => u.Identity.Trim().Equals(identity, StringComparison.OrdinalIgnoreCase));
+        return usage is { LimitMinutes: > 0 } && usage.UsedTodaySeconds >= usage.LimitMinutes * 60;
     }
 
     public static bool MatchesApp(string ruleIdentity, string identity, string? path)

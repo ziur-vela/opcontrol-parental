@@ -117,13 +117,21 @@ else
                             }
                             else if (app.Allowed)
                             {
-                                <span class="state-pill allowed">Allowed</span>
+                                <span class="state-pill allowed">@(app.AlwaysAllowed ? "Always allowed" : $"Limited {app.LimitMinutes} min")</span>
                                 <button class="ghost-btn" @onclick="() => BlockAppAsync(app)">Block</button>
+                                @if (app.LimitMinutes is not null)
+                                {
+                                    <button class="ghost-btn" @onclick="() => AllowAppAsync(app)">Remove limit</button>
+                                }
                             }
                             else
                             {
                                 <button class="btn btn-accent" @onclick="() => BlockAppAsync(app)">Block</button>
                                 <button class="ghost-btn" @onclick="() => AllowAppAsync(app)">Allow</button>
+                            }
+                            @if (!app.Blocked)
+                            {
+                                <button class="ghost-btn" @onclick="() => LimitAppAsync(app)">Limit 1 h</button>
                             }
                             @if (app.Blocked)
                             {
@@ -189,9 +197,13 @@ else
                     <div class="rule-row compact">
                         <div class="rule-main">
                             <div class="rule-title">@rule.DisplayName</div>
-                            <div class="muted tiny">Always allowed</div>
+                            <div class="muted tiny">@(rule.AlwaysAllowed ? "Always allowed — not counted toward the daily limit" : $"Daily limit {rule.DailyLimitMinutes} min")</div>
                         </div>
                         <div class="rule-actions">
+                            @if (rule.DailyLimitMinutes is not null)
+                            {
+                                <button class="ghost-btn" @onclick="() => ClearAppLimitAsync(rule)">Remove limit</button>
+                            }
                             <button class="ghost-btn" @onclick="() => BlockAppRuleAsync(rule)">Block</button>
                         </div>
                     </div>
@@ -258,6 +270,8 @@ else
         public bool IsNew { get; init; }
         public bool Blocked { get; init; }
         public bool Allowed { get; init; }
+        public bool AlwaysAllowed { get; init; }
+        public int? LimitMinutes { get; init; }
         public Guid RuleId { get; init; }
     }
 
@@ -345,6 +359,8 @@ else
                 IsNew = app.IsNew && app.ReviewedUtc is null,
                 Blocked = rule is { IsBlocked: true },
                 Allowed = rule is { IsBlocked: false },
+                AlwaysAllowed = rule?.AlwaysAllowed ?? false,
+                LimitMinutes = rule?.DailyLimitMinutes,
                 RuleId = rule?.Id ?? Guid.Empty
             };
         }
@@ -399,6 +415,25 @@ else
     private Task AllowAppAsync(AppRow app) => AllowIdentityAsync(app.Identity, app.DisplayName, app.Publisher);
 
     private Task BlockAppRuleAsync(AppRule rule) => BlockIdentityAsync(rule.AppIdentity, rule.DisplayName, rule.Publisher);
+
+    private Task LimitAppAsync(AppRow app) => LimitIdentityAsync(app.Identity, app.DisplayName, app.Publisher);
+
+    private async Task LimitIdentityAsync(string identity, string display, string? publisher)
+    {
+        await RunAsync(async (db, rules, parentId) =>
+        {
+            await rules.SetAppLimitAsync(_familyId, _childId, parentId, identity, display, publisher, 60, false);
+            await MarkReviewedAsync(db, identity);
+        });
+    }
+
+    private async Task ClearAppLimitAsync(AppRule rule)
+    {
+        await RunAsync(async (db, rules, parentId) =>
+        {
+            await rules.SetAppLimitAsync(_familyId, _childId, parentId, rule.AppIdentity, rule.DisplayName, rule.Publisher, null, false);
+        });
+    }
 
     private async Task BlockIdentityAsync(string identity, string display, string? publisher)
     {

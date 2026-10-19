@@ -12,8 +12,13 @@ public sealed class RuleService
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private readonly ParentalDbContext _db;
+    private readonly AlertService _alerts;
 
-    public RuleService(ParentalDbContext db) => _db = db;
+    public RuleService(ParentalDbContext db, AlertService alerts)
+    {
+        _db = db;
+        _alerts = alerts;
+    }
 
     public static string NormalizeDomain(string input)
     {
@@ -53,7 +58,7 @@ public sealed class RuleService
         var apps = await _db.AppRules.AsNoTracking()
             .Where(r => r.FamilyId == familyId && r.ChildId == childId)
             .OrderBy(r => r.DisplayName)
-            .Select(r => new AppRuleDto(r.Id, r.AppIdentity, r.DisplayName, r.Publisher, r.IsBlocked, r.Mode, r.ScheduleId, r.UpdatedUtc))
+            .Select(r => new AppRuleDto(r.Id, r.AppIdentity, r.DisplayName, r.Publisher, r.IsBlocked, r.Mode, r.ScheduleId, r.UpdatedUtc, r.DailyLimitMinutes, r.AlwaysAllowed))
             .ToListAsync(ct);
 
         var bonuses = await _db.ItemBonuses.AsNoTracking()
@@ -150,7 +155,8 @@ public sealed class RuleService
                 Publisher = publisher,
                 IsBlocked = blocked,
                 Mode = mode,
-                ScheduleId = scheduleId
+                ScheduleId = scheduleId,
+                AlwaysAllowed = !blocked
             };
             _db.AppRules.Add(rule);
         }
@@ -161,6 +167,8 @@ public sealed class RuleService
             rule.IsBlocked = blocked;
             rule.Mode = mode;
             rule.ScheduleId = mode == RuleMode.Scheduled ? scheduleId : null;
+            rule.AlwaysAllowed = !blocked;
+            if (blocked) rule.DailyLimitMinutes = null;
             rule.UpdatedUtc = DateTime.UtcNow;
         }
 
@@ -300,6 +308,19 @@ public sealed class RuleService
         if (rows.Count == 0) return;
         _db.VisitRecords.AddRange(rows);
         await _db.SaveChangesAsync(ct);
+
+        var since = now.AddMinutes(-10);
+        var blockedDomains = rows.Where(r => r.Blocked).Select(r => r.Domain).Distinct().ToList();
+        foreach (var domain in blockedDomains)
+        {
+            var attempts = await _db.VisitRecords.AsNoTracking()
+                .CountAsync(v => v.FamilyId == device.FamilyId && v.ChildId == device.ChildId && v.Domain == domain && v.Blocked && v.VisitedUtc >= since, ct);
+            if (attempts < 5) continue;
+            await _alerts.AddAsync(device.FamilyId, device.ChildId, device.Id, "repeated-blocked-site",
+                $"Repeated blocked attempts: {domain}",
+                $"{attempts} blocked attempts to {domain} in the last 10 minutes on {device.Name}.",
+                TimeSpan.FromHours(1), ct);
+        }
     }
 
     public async Task SyncAppInventoryAsync(Device device, AppInventoryRequest request, CancellationToken ct = default)
@@ -316,6 +337,7 @@ public sealed class RuleService
             .ToDictionaryAsync(a => a.Identity, ct);
         var firstSync = existing.Count == 0;
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var newApps = new List<(string Identity, string DisplayName)>();
 
         foreach (var app in incoming)
         {
@@ -332,13 +354,14 @@ public sealed class RuleService
             }
             else
             {
+                var display = string.IsNullOrWhiteSpace(app.DisplayName) ? app.Identity : app.DisplayName.Trim();
                 _db.InstalledApps.Add(new InstalledApp
                 {
                     FamilyId = device.FamilyId,
                     ChildId = device.ChildId,
                     DeviceId = device.Id,
                     Identity = app.Identity,
-                    DisplayName = string.IsNullOrWhiteSpace(app.DisplayName) ? app.Identity : app.DisplayName.Trim(),
+                    DisplayName = display,
                     Publisher = app.Publisher,
                     Path = app.Path,
                     Source = string.IsNullOrWhiteSpace(app.Source) ? "win32" : app.Source,
@@ -347,6 +370,7 @@ public sealed class RuleService
                     FirstSeenUtc = now,
                     LastSeenUtc = now
                 });
+                if (!firstSync) newApps.Add((app.Identity, display));
             }
         }
 
@@ -357,6 +381,14 @@ public sealed class RuleService
         }
 
         await _db.SaveChangesAsync(ct);
+
+        foreach (var app in newApps)
+        {
+            await _alerts.AddAsync(device.FamilyId, device.ChildId, device.Id, "new-app",
+                $"New app installed: {app.DisplayName}",
+                $"{app.DisplayName} ({app.Identity}) was installed on {device.Name}.",
+                TimeSpan.FromDays(1), ct);
+        }
     }
 
     public async Task SyncBlockEventsAsync(Device device, BlockEventRequest request, CancellationToken ct = default)
@@ -378,6 +410,99 @@ public sealed class RuleService
         if (rows.Count == 0) return;
         _db.BlockEvents.AddRange(rows);
         await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task SetAppLimitAsync(Guid familyId, Guid childId, Guid? parentId, string identity, string displayName, string? publisher, int? minutes, bool alwaysAllowed, CancellationToken ct = default)
+    {
+        identity = NormalizeAppIdentity(identity);
+        displayName = string.IsNullOrWhiteSpace(displayName) ? identity : displayName.Trim();
+        var rule = await _db.AppRules.FirstOrDefaultAsync(r => r.FamilyId == familyId && r.ChildId == childId && r.AppIdentity == identity, ct);
+
+        if (minutes is null && !alwaysAllowed)
+        {
+            if (rule is null) return;
+            rule.DailyLimitMinutes = null;
+            rule.AlwaysAllowed = false;
+            rule.UpdatedUtc = DateTime.UtcNow;
+            if (!rule.IsBlocked && rule.Mode == RuleMode.Always)
+                _db.AppRules.Remove(rule);
+            await _db.SaveChangesAsync(ct);
+            if (!rule.IsBlocked)
+            {
+                AddHistory(familyId, childId, "app", rule.Id, rule.AppIdentity, rule.DisplayName, RuleAction.Removed, RuleMode.Always, null, parentId);
+                await _db.SaveChangesAsync(ct);
+            }
+            return;
+        }
+
+        if (rule is null)
+        {
+            rule = new AppRule
+            {
+                FamilyId = familyId,
+                ChildId = childId,
+                AppIdentity = identity,
+                DisplayName = displayName,
+                Publisher = publisher,
+                IsBlocked = false,
+                Mode = RuleMode.Always
+            };
+            _db.AppRules.Add(rule);
+        }
+
+        rule.DisplayName = displayName;
+        rule.Publisher = publisher ?? rule.Publisher;
+        if (alwaysAllowed)
+        {
+            rule.IsBlocked = false;
+            rule.Mode = RuleMode.Always;
+            rule.ScheduleId = null;
+            rule.AlwaysAllowed = true;
+            rule.DailyLimitMinutes = null;
+        }
+        else
+        {
+            rule.IsBlocked = false;
+            rule.Mode = RuleMode.Always;
+            rule.ScheduleId = null;
+            rule.AlwaysAllowed = false;
+            rule.DailyLimitMinutes = Math.Clamp(minutes!.Value, 1, 1440);
+        }
+        rule.UpdatedUtc = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        AddHistory(familyId, childId, "app", rule.Id, rule.AppIdentity, rule.DisplayName, RuleAction.Allowed, rule.Mode, rule.ScheduleId, parentId);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task SyncTamperEventsAsync(Device device, TamperEventRequest request, CancellationToken ct = default)
+    {
+        var now = DateTime.UtcNow;
+        var events = (request.Events ?? [])
+            .Where(e => !string.IsNullOrWhiteSpace(e.Kind))
+            .Take(100)
+            .ToList();
+        foreach (var item in events)
+        {
+            _db.ClientTamperEvents.Add(new ClientTamperEvent
+            {
+                FamilyId = device.FamilyId,
+                ChildId = device.ChildId,
+                DeviceId = device.Id,
+                Kind = item.Kind.Length > 40 ? item.Kind[..40] : item.Kind,
+                Detail = item.Detail is { Length: > 500 } ? item.Detail[..500] : item.Detail,
+                OccurredUtc = item.OccurredUtc.Kind == DateTimeKind.Utc ? item.OccurredUtc : item.OccurredUtc.ToUniversalTime(),
+                CreatedUtc = now
+            });
+        }
+        if (events.Count > 0) await _db.SaveChangesAsync(ct);
+
+        foreach (var item in events)
+        {
+            await _alerts.AddAsync(device.FamilyId, device.ChildId, device.Id, "tampering",
+                "Client tampering sign",
+                $"{item.Kind} was reported on {device.Name}" + (string.IsNullOrWhiteSpace(item.Detail) ? "." : $": {item.Detail}"),
+                TimeSpan.FromHours(1), ct);
+        }
     }
 
     private void AddHistory(Guid familyId, Guid childId, string ruleType, Guid ruleId, string identity, string displayName, RuleAction action, RuleMode mode, Guid? scheduleId, Guid? parentId)

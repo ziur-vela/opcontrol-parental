@@ -13,19 +13,23 @@ public sealed class DataSyncService : BackgroundService
     private readonly SemaphoreSlim _fileGate = new(1, 1);
     private readonly ConcurrentDictionary<string, DateTime> _lastVisit = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, DateTime> _lastBlockEvent = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object _visitGate = new();
+    private (string Domain, DateTime Utc)? _lastAllowedVisit;
     private readonly IHttpClientFactory _httpFactory;
     private readonly CredentialStore _credentials;
     private readonly EnrollmentClient _enrollment;
     private readonly ClientSettings _settings;
+    private readonly LockRuntime _runtime;
     private readonly ILogger<DataSyncService> _logger;
     private AppInventoryRequest? _pendingInventory;
 
-    public DataSyncService(IHttpClientFactory httpFactory, CredentialStore credentials, EnrollmentClient enrollment, ClientSettings settings, ILogger<DataSyncService> logger)
+    public DataSyncService(IHttpClientFactory httpFactory, CredentialStore credentials, EnrollmentClient enrollment, ClientSettings settings, LockRuntime runtime, ILogger<DataSyncService> logger)
     {
         _httpFactory = httpFactory;
         _credentials = credentials;
         _enrollment = enrollment;
         _settings = settings;
+        _runtime = runtime;
         _logger = logger;
     }
 
@@ -36,8 +40,31 @@ public sealed class DataSyncService : BackgroundService
         var now = DateTime.UtcNow;
         if (_lastVisit.TryGetValue(key, out var last) && now - last < TimeSpan.FromSeconds(60)) return;
         _lastVisit[key] = now;
+        if (!blocked)
+        {
+            lock (_visitGate) _lastAllowedVisit = (registrableDomain, now);
+            try
+            {
+                Directory.CreateDirectory(ClientPaths.PublicDirectory);
+                var temp = ClientPaths.LastVisitFile + ".tmp";
+                File.WriteAllText(temp, JsonSerializer.Serialize(new { domain = registrableDomain, utc = now }, LineJson));
+                File.Move(temp, ClientPaths.LastVisitFile, overwrite: true);
+            }
+            catch { }
+        }
         AppendLine(ClientPaths.VisitQueueFile, new VisitEventDto(registrableDomain, now, blocked));
     }
+
+    public (string Domain, DateTime Utc)? LastAllowedVisit
+    {
+        get { lock (_visitGate) return _lastAllowedVisit; }
+    }
+
+    public void QueueUsage(UsageIntervalDto interval) => AppendLine(ClientPaths.UsageQueueFile, interval);
+
+    public void QueueWebsiteUsage(WebsiteUsageDto usage) => AppendLine(ClientPaths.WebsiteUsageQueueFile, usage);
+
+    public void QueueTamper(TamperEventDto tamper) => AppendLine(ClientPaths.TamperQueueFile, tamper);
 
     public void RecordBlockEvent(string ruleType, string identity, string displayName)
     {
@@ -94,6 +121,36 @@ public sealed class DataSyncService : BackgroundService
             var events = blocks.Select(Deserialize<BlockEventDto>).Where(v => v is not null).Cast<BlockEventDto>().ToList();
             if (events.Count > 0 && await PostAsync(client, $"{server}/api/device/block-events", new BlockEventRequest(events), credential, ct))
                 await RemoveLinesAsync(ClientPaths.BlockEventQueueFile, blocks);
+        }
+
+        var usageLines = await TakeLinesAsync(ClientPaths.UsageQueueFile, 2000);
+        var siteLines = await TakeLinesAsync(ClientPaths.WebsiteUsageQueueFile, 2000);
+        if (usageLines.Count > 0 || siteLines.Count > 0)
+        {
+            var intervals = usageLines.Select(Deserialize<UsageIntervalDto>).Where(v => v is not null).Cast<UsageIntervalDto>().ToList();
+            var sites = siteLines.Select(Deserialize<WebsiteUsageDto>).Where(v => v is not null).Cast<WebsiteUsageDto>().ToList();
+            if (await PostAsync(client, $"{server}/api/device/usage", new UsageBatchRequest(intervals, sites), credential, ct))
+            {
+                var state = _runtime.DeviceState;
+                if (state is not null)
+                {
+                    foreach (var interval in intervals.Where(i => i.Active))
+                    {
+                        var alwaysAllowed = PolicyRules.IsAppAlwaysAllowed(state, interval.AppIdentity, null);
+                        _runtime.AddLocalUsage(interval.AppIdentity, interval.DurationSeconds, alwaysAllowed);
+                    }
+                }
+                if (usageLines.Count > 0) await RemoveLinesAsync(ClientPaths.UsageQueueFile, usageLines);
+                if (siteLines.Count > 0) await RemoveLinesAsync(ClientPaths.WebsiteUsageQueueFile, siteLines);
+            }
+        }
+
+        var tamperLines = await TakeLinesAsync(ClientPaths.TamperQueueFile, 200);
+        if (tamperLines.Count > 0)
+        {
+            var events = tamperLines.Select(Deserialize<TamperEventDto>).Where(v => v is not null).Cast<TamperEventDto>().ToList();
+            if (events.Count > 0 && await PostAsync(client, $"{server}/api/device/tamper", new TamperEventRequest(events), credential, ct))
+                await RemoveLinesAsync(ClientPaths.TamperQueueFile, tamperLines);
         }
 
         var inventory = _pendingInventory;

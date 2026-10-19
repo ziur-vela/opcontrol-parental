@@ -1,0 +1,533 @@
+@page "/screen-time"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using OpControl.Parental.Contracts
+@using OpControl.Parental.Server.Data
+@using OpControl.Parental.Server.Services
+@inject AuthenticationStateProvider AuthState
+@inject IServiceScopeFactory Scopes
+
+<PageTitle>Screen time · Parental OpControl</PageTitle>
+
+@if (_loading)
+{
+    <div class="card"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>
+}
+else if (_childId == Guid.Empty)
+{
+    <div class="card"><h1>No child yet</h1><p class="muted">Create a child profile first.</p></div>
+}
+else
+{
+    <div class="page-head">
+        <div>
+            <div class="eyebrow">@_childName</div>
+            <h1>Screen time</h1>
+            <p class="muted">Active use, app limits and reports for every device of this child.</p>
+        </div>
+        <div class="button-row">
+            <a class="btn btn-ghost" href="/activity">Activity</a>
+            <a class="btn btn-ghost" href="/websites">Websites</a>
+            <a class="btn btn-ghost" href="/apps">Apps</a>
+        </div>
+    </div>
+
+    @if (_error is not null)
+    {
+        <div class="alert danger">@_error</div>
+    }
+
+    <section class="stat-grid">
+        <div class="card stat-card">
+            <div class="eyebrow">Active use</div>
+            <div class="stat-value">@FormatDuration(_activeSeconds)</div>
+            <div class="muted tiny">@PeriodLabel</div>
+        </div>
+        <div class="card stat-card">
+            <div class="eyebrow">Idle</div>
+            <div class="stat-value">@FormatDuration(_idleSeconds)</div>
+            <div class="muted tiny">Excluded from screen time</div>
+        </div>
+        <div class="card stat-card">
+            <div class="eyebrow">Blocked attempts</div>
+            <div class="stat-value">@_blockedAttempts</div>
+            <div class="muted tiny">@PeriodLabel</div>
+        </div>
+        <div class="card stat-card">
+            <div class="eyebrow">Today vs average</div>
+            <div class="stat-value">@FormatDuration(_todaySeconds)</div>
+            <div class="muted tiny">Average @FormatDuration(_averageSeconds) per day</div>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="card-title-row">
+            <h2>Usage</h2>
+            <div class="date-nav">
+                <div class="chip-row">
+                    @foreach (var item in Periods)
+                    {
+                        <button class="chip @(_period == item.Key ? "active" : "")" @onclick="() => SetPeriod(item.Key)">@item.Label</button>
+                    }
+                </div>
+                <button class="icon-btn" @onclick="() => ShiftPeriod(-1)" title="Previous">‹</button>
+                <span class="pill-soft">@PeriodLabel</span>
+                <button class="icon-btn" @onclick="() => ShiftPeriod(1)" title="Next">›</button>
+            </div>
+        </div>
+
+        <div class="bar-chart">
+            @foreach (var bucket in _buckets)
+            {
+                <div class="bar-col" title="@bucket.Label: @FormatDuration(bucket.Seconds)">
+                    <div class="bar-track">
+                        <div class="bar-fill" style="height:@BarHeight(bucket.Seconds)%"></div>
+                    </div>
+                    <div class="bar-label">@bucket.Label</div>
+                </div>
+            }
+        </div>
+        <div class="muted tiny">Time is stored in UTC and grouped by the device time zone (local midnight). Website time is approximate, derived from the DNS visit log and browser foreground time.</div>
+    </section>
+
+    <div class="grid-2">
+        <section class="card">
+            <div class="card-title-row">
+                <h2>Today's limit</h2>
+                <span class="pill-soft">@FormatDuration(_usedTodaySeconds) used of @_todayLimitMinutes min</span>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill" style="width:@LimitPercent()%"></div>
+            </div>
+            <div class="muted small">@RemainingText</div>
+            <form class="stack" @onsubmit="SaveLimitsAsync" @onsubmit:preventDefault>
+                <label class="check"><input type="checkbox" @bind="_limitEnabled" /> Enable a daily screen time limit</label>
+                <label class="check"><input type="checkbox" @bind="_spokenWarnings" /> Spoken warnings before the limit</label>
+                <div class="weekday-grid">
+                    @for (var i = 0; i < 7; i++)
+                    {
+                        var index = i;
+                        <label class="field">
+                            <span>@Days[index].Label</span>
+                            <input type="number" min="0" max="1440" @bind="_dayMinutes[index]" disabled="@(!_limitEnabled)" />
+                        </label>
+                    }
+                </div>
+                <div class="button-row">
+                    <button class="btn btn-primary" type="submit" disabled="@_busy">Save limits</button>
+                    <span class="muted tiny">Shared across all of @_childName's devices. Resets at local midnight.</span>
+                </div>
+            </form>
+        </section>
+
+        <section class="card">
+            <div class="card-title-row">
+                <h2>Most used apps</h2>
+                <span class="pill-soft">@_periodLabelShort</span>
+            </div>
+            @if (_apps.Count == 0)
+            {
+                <p class="muted">No app usage recorded for this period.</p>
+            }
+            else
+            {
+                <div class="usage-bars">
+                    @foreach (var app in _apps.Take(8))
+                    {
+                        <div class="usage-row">
+                            <div class="usage-main">
+                                <div class="usage-title">@app.DisplayName <span class="muted tiny">@FormatDuration(app.Seconds)</span></div>
+                                <div class="usage-track"><div class="usage-fill" style="width:@AppPercent(app.Seconds)%"></div></div>
+                                <div class="muted tiny">
+                                    @if (app.AlwaysAllowed) { <span>Always allowed · </span> }
+                                    @if (app.LimitMinutes is { } minutes) { <span>Limit @minutes min · </span> }
+                                    @if (app.UsedTodaySeconds > 0) { <span>@FormatDuration(app.UsedTodaySeconds) today</span> }
+                                </div>
+                            </div>
+                            <div class="rule-actions">
+                                @if (app.IsBlocked)
+                                {
+                                    <span class="state-pill blocked">Blocked</span>
+                                    <button class="ghost-btn" @onclick="() => AllowAppAsync(app.Identity, app.DisplayName)">Allow</button>
+                                }
+                                else
+                                {
+                                    <button class="ghost-btn" @onclick="() => BlockAppAsync(app.Identity, app.DisplayName)">Block</button>
+                                    <button class="ghost-btn" @onclick="() => LimitAppAsync(app.Identity, app.DisplayName, 60)">Limit 1 h</button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+    </div>
+
+    <section class="card">
+        <div class="card-title-row">
+            <h2>Most visited sites</h2>
+            <span class="pill-soft">Time is approximate</span>
+        </div>
+        @if (_sites.Count == 0)
+        {
+            <p class="muted">No website usage recorded for this period.</p>
+        }
+        else
+        {
+            <div class="rule-list">
+                @foreach (var site in _sites.Take(10))
+                {
+                    <div class="rule-row">
+                        <div class="rule-main">
+                            <div class="rule-title">@site.Domain</div>
+                            <div class="muted tiny">@FormatDuration(site.Seconds) · @site.Visits visit@(site.Visits == 1 ? "" : "s")</div>
+                        </div>
+                        <div class="rule-actions">
+                            @if (site.IsBlocked)
+                            {
+                                <span class="state-pill blocked">Blocked</span>
+                                <button class="ghost-btn" @onclick="() => AllowSiteAsync(site.Domain)">Allow</button>
+                            }
+                            else
+                            {
+                                <button class="ghost-btn" @onclick="() => BlockSiteAsync(site.Domain)">Block</button>
+                                <button class="ghost-btn" @onclick="() => AllowSiteAsync(site.Domain)">Always allow</button>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+}
+
+@code {
+    private static readonly (string Key, string Label)[] Periods =
+    [
+        ("day", "Day"),
+        ("week", "Week"),
+        ("month", "Month")
+    ];
+
+    private static readonly (string Label, DayOfWeek Day)[] Days =
+    [
+        ("Mon", DayOfWeek.Monday), ("Tue", DayOfWeek.Tuesday), ("Wed", DayOfWeek.Wednesday),
+        ("Thu", DayOfWeek.Thursday), ("Fri", DayOfWeek.Friday), ("Sat", DayOfWeek.Saturday),
+        ("Sun", DayOfWeek.Sunday)
+    ];
+
+    private sealed class AppRow
+    {
+        public string Identity { get; init; } = "";
+        public string DisplayName { get; init; } = "";
+        public int Seconds { get; init; }
+        public int UsedTodaySeconds { get; init; }
+        public int? LimitMinutes { get; init; }
+        public bool AlwaysAllowed { get; init; }
+        public bool IsBlocked { get; init; }
+    }
+
+    private sealed class SiteRow
+    {
+        public string Domain { get; init; } = "";
+        public int Seconds { get; init; }
+        public int Visits { get; init; }
+        public bool IsBlocked { get; init; }
+    }
+
+    private sealed record Bucket(string Label, int Seconds);
+
+    private Guid _familyId;
+    private Guid _childId;
+    private string _childName = "";
+    private string _timeZoneId = "UTC";
+    private bool _loading = true;
+    private bool _busy;
+    private string? _error;
+    private string _period = "day";
+    private DateTime _anchor = DateTime.Today;
+    private int _activeSeconds;
+    private int _idleSeconds;
+    private int _blockedAttempts;
+    private int _todaySeconds;
+    private int _averageSeconds;
+    private int _usedTodaySeconds;
+    private int _todayLimitMinutes;
+    private bool _limitEnabled;
+    private bool _spokenWarnings;
+    private int[] _dayMinutes = [120, 120, 120, 120, 120, 240, 240];
+    private List<Bucket> _buckets = [];
+    private List<AppRow> _apps = [];
+    private List<SiteRow> _sites = [];
+
+    private string PeriodLabel => _period switch
+    {
+        "week" => $"{_rangeStart:MMM d} – {_rangeEnd.AddDays(-1):MMM d}",
+        "month" => _rangeStart.ToString("MMMM yyyy"),
+        _ => _rangeStart.ToString("ddd, MMM d")
+    };
+
+    private DateTime _rangeStart;
+    private DateTime _rangeEnd;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        if (!Guid.TryParse(auth.User.FindFirst("family_id")?.Value, out _familyId))
+        {
+            _loading = false;
+            _error = "Family scope is missing from the session.";
+            return;
+        }
+        _anchor = DateTime.Today;
+        await RefreshAsync();
+        _loading = false;
+    }
+
+    private async Task SetPeriod(string key)
+    {
+        _period = key;
+        _anchor = DateTime.Today;
+        await RefreshAsync();
+    }
+
+    private async Task ShiftPeriod(int direction)
+    {
+        _anchor = _period switch
+        {
+            "week" => _anchor.AddDays(7 * direction),
+            "month" => _anchor.AddMonths(direction),
+            _ => _anchor.AddDays(direction)
+        };
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        using var scope = Scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
+        var usage = scope.ServiceProvider.GetRequiredService<UsageService>();
+        var rules = scope.ServiceProvider.GetRequiredService<RuleService>();
+        var child = await db.Children.AsNoTracking().Where(c => c.FamilyId == _familyId).OrderBy(c => c.CreatedUtc).FirstOrDefaultAsync();
+        if (child is null) { _childId = Guid.Empty; return; }
+        _childId = child.Id;
+        _childName = child.Name;
+        _timeZoneId = await db.Devices.AsNoTracking().Where(d => d.ChildId == child.Id).Select(d => d.TimeZoneId).FirstOrDefaultAsync() ?? "UTC";
+        var tz = TimeZoneResolver.Resolve(_timeZoneId);
+
+        ComputeRange();
+        var startUtc = LocalToUtc(_rangeStart, tz);
+        var endUtc = LocalToUtc(_rangeEnd, tz);
+        var now = DateTime.UtcNow;
+
+        var intervals = await db.UsageIntervals.AsNoTracking()
+            .Where(u => u.FamilyId == _familyId && u.ChildId == child.Id && u.StartUtc >= startUtc && u.StartUtc < endUtc)
+            .ToListAsync();
+        _activeSeconds = intervals.Where(i => i.Active).Sum(i => i.DurationSeconds);
+        _idleSeconds = intervals.Where(i => !i.Active).Sum(i => i.DurationSeconds);
+        _blockedAttempts = await db.VisitRecords.AsNoTracking()
+            .CountAsync(v => v.FamilyId == _familyId && v.ChildId == child.Id && v.Blocked && v.VisitedUtc >= startUtc && v.VisitedUtc < endUtc);
+
+        var (todayStart, todayEnd) = UsageService.LocalDayBounds(tz, now);
+        _todaySeconds = await db.UsageIntervals.AsNoTracking()
+            .Where(u => u.ChildId == child.Id && u.Active && u.StartUtc >= todayStart && u.StartUtc < todayEnd)
+            .SumAsync(u => (int?)u.DurationSeconds) ?? 0;
+        var dayCount = Math.Max(1, (int)Math.Ceiling((_rangeEnd - _rangeStart).TotalDays));
+        _averageSeconds = _activeSeconds / dayCount;
+
+        var daily = await usage.BuildDailyLimitAsync(_familyId, child.Id, tz, now);
+        _todayLimitMinutes = daily.TodayMinutes;
+        _usedTodaySeconds = daily.UsedTodaySeconds;
+        var limit = await usage.EnsureLimitAsync(_familyId, child.Id);
+        _limitEnabled = limit.Enabled;
+        _spokenWarnings = limit.SpokenWarnings;
+        _dayMinutes = [limit.MondayMinutes, limit.TuesdayMinutes, limit.WednesdayMinutes, limit.ThursdayMinutes,
+            limit.FridayMinutes, limit.SaturdayMinutes, limit.SundayMinutes];
+
+        _buckets = BuildBuckets(intervals, tz);
+        await BuildAppRowsAsync(db, usage, child.Id, tz, intervals, now);
+        await BuildSiteRowsAsync(db, child.Id, startUtc, endUtc, tz);
+    }
+
+    private void ComputeRange()
+    {
+        if (_period == "week")
+        {
+            var offset = ((int)_anchor.DayOfWeek + 6) % 7;
+            _rangeStart = _anchor.Date.AddDays(-offset);
+            _rangeEnd = _rangeStart.AddDays(7);
+        }
+        else if (_period == "month")
+        {
+            _rangeStart = new DateTime(_anchor.Year, _anchor.Month, 1);
+            _rangeEnd = _rangeStart.AddMonths(1);
+        }
+        else
+        {
+            _rangeStart = _anchor.Date;
+            _rangeEnd = _rangeStart.AddDays(1);
+        }
+    }
+
+    private List<Bucket> BuildBuckets(List<UsageInterval> intervals, TimeZoneInfo tz)
+    {
+        if (_period == "day")
+        {
+            var seconds = new int[24];
+            foreach (var interval in intervals.Where(i => i.Active))
+            {
+                var local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(interval.StartUtc, DateTimeKind.Utc), tz);
+                seconds[local.Hour] += interval.DurationSeconds;
+            }
+            return seconds.Select((value, hour) => new Bucket(hour % 3 == 0 ? $"{hour:00}" : "", value)).ToList();
+        }
+
+        var count = (int)(_rangeEnd - _rangeStart).TotalDays;
+        var totals = new int[count];
+        foreach (var interval in intervals.Where(i => i.Active))
+        {
+            var local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(interval.StartUtc, DateTimeKind.Utc), tz);
+            var index = (local.Date - _rangeStart).Days;
+            if (index >= 0 && index < count) totals[index] += interval.DurationSeconds;
+        }
+        return totals.Select((value, index) =>
+        {
+            var date = _rangeStart.AddDays(index);
+            var label = _period == "week" ? date.ToString("ddd") : date.Day.ToString();
+            return new Bucket(label, value);
+        }).ToList();
+    }
+
+    private async Task BuildAppRowsAsync(ParentalDbContext db, UsageService usage, Guid childId, TimeZoneInfo tz, List<UsageInterval> intervals, DateTime now)
+    {
+        var today = await usage.AppUsageTodayAsync(_familyId, childId, tz, now);
+        var appRules = await db.AppRules.AsNoTracking().Where(r => r.FamilyId == _familyId && r.ChildId == childId).ToListAsync();
+        _apps = intervals.Where(i => i.Active && !string.IsNullOrWhiteSpace(i.AppIdentity))
+            .GroupBy(i => i.AppIdentity, StringComparer.OrdinalIgnoreCase)
+            .Select(g =>
+            {
+                var rule = appRules.FirstOrDefault(r => string.Equals(r.AppIdentity, g.Key, StringComparison.OrdinalIgnoreCase));
+                return new AppRow
+                {
+                    Identity = g.Key,
+                    DisplayName = g.Select(i => i.AppDisplayName).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n)) ?? g.Key,
+                    Seconds = g.Sum(i => i.DurationSeconds),
+                    UsedTodaySeconds = today.FirstOrDefault(t => string.Equals(t.Identity, g.Key, StringComparison.OrdinalIgnoreCase))?.UsedTodaySeconds ?? 0,
+                    LimitMinutes = rule?.DailyLimitMinutes,
+                    AlwaysAllowed = rule?.AlwaysAllowed ?? false,
+                    IsBlocked = rule?.IsBlocked ?? false
+                };
+            })
+            .OrderByDescending(a => a.Seconds)
+            .ToList();
+    }
+
+    private async Task BuildSiteRowsAsync(ParentalDbContext db, Guid childId, DateTime startUtc, DateTime endUtc, TimeZoneInfo tz)
+    {
+        var usage = await db.WebsiteUsages.AsNoTracking()
+            .Where(u => u.FamilyId == _familyId && u.ChildId == childId && u.StartUtc >= startUtc && u.StartUtc < endUtc)
+            .ToListAsync();
+        var visits = await db.VisitRecords.AsNoTracking()
+            .Where(v => v.FamilyId == _familyId && v.ChildId == childId && !v.Blocked && v.VisitedUtc >= startUtc && v.VisitedUtc < endUtc)
+            .ToListAsync();
+        var sites = await db.WebsiteRules.AsNoTracking()
+            .Where(r => r.FamilyId == _familyId && r.ChildId == childId)
+            .ToListAsync();
+        _sites = usage.GroupBy(u => u.Domain, StringComparer.OrdinalIgnoreCase)
+            .Select(g => new SiteRow
+            {
+                Domain = g.Key,
+                Seconds = g.Sum(u => u.DurationSeconds),
+                Visits = visits.Count(v => string.Equals(v.Domain, g.Key, StringComparison.OrdinalIgnoreCase)),
+                IsBlocked = sites.Any(r => r.IsBlocked && (r.Domain == g.Key || g.Key.EndsWith("." + r.Domain, StringComparison.OrdinalIgnoreCase)))
+            })
+            .OrderByDescending(s => s.Seconds)
+            .ToList();
+    }
+
+    private async Task SaveLimitsAsync()
+    {
+        await RunAsync(async (db, rules, parentId) =>
+        {
+            using var scope = Scopes.CreateScope();
+            var usage = scope.ServiceProvider.GetRequiredService<UsageService>();
+            var locks = scope.ServiceProvider.GetRequiredService<LockService>();
+            await usage.SetLimitAsync(_familyId, _childId, parentId, _limitEnabled, _spokenWarnings,
+                _dayMinutes[0], _dayMinutes[1], _dayMinutes[2], _dayMinutes[3], _dayMinutes[4], _dayMinutes[5], _dayMinutes[6]);
+            await locks.PublishDeviceStateAsync(_familyId, _childId);
+        });
+    }
+
+    private string _periodLabelShort => _period switch { "week" => "This week", "month" => "This month", _ => "Today" };
+
+    private Task BlockAppAsync(string identity, string display) =>
+        RunRuleAsync(async (rules, parentId) => await rules.UpsertAppRuleAsync(_familyId, _childId, parentId, identity, display, null, true, RuleMode.Always, null));
+
+    private Task AllowAppAsync(string identity, string display) =>
+        RunRuleAsync(async (rules, parentId) => await rules.SetAppLimitAsync(_familyId, _childId, parentId, identity, display, null, null, true));
+
+    private Task LimitAppAsync(string identity, string display, int minutes) =>
+        RunRuleAsync(async (rules, parentId) => await rules.SetAppLimitAsync(_familyId, _childId, parentId, identity, display, null, minutes, false));
+
+    private Task BlockSiteAsync(string domain) =>
+        RunRuleAsync(async (rules, parentId) => await rules.UpsertWebsiteRuleAsync(_familyId, _childId, parentId, domain, true, RuleMode.Always, null));
+
+    private Task AllowSiteAsync(string domain) =>
+        RunRuleAsync(async (rules, parentId) => await rules.UpsertWebsiteRuleAsync(_familyId, _childId, parentId, domain, false, RuleMode.Always, null));
+
+    private async Task RunRuleAsync(Func<RuleService, Guid?, Task> action)
+    {
+        await RunAsync(async (db, rules, parentId) => await action(rules, parentId));
+    }
+
+    private async Task RunAsync(Func<ParentalDbContext, RuleService, Guid?, Task> action)
+    {
+        _error = null;
+        _busy = true;
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
+            var rules = scope.ServiceProvider.GetRequiredService<RuleService>();
+            var locks = scope.ServiceProvider.GetRequiredService<LockService>();
+            var auth = await AuthState.GetAuthenticationStateAsync();
+            Guid? parentId = Guid.TryParse(auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id) ? id : null;
+            await action(db, rules, parentId);
+            await db.SaveChangesAsync();
+            await locks.PublishDeviceStateAsync(_familyId, _childId);
+            await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private string RemainingText
+    {
+        get
+        {
+            if (!_limitEnabled) return "No daily limit is set.";
+            var remaining = Math.Max(0, _todayLimitMinutes * 60 - _usedTodaySeconds);
+            return remaining == 0 ? "Daily limit reached. The device is locked until local midnight." : $"{FormatDuration(remaining)} left today.";
+        }
+    }
+
+    private int LimitPercent() => _todayLimitMinutes <= 0 ? 0 : Math.Clamp((int)(_usedTodaySeconds * 100.0 / (_todayLimitMinutes * 60)), 0, 100);
+    private int BarHeight(int seconds) { var max = _buckets.Count == 0 ? 0 : _buckets.Max(b => b.Seconds); return max <= 0 ? 0 : Math.Max(2, (int)(seconds * 100.0 / max)); }
+    private int AppPercent(int seconds) { var max = _apps.Count == 0 ? 0 : _apps.Max(a => a.Seconds); return max <= 0 ? 0 : Math.Max(2, (int)(seconds * 100.0 / max)); }
+
+    private static DateTime LocalToUtc(DateTime local, TimeZoneInfo tz) =>
+        TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(local, DateTimeKind.Unspecified), tz);
+
+    private static string FormatDuration(int seconds)
+    {
+        var span = TimeSpan.FromSeconds(Math.Max(0, seconds));
+        return span.TotalHours >= 1 ? $"{(int)span.TotalHours}h {span.Minutes:00}m" : $"{span.Minutes}m";
+    }
+}

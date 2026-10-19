@@ -162,15 +162,18 @@ public class Job3PolicyTests
         IReadOnlyList<WebsiteRuleDto>? sites = null,
         IReadOnlyList<AppRuleDto>? apps = null,
         IReadOnlyList<ItemBonusDto>? bonuses = null,
-        IReadOnlyList<ScheduleDto>? schedules = null) =>
+        IReadOnlyList<ScheduleDto>? schedules = null,
+        IReadOnlyList<AppDailyUsageDto>? usage = null,
+        DailyLimitDto? daily = null) =>
         new(Guid.NewGuid(), "Emma", "Hendry", false, null, null, null, null,
-            schedules ?? [], sites ?? [], apps ?? [], bonuses ?? [], [], DateTime.UtcNow);
+            schedules ?? [], sites ?? [], apps ?? [], bonuses ?? [], [], DateTime.UtcNow,
+            usage ?? [], daily, false);
 
     private static WebsiteRuleDto Site(string domain, bool blocked, RuleMode mode = RuleMode.Always, Guid? scheduleId = null) =>
         new(Guid.NewGuid(), domain, blocked, mode, scheduleId, DateTime.UtcNow);
 
-    private static AppRuleDto App(string identity, bool blocked, RuleMode mode = RuleMode.Always, Guid? scheduleId = null) =>
-        new(Guid.NewGuid(), identity, identity, null, blocked, mode, scheduleId, DateTime.UtcNow);
+    private static AppRuleDto App(string identity, bool blocked, RuleMode mode = RuleMode.Always, Guid? scheduleId = null, int? limit = null, bool alwaysAllowed = false) =>
+        new(Guid.NewGuid(), identity, identity, null, blocked, mode, scheduleId, DateTime.UtcNow, limit, alwaysAllowed);
 
     [Fact]
     public void Site_rule_blocks_subdomains_and_allow_rule_wins()
@@ -227,5 +230,108 @@ public class Job3PolicyTests
         Assert.Equal("youtube.com", RuleService.NormalizeDomain("https://www.youtube.com/watch?v=1"));
         Assert.Equal("example.com", RuleService.NormalizeDomain("example.com:443/path"));
         Assert.Throws<InvalidOperationException>(() => RuleService.NormalizeDomain("not a domain"));
+    }
+}
+
+
+public class Job4UsageTests
+{
+    private static DeviceStateDto State(
+        IReadOnlyList<AppRuleDto>? apps = null,
+        IReadOnlyList<AppDailyUsageDto>? usage = null,
+        DailyLimitDto? daily = null) =>
+        new(Guid.NewGuid(), "Emma", "Hendry", false, null, null, null, null,
+            [], [], apps ?? [], [], [], DateTime.UtcNow, usage ?? [], daily, false);
+
+    private static AppRuleDto App(string identity, bool blocked, int? limit = null, bool alwaysAllowed = false) =>
+        new(Guid.NewGuid(), identity, identity, null, blocked, RuleMode.Always, null, DateTime.UtcNow, limit, alwaysAllowed);
+
+    [Fact]
+    public void Daily_limit_locks_at_zero_and_bonus_still_overrides()
+    {
+        var now = new DateTime(2026, 10, 18, 12, 0, 0, DateTimeKind.Utc);
+        var dayStart = new DateTime(2026, 10, 18, 0, 0, 0, DateTimeKind.Utc);
+        var dayEnd = dayStart.AddDays(1);
+        var daily = new DailyLimitDto(true, 120, 120 * 60, dayStart, dayEnd);
+
+        var evaluation = LockRules.Evaluate(false, null, null, [], TimeZoneInfo.Utc, now, daily);
+        Assert.True(evaluation.IsLocked);
+        Assert.Equal("daily-limit", evaluation.Reason);
+        Assert.Equal(dayEnd, evaluation.EndsUtc);
+
+        var withBonus = LockRules.Evaluate(false, null, now.AddMinutes(15), [], TimeZoneInfo.Utc, now, daily);
+        Assert.False(withBonus.IsLocked);
+        Assert.Equal("bonus", withBonus.Reason);
+
+        Assert.Equal(0, LockRules.DailyLimitRemainingSeconds(daily, now));
+    }
+
+    [Fact]
+    public void Daily_limit_is_not_reached_after_midnight()
+    {
+        var dayStart = new DateTime(2026, 10, 18, 0, 0, 0, DateTimeKind.Utc);
+        var daily = new DailyLimitDto(true, 120, 120 * 60, dayStart, dayStart.AddDays(1));
+        var afterMidnight = dayStart.AddDays(1).AddMinutes(1);
+        Assert.False(LockRules.DailyLimitReached(daily, afterMidnight));
+        Assert.Equal(120 * 60, LockRules.DailyLimitRemainingSeconds(daily, afterMidnight));
+    }
+
+    [Fact]
+    public void Per_app_limit_blocks_and_always_allowed_app_is_exempt()
+    {
+        var now = new DateTime(2026, 10, 18, 12, 0, 0, DateTimeKind.Utc);
+        var state = State(
+            [App("store:roblox_abc", false, 60, false), App("win32:school.exe|school", false, null, true)],
+            [new AppDailyUsageDto("store:roblox_abc", 3600, 60, false),
+             new AppDailyUsageDto("win32:school.exe|school", 7200, null, true)]);
+
+        Assert.True(PolicyRules.IsAppBlocked(state, "store:roblox_abc", null, TimeZoneInfo.Utc, now, out var reason));
+        Assert.Equal("daily-limit", reason);
+        Assert.False(PolicyRules.IsAppBlocked(state, "win32:school.exe|school", @"C:\School\school.exe", TimeZoneInfo.Utc, now));
+        Assert.False(PolicyRules.IsAppBlocked(state, "store:other_abc", null, TimeZoneInfo.Utc, now));
+    }
+
+    [Fact]
+    public void Local_day_bounds_use_the_child_time_zone()
+    {
+        var zone = TimeZoneInfo.CreateCustomTimeZone("Test-8", TimeSpan.FromHours(-8), "Test", "Test");
+        var now = new DateTime(2026, 10, 19, 3, 0, 0, DateTimeKind.Utc);
+        var (start, end) = UsageService.LocalDayBounds(zone, now);
+        Assert.Equal(new DateTime(2026, 10, 18, 8, 0, 0, DateTimeKind.Utc), start);
+        Assert.Equal(new DateTime(2026, 10, 19, 8, 0, 0, DateTimeKind.Utc), end);
+    }
+
+    [Fact]
+    public async Task Usage_sync_is_idempotent_and_usage_counts_active_time_only()
+    {
+        await using var db = new ParentalDbContext(new DbContextOptionsBuilder<ParentalDbContext>()
+            .UseInMemoryDatabase("usage-" + Guid.NewGuid()).Options);
+        var family = new Family { Name = "F" };
+        var child = new Child { FamilyId = family.Id, Name = "C" };
+        var device = new Device { FamilyId = family.Id, ChildId = child.Id, Name = "D" };
+        db.Families.Add(family);
+        db.Children.Add(child);
+        db.Devices.Add(device);
+        db.ScreenTimeLimits.Add(new ScreenTimeLimit { FamilyId = family.Id, ChildId = child.Id, Enabled = true, MondayMinutes = 120 });
+        db.AppRules.Add(new AppRule { FamilyId = family.Id, ChildId = child.Id, AppIdentity = "win32:school.exe|school", IsBlocked = false, Mode = RuleMode.Always, AlwaysAllowed = true });
+        await db.SaveChangesAsync();
+
+        var service = new UsageService(db);
+        var start = new DateTime(2026, 10, 19, 12, 0, 0, DateTimeKind.Utc);
+        var interval = new UsageIntervalDto(Guid.NewGuid(), "win32:brave.exe|brave", "Brave", start, 30, true);
+        var school = new UsageIntervalDto(Guid.NewGuid(), "win32:school.exe|school", "School", start, 60, true);
+        var idle = new UsageIntervalDto(Guid.NewGuid(), "", "", start, 45, false);
+        var request = new UsageBatchRequest([interval, school, idle], [new WebsiteUsageDto(Guid.NewGuid(), "youtube.com", start, 30)]);
+
+        await service.SyncUsageAsync(device, request);
+        await service.SyncUsageAsync(device, request);
+
+        Assert.Equal(3, await db.UsageIntervals.CountAsync());
+        Assert.Equal(1, await db.WebsiteUsages.CountAsync());
+        var used = await service.UsedTodaySecondsAsync(family.Id, child.Id, TimeZoneInfo.Utc, start.AddMinutes(5));
+        Assert.Equal(30, used);
+        var apps = await service.AppUsageTodayAsync(family.Id, child.Id, TimeZoneInfo.Utc, start.AddMinutes(5));
+        Assert.Equal(30, apps.Single(a => a.Identity == "win32:brave.exe|brave").UsedTodaySeconds);
+        Assert.True(apps.Single(a => a.Identity == "win32:school.exe|school").AlwaysAllowed);
     }
 }
