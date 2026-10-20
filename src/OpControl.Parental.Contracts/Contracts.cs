@@ -97,7 +97,8 @@ public sealed record DeviceStateDto(
     DateTime ServerUtc,
     IReadOnlyList<AppDailyUsageDto>? AppUsage = null,
     DailyLimitDto? DailyLimit = null,
-    bool SpokenWarnings = false);
+    bool SpokenWarnings = false,
+    string? Language = null);
 
 public sealed record DailyLimitDto(
     bool Enabled,
@@ -224,7 +225,8 @@ public sealed record RuntimeLockStateDto(
     int? DailyLimitRemainingSeconds = null,
     int? DailyLimitMinutes = null,
     bool SpokenWarnings = false,
-    int? IdleThresholdSeconds = null);
+    int? IdleThresholdSeconds = null,
+    string? Language = null);
 
 public sealed record UsageIntervalDto(
     Guid Id,

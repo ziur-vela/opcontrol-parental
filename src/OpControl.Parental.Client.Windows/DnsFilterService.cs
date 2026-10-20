@@ -53,7 +53,7 @@ public sealed class DnsFilterService : BackgroundService
                     if (_network.EnsureApplied())
                         _sync.QueueTamper(new OpControl.Parental.Contracts.TamperEventDto(
                             "dns-settings-changed",
-                            "The adapter DNS settings were changed while filtering was active and had to be restored.",
+                            "",
                             DateTime.UtcNow));
                 }
             }

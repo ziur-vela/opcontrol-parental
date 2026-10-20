@@ -45,7 +45,7 @@ public sealed class ServerAdminService
     public async Task SetStatusAsync(Guid familyId, FamilyStatus status, Guid actorId, string actorEmail, CancellationToken ct = default)
     {
         var family = await _db.Families.FirstOrDefaultAsync(f => f.Id == familyId, ct)
-            ?? throw new InvalidOperationException("Family not found.");
+            ?? throw new InvalidOperationException(AppText.Get("Error.FamilyNotFound"));
         family.Status = status;
         family.SuspendedUtc = status == FamilyStatus.Suspended ? DateTime.UtcNow : null;
 
@@ -67,7 +67,7 @@ public sealed class ServerAdminService
     public async Task DeleteFamilyAsync(Guid familyId, Guid actorId, string actorEmail, CancellationToken ct = default)
     {
         var family = await _db.Families.AsNoTracking().FirstOrDefaultAsync(f => f.Id == familyId, ct)
-            ?? throw new InvalidOperationException("Family not found.");
+            ?? throw new InvalidOperationException(AppText.Get("Error.FamilyNotFound"));
         var strategy = _db.Database.CreateExecutionStrategy();
         await strategy.ExecuteAsync(async () =>
         {

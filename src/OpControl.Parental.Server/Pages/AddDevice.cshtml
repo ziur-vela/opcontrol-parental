@@ -2,13 +2,13 @@
 @model AddDeviceModel
 @{
     Layout = "_Layout";
-    ViewData["Title"] = "Add device";
+    ViewData["Title"] = L["AddDevice.Title"];
 }
 <div class="page-head">
     <div>
-        <div class="eyebrow">Enrollment</div>
-        <h1>Add device</h1>
-        <p class="muted">Create a one-time install link, then open it on the child's computer while signed in as an administrator. Links and codes expire and can be used once.</p>
+        <div class="eyebrow">@L["AddDevice.Eyebrow"]</div>
+        <h1>@L["Nav.AddDevice"]</h1>
+        <p class="muted">@L["AddDevice.Subtitle"]</p>
     </div>
 </div>
 
@@ -19,16 +19,16 @@
 
 <div class="grid-2">
     <div class="card">
-        <h2>Create an install link</h2>
+        <h2>@L["AddDevice.CreateLink"]</h2>
         @if (Model.Children.Count == 0)
         {
-            <p class="muted">Add a child profile first.</p>
+            <p class="muted">@L["AddDevice.AddChildFirst"]</p>
         }
         else
         {
             <form method="post" asp-page-handler="Create" class="stack">
                 <label class="field">
-                    <span>Assign to child</span>
+                    <span>@L["AddDevice.AssignChild"]</span>
                     <select asp-for="ChildId">
                         @foreach (var child in Model.Children)
                         {
@@ -37,54 +37,54 @@
                     </select>
                 </label>
                 <label class="field">
-                    <span>Device type</span>
+                    <span>@L["AddDevice.DeviceType"]</span>
                     <select asp-for="Platform">
-                        <option value="Windows">Windows PC</option>
-                        <option value="Android" disabled>Android — coming soon</option>
-                        <option value="Linux" disabled>Linux — coming soon</option>
+                        <option value="Windows">@L["AddDevice.WindowsPc"]</option>
+                        <option value="Android" disabled>@L["AddDevice.AndroidSoon"]</option>
+                        <option value="Linux" disabled>@L["AddDevice.LinuxSoon"]</option>
                     </select>
                 </label>
-                <button type="submit" class="btn btn-primary">Create install link</button>
+                <button type="submit" class="btn btn-primary">@L["AddDevice.CreateButton"]</button>
             </form>
         }
     </div>
 
     <div class="card">
-        <h2>Install link</h2>
+        <h2>@L["AddDevice.InstallLink"]</h2>
         @if (Model.Created is null)
         {
-            <p class="muted">Create a link to see the code and QR.</p>
+            <p class="muted">@L["AddDevice.CreateToSee"]</p>
         }
         else
         {
             var mailto = $"mailto:?subject=Install%20Parental%20OpControl&body=Install%20link%3A%20{Uri.EscapeDataString(Model.Created.Link)}%0D%0ACode%3A%20{Model.Created.Code}%0D%0AExpires%3A%20{Uri.EscapeDataString(Model.Created.ExpiresUtc.ToLocalTime().ToString("u"))}";
             <div class="install-link-box" data-token="@Model.Created.Token">
                 <div class="install-link-status" id="install-status">
-                    <span class="status-dot offline"></span> Waiting for the device…
+                    <span class="status-dot offline"></span> @L["AddDevice.WaitingDevice"]
                 </div>
                 <label class="field">
-                    <span>Link</span>
+                    <span>@L["AddDevice.Link"]</span>
                     <div class="copy-row">
                         <input readonly value="@Model.Created.Link" id="install-link" />
-                        <button type="button" class="ghost-btn" onclick="ocpCopy('install-link')">Copy</button>
+                        <button type="button" class="ghost-btn" onclick="ocpCopy('install-link')">@L["AddDevice.Copy"]</button>
                     </div>
                 </label>
                 <label class="field">
-                    <span>One-time code</span>
+                    <span>@L["AddDevice.OneTimeCode"]</span>
                     <div class="copy-row">
                         <input readonly value="@Model.Created.Code" id="install-code" class="enroll-code-input" />
-                        <button type="button" class="ghost-btn" onclick="ocpCopy('install-code')">Copy</button>
+                        <button type="button" class="ghost-btn" onclick="ocpCopy('install-code')">@L["AddDevice.Copy"]</button>
                     </div>
                 </label>
                 <div class="qr-row">
-                    <img src="/i/@Model.Created.Token/qr.png" alt="QR code for the install link" width="180" height="180" />
+                    <img src="/i/@Model.Created.Token/qr.png" alt="@L["AddDevice.QrAlt"]" width="180" height="180" />
                     <div>
-                        <p class="muted small">Scan this QR with the child's computer or open the link on that PC.</p>
-                        <a class="btn btn-primary" href="/i/@Model.Created.Token" target="_blank" rel="noopener">Open link page</a>
-                        <a class="ghost-btn" href="@mailto">Email it</a>
+                        <p class="muted small">@L["AddDevice.ScanQr"]</p>
+                        <a class="btn btn-primary" href="/i/@Model.Created.Token" target="_blank" rel="noopener">@L["AddDevice.OpenLink"]</a>
+                        <a class="ghost-btn" href="@mailto">@L["AddDevice.EmailIt"]</a>
                     </div>
                 </div>
-                <p class="muted small">Expires @Model.Created.ExpiresUtc.ToLocalTime().ToString("MMM d, HH:mm"). The link and code work once.</p>
+                <p class="muted small">@L["Install.Expires", Formats.CompactDateTime(Model.Created.ExpiresUtc.ToLocalTime())]</p>
             </div>
         }
     </div>
@@ -92,27 +92,27 @@
 
 <div class="card">
     <div class="card-title-row">
-        <h2>Recent install links</h2>
-        <span class="pill-soft">Single use</span>
+        <h2>@L["AddDevice.Recent"]</h2>
+        <span class="pill-soft">@L["AddDevice.SingleUse"]</span>
     </div>
     @if (Model.Links.Count == 0)
     {
-        <p class="muted">No install links yet.</p>
+        <p class="muted">@L["AddDevice.NoLinks"]</p>
     }
     else
     {
         <div class="device-list">
             @foreach (var link in Model.Links)
             {
-                var state = link.RevokedUtc is not null ? "Revoked" : link.UsedUtc is not null ? "Connected" : link.ExpiresUtc <= DateTime.UtcNow ? "Expired" : "Waiting";
+                var state = link.RevokedUtc is not null ? L["AddDevice.StateRevoked"].Value : link.UsedUtc is not null ? L["Common.Connected"].Value : link.ExpiresUtc <= DateTime.UtcNow ? L["AddDevice.StateExpired"].Value : L["AddDevice.StateWaiting"].Value;
                 <div class="device-row">
-                    <span class="status-dot @(state == "Connected" ? "online" : "offline")"></span>
+                    <span class="status-dot @(state == L["Common.Connected"].Value ? "online" : "offline")"></span>
                     <div class="device-main">
                         <div class="device-name">@link.ChildName · @link.Platform</div>
-                        <div class="muted tiny">Created @link.CreatedUtc.ToLocalTime().ToString("MMM d, HH:mm") · expires @link.ExpiresUtc.ToLocalTime().ToString("MMM d, HH:mm")</div>
+                        <div class="muted tiny">@L["AddDevice.CreatedExpires", Formats.CompactDateTime(link.CreatedUtc.ToLocalTime()), Formats.CompactDateTime(link.ExpiresUtc.ToLocalTime())]</div>
                         @if (link.DeviceName is not null)
                         {
-                            <div class="muted tiny">Device: @link.DeviceName</div>
+                            <div class="muted tiny">@L["AddDevice.DeviceLabel", link.DeviceName]</div>
                         }
                     </div>
                     <div class="device-meta">
@@ -121,7 +121,7 @@
                         {
                             <form method="post" asp-page-handler="Revoke">
                                 <input type="hidden" name="linkId" value="@link.Id" />
-                                <button type="submit" class="ghost-btn">Revoke</button>
+                                <button type="submit" class="ghost-btn">@L["Team.Revoke"]</button>
                             </form>
                         }
                     </div>
@@ -149,7 +149,7 @@
                 if (!response.ok) return;
                 const status = await response.json();
                 if (status.status === 'connected') {
-                    label.innerHTML = '<span class="status-dot online"></span> Connected: ' + (status.deviceName || 'device');
+                    label.innerHTML = '<span class="status-dot online"></span> ' + (@System.Text.Json.JsonSerializer.Serialize(L["AddDevice.ConnectedLabel"].Value)) + ': ' + (status.deviceName || @System.Text.Json.JsonSerializer.Serialize(L["AddDevice.DeviceFallback"].Value));
                     clearInterval(timer);
                 }
             } catch { }

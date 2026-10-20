@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,7 +8,17 @@
     <link rel="stylesheet" href="/css/parental.css" />
 </head>
 <body class="t-dark">
+    @{
+        var authIsSpanish = System.Globalization.CultureInfo.CurrentUICulture.Name.StartsWith("es", StringComparison.OrdinalIgnoreCase);
+        var authPath = Uri.EscapeDataString(Context.Request.Path + Context.Request.QueryString);
+    }
     <div class="auth-wrap">
+        <div class="auth-lang">
+            <span class="lang-switch" role="group" aria-label="@L["Layout.Language"]">
+                <a class="lang-link @(authIsSpanish ? "" : "active")" href="/language/en?returnUrl=@authPath">EN</a>
+                <a class="lang-link @(authIsSpanish ? "active" : "")" href="/language/es-MX?returnUrl=@authPath">ES</a>
+            </span>
+        </div>
         <div class="auth-brand">
             <img src="/brand/lockup-ondark.svg" alt="Parental OpControl" class="brand-logo brand-dark" />
             <img src="/brand/lockup-color.svg" alt="Parental OpControl" class="brand-logo brand-light" />
@@ -16,8 +26,23 @@
         <div class="auth-card">
             @RenderBody()
         </div>
-        <div class="auth-foot muted tiny">CREATED BY OpControl</div>
+        <div class="auth-foot muted tiny">@L["Layout.CreatedBy"]</div>
     </div>
+    <script>
+        window.ocpStrings = @(new Microsoft.AspNetCore.Html.HtmlString(System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, string>
+        {
+            ["requesting"] = L["Js.Requesting"],
+            ["updateRequested"] = L["Js.UpdateRequested"],
+            ["updateFailed"] = L["Js.UpdateFailed"],
+            ["connectionError"] = L["Js.ConnectionError"],
+            ["sessionCreating"] = L["Js.SessionCreating"],
+            ["sessionStartFailed"] = L["Js.SessionStartFailed"],
+            ["sessionWaiting"] = L["Js.SessionWaiting"],
+            ["cameraLive"] = L["Js.CameraLive"],
+            ["screenLive"] = L["Js.ScreenLive"],
+            ["sessionEnded"] = L["Js.SessionEnded"]
+        })));
+    </script>
     <script src="/js/app.js"></script>
 </body>
 </html>

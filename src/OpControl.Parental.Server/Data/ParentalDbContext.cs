@@ -54,6 +54,7 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
             e.HasKey(x => x.Id);
             e.Property(x => x.Name).HasMaxLength(120).IsRequired();
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+            e.Property(x => x.DefaultLanguage).HasMaxLength(16).HasDefaultValue("en");
         });
 
         builder.Entity<ParentUser>(e =>
@@ -61,6 +62,7 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
             e.Property(x => x.DisplayName).HasMaxLength(120).IsRequired();
             e.Property(x => x.RoleInFamily).HasConversion<string>().HasMaxLength(16);
             e.Property(x => x.Permissions).HasConversion<int>();
+            e.Property(x => x.PreferredLanguage).HasMaxLength(16);
             e.HasIndex(x => x.FamilyId);
             e.HasIndex(x => x.IsServerAdmin);
             e.HasOne(x => x.Family).WithMany(x => x.Parents).HasForeignKey(x => x.FamilyId).OnDelete(DeleteBehavior.Restrict);
@@ -83,6 +85,7 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
             e.Property(x => x.OsVersion).HasMaxLength(120);
             e.Property(x => x.TimeZoneId).HasMaxLength(80).IsRequired();
             e.Property(x => x.CameraNoticeEnabled).HasDefaultValue(true);
+            e.Property(x => x.ClientLanguage).HasMaxLength(16);
             e.Property(x => x.CredentialHash).HasMaxLength(64);
             e.Property(x => x.ClientVersion).HasMaxLength(40);
             e.Property(x => x.PreviousClientVersion).HasMaxLength(40);
@@ -281,6 +284,9 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
             e.Property(x => x.Type).HasMaxLength(40).IsRequired();
             e.Property(x => x.Title).HasMaxLength(200).IsRequired();
             e.Property(x => x.Detail).HasMaxLength(500).IsRequired();
+            e.Property(x => x.TitleKey).HasMaxLength(80);
+            e.Property(x => x.DetailKey).HasMaxLength(80);
+            e.Property(x => x.ArgsJson).HasMaxLength(1000);
             e.HasIndex(x => new { x.FamilyId, x.CreatedUtc });
             e.HasIndex(x => new { x.ChildId, x.ReadUtc });
             e.HasIndex(x => new { x.ChildId, x.Type, x.CreatedUtc });

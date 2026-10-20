@@ -404,3 +404,12 @@ code { font-family: var(--mono); background: var(--panel-2); padding: 2px 5px; f
 /* Per-device notice settings */
 .notice-settings { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
 .notice-settings .check { font-size: 12px; }
+
+/* Job 9: language switch */
+.lang-switch { display: inline-flex; border: 1px solid var(--line-2); }
+.lang-link { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 36px; padding: 0 7px; font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; color: var(--muted); text-decoration: none; }
+.lang-link + .lang-link { border-left: 1px solid var(--line-2); }
+.lang-link:hover { color: var(--text); }
+.lang-link.active { color: var(--brand-dark); background: var(--brand); }
+@media (max-width: 720px) { .lang-link { min-width: 44px; height: 44px; } }
+.auth-lang { display: flex; justify-content: flex-end; padding: 14px 18px 0; }

@@ -2,7 +2,7 @@
 @model InstallLinkModel
 @{
     Layout = "_AuthLayout";
-    ViewData["Title"] = "Install Parental OpControl";
+    ViewData["Title"] = L["Install.Title"];
 }
 
 <div class="auth-card install-card" data-token="@Model.Token">
@@ -13,42 +13,42 @@
     @if (Model.Status.Status == "connected")
     {
         <div class="status-mark ok">✓</div>
-        <h1>Connected</h1>
-        <p class="muted">@Model.Status.DeviceName is now protected by Parental OpControl.</p>
-        <p class="muted small">You can close this page. The device will appear in the dashboard immediately.</p>
+        <h1>@L["Install.Connected"]</h1>
+        <p class="muted">@L["Install.ConnectedBody", Model.Status.DeviceName ?? ""]</p>
+        <p class="muted small">@L["Install.ConnectedClose"]</p>
     }
     else if (Model.Status.Status is "expired" or "revoked" or "invalid")
     {
         <div class="status-mark warn">!</div>
-        <h1>@(Model.Status.Status == "expired" ? "Link expired" : Model.Status.Status == "revoked" ? "Link revoked" : "Link not valid")</h1>
+        <h1>@(Model.Status.Status == "expired" ? L["Install.LinkExpired"] : Model.Status.Status == "revoked" ? L["Install.LinkRevoked"] : L["Install.LinkInvalid"])</h1>
         <p class="muted">@Model.Status.Error</p>
-        <p class="muted small">Open the dashboard, choose <strong>Add device</strong>, and create a new install link.</p>
+        <p class="muted small">@L["Install.LinkHelp1"] <strong>@L["Nav.AddDevice"]</strong>@L["Install.LinkHelp2"]</p>
     }
     else if (Model.IsPhone)
     {
         <div class="status-mark">📱</div>
-        <h1>Android coming soon</h1>
-        <p class="muted">This install link is for @Model.Status.ChildName's Windows computer. The Android app is not available yet.</p>
-        <p class="muted small">Open this link on the child's Windows PC while signed in as an administrator.</p>
+        <h1>@L["Install.AndroidSoon"]</h1>
+        <p class="muted">@L["Install.AndroidBody", Model.Status.ChildName ?? ""]</p>
+        <p class="muted small">@L["Install.AndroidHelp"]</p>
     }
     else
     {
         <div class="status-mark">🖥️</div>
-        <h1>Install on this PC</h1>
-        <p class="muted">This will install Parental OpControl for <strong>@Model.Status.ChildName</strong>.</p>
-        <p class="muted small">Signed in as an administrator? The installer will ask which Windows account to protect.</p>
+        <h1>@L["Install.OnThisPc"]</h1>
+        <p class="muted">@L["Install.ForChild1"] <strong>@Model.Status.ChildName</strong>@L["Install.ForChild2"]</p>
+        <p class="muted small">@L["Install.AdminHelp"]</p>
         @if (Model.HasInstaller)
         {
-            <a class="btn btn-primary btn-wide" href="/i/@Model.Token/download">Download installer</a>
+            <a class="btn btn-primary btn-wide" href="/i/@Model.Token/download">@L["Install.Download"]</a>
         }
         else
         {
-            <div class="alert danger">The installer is not published on this server yet.</div>
+            <div class="alert danger">@L["Install.NoInstaller"]</div>
         }
-        <p class="muted tiny">Link expires @Model.Status.ExpiresUtc.ToLocalTime().ToString("MMM d, HH:mm"). The link and code work once.</p>
+        <p class="muted tiny">@L["Install.Expires", Model.Status.ExpiresUtc.ToLocalTime().ToString("d MMM, t", System.Globalization.CultureInfo.CurrentCulture)]</p>
         <details class="install-fallback">
-            <summary>Installer didn't include the code?</summary>
-            <p class="muted small">Run the installer and type the one-time code shown in the parent dashboard. You can also download the latest installer from the dashboard's Downloads page.</p>
+            <summary>@L["Install.CodeHelp"]</summary>
+            <p class="muted small">@L["Install.CodeHelpBody"]</p>
         </details>
     }
 </div>

@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using OpControl.Parental.Server.Data;
 using QRCoder;
+using Microsoft.Extensions.Localization;
+using OpControl.Parental.Server.Resources;
 
 namespace OpControl.Parental.Server.Pages;
 
@@ -12,11 +14,13 @@ public class AccountTwoFactorModel : PageModel
 {
     private readonly UserManager<ParentUser> _users;
     private readonly SignInManager<ParentUser> _signIn;
+    private readonly IStringLocalizer<AppStrings> _l;
 
-    public AccountTwoFactorModel(UserManager<ParentUser> users, SignInManager<ParentUser> signIn)
+    public AccountTwoFactorModel(UserManager<ParentUser> users, SignInManager<ParentUser> signIn, IStringLocalizer<AppStrings> localizer)
     {
         _users = users;
         _signIn = signIn;
+        _l = localizer;
     }
 
     public bool IsEnabled { get; private set; }
@@ -49,7 +53,7 @@ public class AccountTwoFactorModel : PageModel
         var valid = await _users.VerifyTwoFactorTokenAsync(user, _users.Options.Tokens.AuthenticatorTokenProvider, code?.Replace(" ", "") ?? "");
         if (!valid)
         {
-            Message = "The code is not valid. Check the device clock and try again.";
+            Message = _l["TwoFactor.InvalidCodeClock"];
             IsError = true;
             await LoadAsync(user);
             return Page();
@@ -58,7 +62,7 @@ public class AccountTwoFactorModel : PageModel
         await _users.SetTwoFactorEnabledAsync(user, true);
         var codes = await _users.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
         RecoveryCodes = codes?.ToList() ?? [];
-        Message = "Two-factor authentication enabled. Save your recovery codes now.";
+        Message = _l["TwoFactor.Enabled"];
         await LoadAsync(user);
         return Page();
     }
@@ -69,7 +73,7 @@ public class AccountTwoFactorModel : PageModel
         if (user is null) return RedirectToPage("/Login");
         await _users.SetTwoFactorEnabledAsync(user, false);
         await _users.ResetAuthenticatorKeyAsync(user);
-        Message = "Two-factor authentication disabled.";
+        Message = _l["TwoFactor.Disabled"];
         await LoadAsync(user);
         return Page();
     }
@@ -80,14 +84,14 @@ public class AccountTwoFactorModel : PageModel
         if (user is null) return RedirectToPage("/Login");
         if (!await _users.GetTwoFactorEnabledAsync(user))
         {
-            Message = "Enable two-factor authentication first.";
+            Message = _l["TwoFactor.EnableFirst"];
             IsError = true;
             await LoadAsync(user);
             return Page();
         }
         var codes = await _users.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
         RecoveryCodes = codes?.ToList() ?? [];
-        Message = "New recovery codes generated. The previous codes no longer work.";
+        Message = _l["TwoFactor.NewRecovery"];
         await LoadAsync(user);
         return Page();
     }

@@ -1,5 +1,6 @@
 using System.Reflection;
 using OpControl.Parental.Contracts;
+using OpControl.Parental.Localization;
 
 namespace OpControl.Parental.Helper;
 
@@ -115,7 +116,7 @@ public sealed class LockForm : Form
         };
         var title = new Label
         {
-            Text = "THIS DEVICE IS LOCKED",
+            Text = Loc.T("Client.Lock.Title"),
             Font = Theme.Sans(38f, FontStyle.Bold),
             ForeColor = Theme.Text,
             AutoSize = true,
@@ -125,7 +126,7 @@ public sealed class LockForm : Form
         };
         _reason = new Label
         {
-            Text = "A parent has paused this device.",
+            Text = Loc.T("Client.Lock.Paused"),
             Font = Theme.Mono(14f),
             ForeColor = Theme.Muted,
             AutoSize = true,
@@ -144,7 +145,7 @@ public sealed class LockForm : Form
         };
         var overrideLink = new Button
         {
-            Text = "PARENT OVERRIDE",
+            Text = Loc.T("Client.Lock.Override"),
             Font = Theme.Mono(12f, FontStyle.Bold),
             ForeColor = Theme.Brand,
             AutoSize = true,
@@ -161,7 +162,7 @@ public sealed class LockForm : Form
 
         var footer = new Label
         {
-            Text = "MANAGED BY OPCONTROL",
+            Text = Loc.T("Client.Lock.ManagedBy"),
             Font = Theme.Mono(9f),
             ForeColor = Theme.Muted,
             AutoSize = true,
@@ -194,16 +195,16 @@ public sealed class LockForm : Form
     {
         _reason.Text = state.Reason switch
         {
-            "manual" => $"Locked by {state.ParentDisplayName ?? "a parent"}",
-            "schedule" => $"Locked by {(string.IsNullOrWhiteSpace(state.ScheduleName) ? "a schedule" : state.ScheduleName)}",
-            "daily-limit" => "Daily limit reached",
-            _ => "This device is locked"
+            "manual" => Loc.T("Client.Lock.ReasonManual", state.ParentDisplayName ?? Loc.T("Client.Lock.AParent")),
+            "schedule" => Loc.T("Client.Lock.ReasonSchedule", string.IsNullOrWhiteSpace(state.ScheduleName) ? Loc.T("Client.Lock.ASchedule") : state.ScheduleName),
+            "daily-limit" => Loc.T("Client.Lock.ReasonDailyLimit"),
+            _ => Loc.T("Client.Lock.ReasonLocked")
         };
         _end.Text = state.Reason == "daily-limit"
-            ? "Screen time resets at local midnight."
+            ? Loc.T("Client.Lock.ResetsMidnight")
             : state.EndsUtc is { } ends
-                ? $"Unlocks {ends.ToLocalTime():h:mm tt}"
-                : "Ask a parent to unlock this device.";
+                ? Loc.T("Client.Lock.Unlocks", ends.ToLocalTime().ToString("t"))
+                : Loc.T("Client.Lock.AskParent");
     }
 
     protected override bool ShowWithoutActivation => true;

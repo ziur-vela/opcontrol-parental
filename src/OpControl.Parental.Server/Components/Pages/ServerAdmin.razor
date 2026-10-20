@@ -9,21 +9,22 @@
 @inject AuthenticationStateProvider AuthState
 @inject IServiceScopeFactory Scopes
 @inject BuildInfo Build
+@inject IStringLocalizer<AppStrings> L
 
-<PageTitle>Server admin · Parental OpControl</PageTitle>
+<PageTitle>@L["ServerAdmin.PageTitle"]</PageTitle>
 
 <div class="page-head">
     <div>
-        <div class="eyebrow">Server</div>
-        <h1>Server admin</h1>
-        <p class="muted">Invite families, manage server settings and see only family metadata. Family rules, reports and activity stay private unless you are a member of that family.</p>
+        <div class="eyebrow">@L["ServerAdmin.Eyebrow"]</div>
+        <h1>@L["Nav.ServerAdmin"]</h1>
+        <p class="muted">@L["ServerAdmin.Subtitle"]</p>
     </div>
     <span class="pill-soft">@Build.DisplayVersion</span>
 </div>
 
 @if (!_isServerAdmin)
 {
-    <div class="card danger"><h2>Not allowed</h2><p class="muted">This page is for the server administrator.</p></div>
+    <div class="card danger"><h2>@L["ServerAdmin.NotAllowed"]</h2><p class="muted">@L["ServerAdmin.NotAllowedBody"]</p></div>
 }
 else
 {
@@ -31,27 +32,27 @@ else
     @if (_notice is not null) { <div class="alert ok">@_notice</div> }
 
     <section class="card">
-        <h2>Invite a family</h2>
-        <p class="muted small">New families can only join by invitation. The link expires in 7 days and can be used once. There is no public sign-up.</p>
+        <h2>@L["ServerAdmin.InviteFamily"]</h2>
+        <p class="muted small">@L["ServerAdmin.InviteHelp"]</p>
         <div class="grid-2">
-            <label class="field"><span>Email (optional)</span><input @bind="_inviteEmail" placeholder="owner@example.com" /></label>
-            <label class="field"><span>Family name hint (optional)</span><input @bind="_inviteFamilyName" /></label>
+            <label class="field"><span>@L["Team.EmailOptional"]</span><input @bind="_inviteEmail" placeholder="owner@example.com" /></label>
+            <label class="field"><span>@L["ServerAdmin.FamilyHint"]</span><input @bind="_inviteFamilyName" /></label>
         </div>
         <div class="button-row">
-            <button class="btn btn-primary" @onclick="InviteAsync">Create invitation</button>
+            <button class="btn btn-primary" @onclick="InviteAsync">@L["Team.CreateInvitation"]</button>
         </div>
         @if (_createdLink is not null)
         {
-            <label class="field"><span>One-time invitation link</span><input readonly value="@_createdLink" /></label>
-            <div class="muted tiny">@(_emailSent ? "Email sent to the invitee." : "Copy this link and send it to the invitee.")</div>
+            <label class="field"><span>@L["ServerAdmin.OneTimeInviteLink"]</span><input readonly value="@_createdLink" /></label>
+            <div class="muted tiny">@(_emailSent ? L["ServerAdmin.EmailSent"] : L["ServerAdmin.CopyLink"])</div>
         }
     </section>
 
     <section class="card">
-        <h2>Pending family invitations</h2>
+        <h2>@L["ServerAdmin.PendingFamilies"]</h2>
         @if (_invitations.Count == 0)
         {
-            <p class="muted">No pending invitations.</p>
+            <p class="muted">@L["ServerAdmin.NoPending"]</p>
         }
         else
         {
@@ -60,12 +61,12 @@ else
                 {
                     <div class="device-row">
                         <div class="device-main">
-                            <div class="device-name">@(invite.Email ?? "Link-only invitation")</div>
-                            <div class="muted tiny">@(invite.FamilyName ?? "Family name chosen by invitee") · expires @invite.ExpiresUtc.ToLocalTime().ToString("MMM d, HH:mm")</div>
+                            <div class="device-name">@(invite.Email ?? L["Team.LinkOnly"])</div>
+                            <div class="muted tiny">@(invite.FamilyName ?? L["ServerAdmin.FamilyNameChosen"]) · @L["Team.Expires", Formats.CompactDateTime(invite.ExpiresUtc.ToLocalTime())]</div>
                         </div>
                         <div class="device-meta">
-                            <button class="ghost-btn" @onclick="() => ResendAsync(invite)">Resend</button>
-                            <button class="ghost-btn" @onclick="() => RevokeAsync(invite)">Revoke</button>
+                            <button class="ghost-btn" @onclick="() => ResendAsync(invite)">@L["Team.Resend"]</button>
+                            <button class="ghost-btn" @onclick="() => RevokeAsync(invite)">@L["Team.Revoke"]</button>
                         </div>
                     </div>
                 }
@@ -74,26 +75,26 @@ else
     </section>
 
     <section class="card">
-        <h2>Families</h2>
+        <h2>@L["ServerAdmin.Families"]</h2>
         <div class="device-list">
             @foreach (var family in _families)
             {
                 <div class="device-row">
                     <div class="device-main">
-                        <div class="device-name">@family.Name @(family.Status == FamilyStatus.Suspended ? "· suspended" : "")</div>
-                        <div class="muted tiny">@family.OwnerName · @family.OwnerEmail · created @family.CreatedUtc.ToLocalTime().ToString("MMM d, yyyy")</div>
-                        <div class="muted tiny">@family.Children child(ren) · @family.Devices device(s) · last activity @(family.LastActivityUtc?.ToLocalTime().ToString("MMM d, HH:mm") ?? "never")</div>
+                        <div class="device-name">@family.Name @(family.Status == FamilyStatus.Suspended ? L["ServerAdmin.Suspended"] : "")</div>
+                        <div class="muted tiny">@family.OwnerName · @family.OwnerEmail · @L["ServerAdmin.Created", family.CreatedUtc.ToLocalTime().ToString("d MMM yyyy", System.Globalization.CultureInfo.CurrentCulture)]</div>
+                        <div class="muted tiny">@L["ServerAdmin.FamilyCounts", family.Children, family.Devices] · @L["ServerAdmin.LastActivity", family.LastActivityUtc is { } last ? Formats.CompactDateTime(last.ToLocalTime()) : L["Common.Never"]]</div>
                     </div>
                     <div class="device-meta">
                         @if (family.Status == FamilyStatus.Active)
                         {
-                            <button class="ghost-btn" @onclick="() => SetStatusAsync(family, false)">Suspend</button>
+                            <button class="ghost-btn" @onclick="() => SetStatusAsync(family, false)">@L["ServerAdmin.Suspend"]</button>
                         }
                         else
                         {
-                            <button class="ghost-btn" @onclick="() => SetStatusAsync(family, true)">Reactivate</button>
+                            <button class="ghost-btn" @onclick="() => SetStatusAsync(family, true)">@L["ServerAdmin.Reactivate"]</button>
                         }
-                        <button class="ghost-btn danger-text" @onclick="() => BeginDelete(family)">Delete</button>
+                        <button class="ghost-btn danger-text" @onclick="() => BeginDelete(family)">@L["Common.Delete"]</button>
                     </div>
                 </div>
             }
@@ -101,36 +102,36 @@ else
         @if (_deleting is not null)
         {
             <div class="alert danger">
-                <div>Delete <strong>@_deleting.Name</strong> and all of its data? This cannot be undone.</div>
-                <label class="field"><span>Type the family name to confirm</span><input @bind="_deleteConfirmation" /></label>
+                <div>@L["ServerAdmin.DeleteConfirm1"] <strong>@_deleting.Name</strong> @L["ServerAdmin.DeleteConfirm2"]</div>
+                <label class="field"><span>@L["ServerAdmin.TypeName"]</span><input @bind="_deleteConfirmation" /></label>
                 <div class="button-row">
-                    <button class="btn btn-primary" disabled="@(_deleteConfirmation != _deleting.Name)" @onclick="DeleteAsync">Delete family</button>
-                    <button class="btn btn-ghost" @onclick="CancelDelete">Cancel</button>
+                    <button class="btn btn-primary" disabled="@(_deleteConfirmation != _deleting.Name)" @onclick="DeleteAsync">@L["ServerAdmin.DeleteFamily"]</button>
+                    <button class="btn btn-ghost" @onclick="CancelDelete">@L["Common.Cancel"]</button>
                 </div>
             </div>
         }
     </section>
 
     <section class="card">
-        <h2>Server SMTP</h2>
-        <p class="muted small">Used for family invitations and alert emails. Existing family SMTP settings remain as a fallback.</p>
+        <h2>@L["ServerAdmin.ServerSmtp"]</h2>
+        <p class="muted small">@L["ServerAdmin.SmtpHelp"]</p>
         <div class="grid-2">
-            <label class="field"><span>SMTP host</span><input @bind="_smtpHost" /></label>
-            <label class="field"><span>Port</span><input type="number" @bind="_smtpPort" /></label>
-            <label class="field"><span>Username</span><input @bind="_smtpUsername" /></label>
-            <label class="field"><span>Password @(_hasSmtpPassword ? "(stored)" : "")</span><input type="password" @bind="_smtpPassword" placeholder="@(_hasSmtpPassword ? "Leave blank to keep" : "")" /></label>
-            <label class="field"><span>From address</span><input @bind="_smtpFrom" /></label>
-            <label class="field"><span>From name</span><input @bind="_smtpFromName" /></label>
+            <label class="field"><span>@L["Settings.SmtpHost"]</span><input @bind="_smtpHost" /></label>
+            <label class="field"><span>@L["ServerAdmin.Port"]</span><input type="number" @bind="_smtpPort" /></label>
+            <label class="field"><span>@L["ServerAdmin.Username"]</span><input @bind="_smtpUsername" /></label>
+            <label class="field"><span>@L["Settings.SmtpPassword"] @(_hasSmtpPassword ? L["Settings.Stored"] : "")</span><input type="password" @bind="_smtpPassword" placeholder="@(_hasSmtpPassword ? L["Settings.LeaveBlankToKeep"] : "")" /></label>
+            <label class="field"><span>@L["Settings.FromAddress"]</span><input @bind="_smtpFrom" /></label>
+            <label class="field"><span>@L["ServerAdmin.FromName"]</span><input @bind="_smtpFromName" /></label>
         </div>
-        <label class="check"><input type="checkbox" @bind="_smtpSsl" /> Use SSL/TLS</label>
-        <div class="button-row"><button class="btn btn-primary" @onclick="SaveSmtpAsync">Save SMTP</button></div>
+        <label class="check"><input type="checkbox" @bind="_smtpSsl" /> @L["Settings.UseSsl"]</label>
+        <div class="button-row"><button class="btn btn-primary" @onclick="SaveSmtpAsync">@L["ServerAdmin.SaveSmtp"]</button></div>
     </section>
 
     <section class="card">
-        <h2>Server admin activity</h2>
+        <h2>@L["ServerAdmin.Audit"]</h2>
         @if (_audit.Count == 0)
         {
-            <p class="muted">No server admin actions yet.</p>
+            <p class="muted">@L["ServerAdmin.NoAudit"]</p>
         }
         else
         {
@@ -143,7 +144,7 @@ else
                             <div class="timeline-title">@entry.Action</div>
                             <div class="muted tiny">@entry.ActorEmail · @(entry.Detail ?? "")</div>
                         </div>
-                        <div class="muted tiny">@entry.CreatedUtc.ToLocalTime().ToString("MMM d, HH:mm")</div>
+                        <div class="muted tiny">@Formats.CompactDateTime(entry.CreatedUtc.ToLocalTime())</div>
                     </div>
                 }
             </div>
@@ -227,7 +228,7 @@ else
         {
             using var scope = Scopes.CreateScope();
             var result = await scope.ServiceProvider.GetRequiredService<InvitationService>().ResendAsync(invite.Id);
-            _notice = result.Ok ? (result.EmailSent ? "Invitation email sent again." : result.Error) : result.Error;
+            _notice = result.Ok ? (result.EmailSent ? L["Team.InviteResent"] : result.Error) : result.Error;
         }
         catch (Exception ex) { _error = ex.Message; }
     }
@@ -238,7 +239,7 @@ else
         {
             using var scope = Scopes.CreateScope();
             await scope.ServiceProvider.GetRequiredService<InvitationService>().RevokeAsync(invite.Id);
-            _notice = "Invitation revoked.";
+            _notice = L["Team.InviteRevoked"];
             await RefreshAsync();
         }
         catch (Exception ex) { _error = ex.Message; }
@@ -252,7 +253,7 @@ else
             var access = await scope.ServiceProvider.GetRequiredService<FamilyScope>().AccessAsync();
             await scope.ServiceProvider.GetRequiredService<ServerAdminService>()
                 .SetStatusAsync(family.Id, active ? FamilyStatus.Active : FamilyStatus.Suspended, access.ParentId, access.DisplayName);
-            _notice = active ? "Family reactivated." : "Family suspended.";
+            _notice = active ? L["ServerAdmin.Reactivated"] : L["ServerAdmin.SuspendedNotice"];
             await RefreshAsync();
         }
         catch (Exception ex) { _error = ex.Message; }
@@ -279,7 +280,7 @@ else
             var access = await scope.ServiceProvider.GetRequiredService<FamilyScope>().AccessAsync();
             await scope.ServiceProvider.GetRequiredService<ServerAdminService>()
                 .DeleteFamilyAsync(_deleting.Id, access.ParentId, access.DisplayName);
-            _notice = "Family deleted.";
+            _notice = L["ServerAdmin.Deleted"];
             _deleting = null;
             _deleteConfirmation = "";
             await RefreshAsync();
@@ -295,7 +296,7 @@ else
             await scope.ServiceProvider.GetRequiredService<EmailSender>()
                 .SaveSettingsAsync(_smtpHost, _smtpPort, _smtpSsl, _smtpUsername, _smtpPassword, _smtpFrom, _smtpFromName);
             _smtpPassword = null;
-            _notice = "SMTP settings saved.";
+            _notice = L["ServerAdmin.SmtpSaved"];
             await RefreshAsync();
         }
         catch (Exception ex) { _error = ex.Message; }

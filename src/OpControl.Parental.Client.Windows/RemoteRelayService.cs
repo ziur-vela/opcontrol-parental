@@ -5,6 +5,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using OpControl.Parental.Contracts;
+using OpControl.Parental.Localization;
 
 namespace OpControl.Parental.Client;
 
@@ -81,7 +82,7 @@ public sealed class RemoteRelayService
         }
         catch
         {
-            await SendStatusAsync(ws, "The helper is not available.", ct);
+            await SendStatusAsync(ws, Loc.T("Client.Pipe.NoService"), ct);
             await CloseAsync(ws, "helper-unavailable", ct);
             return;
         }
@@ -98,7 +99,7 @@ public sealed class RemoteRelayService
             var length = BinaryPrimitives.ReadInt32BigEndian(header.AsSpan(1));
             if (length <= 0 || length > buffer.Length)
             {
-                await SendStatusAsync(ws, "Invalid frame from the helper.", ct);
+                await SendStatusAsync(ws, Loc.T("Client.Pipe.InvalidResponse"), ct);
                 break;
             }
             var payload = length == buffer.Length ? buffer : new byte[length];

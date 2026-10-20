@@ -33,12 +33,12 @@
         },
         async start(deviceId, kind, canvasId, statusId) {
             window.ocpRemote.stop(false);
-            setStatus(statusId, 'Creating session…');
+            setStatus(statusId, (window.ocpStrings && window.ocpStrings.sessionCreating) || 'Creating session…');
             let created;
             try {
                 created = await window.ocpJsonPost('/api/remote/sessions', { deviceId: deviceId, kind: kind });
             } catch (e) {
-                setStatus(statusId, 'Could not start: ' + e.message);
+                setStatus(statusId, (window.ocpStrings && window.ocpStrings.sessionStartFailed) || 'Could not start: ' + e.message);
                 return false;
             }
             sessionId = created.id;
@@ -47,7 +47,7 @@
             const ctx = canvas.getContext('2d');
             canvas.width = 640; canvas.height = 360;
             ctx.fillStyle = '#0b1714'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            setStatus(statusId, 'Waiting for the device…');
+            setStatus(statusId, (window.ocpStrings && window.ocpStrings.sessionWaiting) || 'Waiting for the device…');
             const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
             socket = new WebSocket(scheme + '://' + location.host + '/ws/remote/' + created.id);
             socket.binaryType = 'arraybuffer';
@@ -68,14 +68,14 @@
                     }
                     ctx.drawImage(bitmap, 0, 0);
                     bitmap.close();
-                    setStatus(statusId, kind === 1 ? 'Camera live' : 'Screen live');
+                    setStatus(statusId, kind === 1 ? ((window.ocpStrings && window.ocpStrings.cameraLive) || 'Camera live') : ((window.ocpStrings && window.ocpStrings.screenLive) || 'Screen live'));
                 } catch { }
             };
             socket.onclose = () => {
-                setStatus(statusId, 'Session ended.');
+                setStatus(statusId, (window.ocpStrings && window.ocpStrings.sessionEnded) || 'Session ended.');
                 socket = null; sessionId = null; currentKind = null;
             };
-            socket.onerror = () => setStatus(statusId, 'Connection error.');
+            socket.onerror = () => setStatus(statusId, (window.ocpStrings && window.ocpStrings.connectionError) || 'Connection error.');
             return true;
         },
         stop(sendStop) {

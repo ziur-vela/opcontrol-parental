@@ -8,17 +8,8 @@ public sealed record CameraConsentStatusDto(bool Accepted, int Version, string T
 public sealed class CameraConsentService
 {
     public const int CurrentVersion = 1;
-    public const string Text = """
-CAMERA SUPERVISION ACKNOWLEDGEMENT (v1)
+    public static string Text => AppText.Get("Consent.Text");
 
-I confirm that I am the parent or legal guardian of the child associated with this device, or that I have the family owner's express permission to view this camera.
-
-I will use this camera view only for lawful parental supervision of that child. I will not use it to monitor any other person, and I will not use it in any place where a person has a reasonable expectation of privacy, including bedrooms, bathrooms, changing areas or similar private spaces. I will not record, share, publish or use the feed for harassment, stalking, intimidation or any unlawful purpose.
-
-I understand that camera access is logged with my account, device and time, and that misuse can result in loss of access and legal action. I will comply with all applicable privacy, consent and monitoring laws in my jurisdiction. This notice is not legal advice; I am responsible for confirming that my use is lawful.
-
-By selecting "I agree", I confirm that I have read and accept these conditions.
-""";
 
     private readonly ParentalDbContext _db;
 

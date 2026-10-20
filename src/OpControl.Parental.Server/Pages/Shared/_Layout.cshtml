@@ -6,9 +6,11 @@
     var isAdmin = string.Equals(User.FindFirst("server_admin")?.Value, "true", StringComparison.OrdinalIgnoreCase);
     var permissions = int.TryParse(User.FindFirst("permissions")?.Value, out var pv) ? pv : 0;
     bool Can(int bit) => isOwner || (permissions & bit) == bit;
+    var isSpanish = System.Globalization.CultureInfo.CurrentUICulture.Name.StartsWith("es", StringComparison.OrdinalIgnoreCase);
+    var currentPath = Uri.EscapeDataString(Context.Request.Path + Context.Request.QueryString);
 }
 <!DOCTYPE html>
-<html lang="en">
+<html lang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -25,24 +27,24 @@
                 <img src="@brand.LogoLight" alt="@brand.ProductName" class="brand-logo brand-light" />
             </div>
             <nav class="nav">
-                <a class="nav-link" href="/"><span class="nav-ico">⌂</span> Home</a>
+                <a class="nav-link" href="/"><span class="nav-ico">⌂</span> @L["Nav.Home"]</a>
                 @if (Can(16))
                 {
-                    <a class="nav-link" href="/screen-time"><span class="nav-ico">◔</span> Screen time</a>
-                    <a class="nav-link" href="/activity"><span class="nav-ico">≡</span> Activity</a>
+                    <a class="nav-link" href="/screen-time"><span class="nav-ico">◔</span> @L["Nav.ScreenTime"]</a>
+                    <a class="nav-link" href="/activity"><span class="nav-ico">≡</span> @L["Nav.Activity"]</a>
                 }
-                @if (Can(2)) { <a class="nav-link" href="/websites"><span class="nav-ico">◎</span> Websites</a> }
-                @if (Can(4)) { <a class="nav-link" href="/apps"><span class="nav-ico">▤</span> Apps</a> }
+                @if (Can(2)) { <a class="nav-link" href="/websites"><span class="nav-ico">◎</span> @L["Nav.Websites"]</a> }
+                @if (Can(4)) { <a class="nav-link" href="/apps"><span class="nav-ico">▤</span> @L["Nav.Apps"]</a> }
                 @if (Can(32))
                 {
-                    <a class="nav-link" href="/devices"><span class="nav-ico">▣</span> Devices</a>
-                    <a class="nav-link" href="/add-device"><span class="nav-ico">＋</span> Add device</a>
+                    <a class="nav-link" href="/devices"><span class="nav-ico">▣</span> @L["Nav.Devices"]</a>
+                    <a class="nav-link" href="/add-device"><span class="nav-ico">＋</span> @L["Nav.AddDevice"]</a>
                 }
-                @if (Can(128)) { <a class="nav-link" href="/remote"><span class="nav-ico">◉</span> Remote</a> }
-                @if (Can(8)) { <a class="nav-link" href="/schedules"><span class="nav-ico">◷</span> Schedules</a> }
-                @if (isOwner) { <a class="nav-link" href="/team"><span class="nav-ico">👥</span> Parents</a> }
-                @if (isAdmin) { <a class="nav-link" href="/server-admin"><span class="nav-ico">☷</span> Server admin</a> }
-                <a class="nav-link" href="/settings"><span class="nav-ico">⚙</span> Settings</a>
+                @if (Can(128)) { <a class="nav-link" href="/remote"><span class="nav-ico">◉</span> @L["Nav.Remote"]</a> }
+                @if (Can(8)) { <a class="nav-link" href="/schedules"><span class="nav-ico">◷</span> @L["Nav.Schedules"]</a> }
+                @if (isOwner) { <a class="nav-link" href="/team"><span class="nav-ico">👥</span> @L["Nav.Parents"]</a> }
+                @if (isAdmin) { <a class="nav-link" href="/server-admin"><span class="nav-ico">☷</span> @L["Nav.ServerAdmin"]</a> }
+                <a class="nav-link" href="/settings"><span class="nav-ico">⚙</span> @L["Nav.Settings"]</a>
             </nav>
             <div class="sidebar-foot">
                 <div class="pill-soft">@Build.DisplayVersion</div>
@@ -53,20 +55,39 @@
             <header class="topbar">
                 <div class="topbar-title">@ViewData["Title"]</div>
                 <div class="topbar-actions">
-                    <button type="button" class="icon-btn" onclick="ocpToggleTheme()" title="Toggle theme" aria-label="Toggle theme">◐</button>
+                    <span class="lang-switch" role="group" aria-label="@L["Layout.Language"]">
+                        <a class="lang-link @(isSpanish ? "" : "active")" href="/language/en?returnUrl=@currentPath">EN</a>
+                        <a class="lang-link @(isSpanish ? "active" : "")" href="/language/es-MX?returnUrl=@currentPath">ES</a>
+                    </span>
+                    <button type="button" class="icon-btn" onclick="ocpToggleTheme()" title="@L["Layout.ToggleTheme"]" aria-label="@L["Layout.ToggleTheme"]">◐</button>
                     <span class="user-chip">@User.FindFirst("display_name")?.Value</span>
                     <form method="post" action="/logout" class="inline-form">
                         @Html.AntiForgeryToken()
-                        <button type="submit" class="ghost-btn">Sign out</button>
+                        <button type="submit" class="ghost-btn">@L["Layout.SignOut"]</button>
                     </form>
                 </div>
             </header>
             <main class="content">
                 @RenderBody()
-                <div class="site-foot">CREATED BY OpControl</div>
+                <div class="site-foot">@L["Layout.CreatedBy"]</div>
             </main>
         </div>
     </div>
+    <script>
+        window.ocpStrings = @(new Microsoft.AspNetCore.Html.HtmlString(System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, string>
+        {
+            ["requesting"] = L["Js.Requesting"],
+            ["updateRequested"] = L["Js.UpdateRequested"],
+            ["updateFailed"] = L["Js.UpdateFailed"],
+            ["connectionError"] = L["Js.ConnectionError"],
+            ["sessionCreating"] = L["Js.SessionCreating"],
+            ["sessionStartFailed"] = L["Js.SessionStartFailed"],
+            ["sessionWaiting"] = L["Js.SessionWaiting"],
+            ["cameraLive"] = L["Js.CameraLive"],
+            ["screenLive"] = L["Js.ScreenLive"],
+            ["sessionEnded"] = L["Js.SessionEnded"]
+        })));
+    </script>
     <script src="/js/app.js"></script>
     <script src="/js/remote.js"></script>
 </body>

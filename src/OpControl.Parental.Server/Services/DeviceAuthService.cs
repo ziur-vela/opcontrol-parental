@@ -32,9 +32,9 @@ public sealed class DeviceAuthService
     public async Task<(Device Device, string Token)> RefreshAsync(Guid deviceId, CancellationToken ct)
     {
         var device = await _db.Devices.FirstOrDefaultAsync(d => d.Id == deviceId && !d.IsRevoked, ct)
-            ?? throw new InvalidOperationException("Device not found.");
+            ?? throw new InvalidOperationException(AppText.Get("Error.DeviceNotFound"));
         var active = await _db.Families.AnyAsync(f => f.Id == device.FamilyId && f.Status == FamilyStatus.Active, ct);
-        if (!active) throw new InvalidOperationException("This family is suspended.");
+        if (!active) throw new InvalidOperationException(AppText.Get("Error.FamilySuspendedShort"));
 
         var token = SecretToken.NewToken();
         device.CredentialHash = SecretToken.Hash(token);

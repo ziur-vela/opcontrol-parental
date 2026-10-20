@@ -158,6 +158,10 @@ namespace OpControl.Parental.Server.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ArgsJson")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
                     b.Property<Guid>("ChildId")
                         .HasColumnType("uuid");
 
@@ -168,6 +172,10 @@ namespace OpControl.Parental.Server.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<string>("DetailKey")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
 
                     b.Property<Guid?>("DeviceId")
                         .HasColumnType("uuid");
@@ -194,6 +202,10 @@ namespace OpControl.Parental.Server.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("TitleKey")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
 
                     b.Property<string>("Type")
                         .IsRequired()
@@ -602,6 +614,10 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.Property<Guid>("ChildId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ClientLanguage")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
                     b.Property<string>("ClientVersion")
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)");
@@ -811,6 +827,13 @@ namespace OpControl.Parental.Server.Data.Migrations
 
                     b.Property<DateTime>("CreatedUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DefaultLanguage")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasDefaultValue("en");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -1260,6 +1283,10 @@ namespace OpControl.Parental.Server.Data.Migrations
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("PreferredLanguage")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
 
                     b.Property<string>("RoleInFamily")
                         .IsRequired()

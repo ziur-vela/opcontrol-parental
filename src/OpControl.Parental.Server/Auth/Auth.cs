@@ -17,6 +17,7 @@ public static class ParentalClaims
     public const string ChildId = "child_id";
     public const string Permissions = "permissions";
     public const string ServerAdmin = "server_admin";
+    public const string PreferredLanguage = "preferred_language";
 }
 
 public sealed class ParentUserClaimsPrincipalFactory : Microsoft.AspNetCore.Identity.UserClaimsPrincipalFactory<ParentUser, Microsoft.AspNetCore.Identity.IdentityRole<Guid>>
@@ -35,6 +36,8 @@ public sealed class ParentUserClaimsPrincipalFactory : Microsoft.AspNetCore.Iden
         identity.AddClaim(new Claim(ParentalClaims.DisplayName, user.DisplayName));
         identity.AddClaim(new Claim(ParentalClaims.Permissions, ((int)(user.RoleInFamily == FamilyRole.Owner ? ParentPermissions.All : user.Permissions)).ToString()));
         identity.AddClaim(new Claim(ParentalClaims.ServerAdmin, user.IsServerAdmin ? "true" : "false"));
+        if (!string.IsNullOrWhiteSpace(user.PreferredLanguage))
+            identity.AddClaim(new Claim(ParentalClaims.PreferredLanguage, user.PreferredLanguage));
         return identity;
     }
 }

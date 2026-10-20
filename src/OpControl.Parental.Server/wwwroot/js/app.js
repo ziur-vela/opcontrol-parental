@@ -9,6 +9,9 @@
     } catch (e) {
         apply('dark');
     }
+    window.ocpSetLanguageCookie = function (lang) {
+        document.cookie = 'ocp.lang=' + encodeURIComponent(lang) + '; path=/; max-age=31536000; samesite=lax';
+    };
     window.ocpToggleTheme = function () {
         var next = document.body.classList.contains('t-light') ? 'dark' : 'light';
         apply(next);
@@ -42,14 +45,14 @@
     window.ocpRequestUpdate = async function (button, deviceId) {
         var original = button.textContent;
         button.disabled = true;
-        button.textContent = 'Requesting…';
+        button.textContent = (window.ocpStrings && window.ocpStrings.requesting) || 'Requesting…';
         try {
             await window.ocpJsonPost('/api/devices/' + deviceId + '/update');
-            button.textContent = 'Update requested';
+            button.textContent = (window.ocpStrings && window.ocpStrings.updateRequested) || 'Update requested';
         } catch (e) {
             button.textContent = original;
             button.disabled = false;
-            alert('Could not request the update: ' + e.message);
+            alert(((window.ocpStrings && window.ocpStrings.updateFailed) || 'Could not request the update: ') + e.message);
         }
     };
 })();

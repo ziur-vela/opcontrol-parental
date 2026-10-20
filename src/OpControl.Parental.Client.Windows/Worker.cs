@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR.Client;
 using OpControl.Parental.Contracts;
+using OpControl.Parental.Localization;
 
 namespace OpControl.Parental.Client;
 
@@ -67,6 +68,7 @@ public sealed class Worker : BackgroundService
         var cached = _deviceStates.Load();
         if (cached is not null)
         {
+            Loc.SetLanguage(cached.Language);
             _runtime.ApplyServerState(cached);
             _logger.LogInformation("Loaded cached device state for child {ChildId}", cached.ChildId);
         }
@@ -118,7 +120,7 @@ public sealed class Worker : BackgroundService
                 return;
             }
             if (File.Exists(ClientPaths.CredentialFile))
-                QueueTamper("service-stopped", "The client service stopped without a clean shutdown (possible service stop or crash).");
+                QueueTamper("service-stopped", "");
         }
         catch (Exception ex)
         {
@@ -199,6 +201,7 @@ public sealed class Worker : BackgroundService
 
         connection.On<DeviceStateDto>(DeviceHubMethods.DeviceStateChanged, state =>
         {
+            Loc.SetLanguage(state.Language);
             _runtime.ApplyServerState(state);
             if (_overrides.HasPending && _overrides.LastPending is { } pending)
                 _runtime.ApplyLocalOverride(pending.Option, pending.Minutes);
@@ -295,7 +298,7 @@ public sealed class Worker : BackgroundService
             catch { }
             if (!update && !uninstall && !recentUpdate)
             {
-                QueueTamper("service-stopped", "The service was stopped without an update or uninstall in progress.");
+                QueueTamper("service-stopped", "");
                 _logger.LogWarning("Service stopped while not updating or uninstalling");
             }
             File.WriteAllText(ClientPaths.CleanShutdownFile, DateTime.UtcNow.ToString("o"));

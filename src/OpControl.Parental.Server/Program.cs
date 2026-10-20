@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.WebSockets;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
@@ -116,10 +117,12 @@ if (!string.IsNullOrWhiteSpace(dataProtectionPath))
 
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddLocalization();
 builder.Services.Configure<BrandOptions>(builder.Configuration.GetSection("Branding"));
 builder.Services.AddSingleton<BuildInfo>();
 builder.Services.AddSingleton<LoginThrottle>();
 builder.Services.AddScoped<EmailSender>();
+builder.Services.AddScoped<LanguageService>();
 builder.Services.AddScoped<InvitationService>();
 builder.Services.AddScoped<ServerAdminService>();
 builder.Services.AddScoped<TeamService>();
@@ -210,6 +213,21 @@ app.UseRouting();
 app.UseAuthentication();
 app.Use(async (context, next) =>
 {
+    var cookie = context.Request.Cookies[AppCulture.CookieName];
+    string language;
+    if (AppCulture.IsSupported(cookie))
+        language = AppCulture.Normalize(cookie);
+    else if (context.User.Identity?.IsAuthenticated == true && context.User.FindFirstValue(ParentalClaims.PreferredLanguage) is { Length: > 0 } preferred)
+        language = AppCulture.Normalize(preferred);
+    else
+        language = AppCulture.FromAcceptLanguage(context.Request.Headers.AcceptLanguage);
+    var culture = AppCulture.Culture(language);
+    CultureInfo.CurrentCulture = culture;
+    CultureInfo.CurrentUICulture = culture;
+    await next();
+});
+app.Use(async (context, next) =>
+{
     if (context.User.Identity?.IsAuthenticated == true
         && context.User.FindFirstValue("device_id") is null
         && context.Request.Path.StartsWithSegments("/invite") == false
@@ -266,6 +284,23 @@ app.Use(async (context, next) =>
 });
 app.UseRateLimiter();
 app.UseAntiforgery();
+
+app.MapGet("/language/{lang}", (string lang, HttpContext context, string? returnUrl) =>
+{
+    var language = AppCulture.Normalize(lang);
+    context.Response.Cookies.Append(AppCulture.CookieName, language, new CookieOptions
+    {
+        HttpOnly = false,
+        IsEssential = true,
+        SameSite = SameSiteMode.Lax,
+        Secure = context.Request.IsHttps,
+        Expires = DateTimeOffset.UtcNow.AddDays(365)
+    });
+    var target = !string.IsNullOrWhiteSpace(returnUrl) && returnUrl.StartsWith('/') && !returnUrl.StartsWith("//")
+        ? returnUrl
+        : "/";
+    return Results.Redirect(target);
+}).AllowAnonymous();
 
 app.MapRazorPages();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
@@ -572,12 +607,12 @@ app.MapGet("/i/{token}/status", async (string token, InstallService installs, Ca
 app.MapGet("/i/{token}/download", async (string token, InstallService installs, ReleaseCatalog releases, CancellationToken ct) =>
 {
     var status = await installs.StatusAsync(token, ct);
-    if (status.Status != "pending") return Results.NotFound(new { error = status.Error ?? "This install link has already been used." });
+    if (status.Status != "pending") return Results.NotFound(new { error = status.Error ?? AppText.Get("Error.InstallLinkUsed") });
     var link = await installs.FindAsync(token, ct);
     if (link is null) return Results.NotFound();
     var release = releases.CurrentSetup();
     if (release?.SetupPath is null || !File.Exists(release.SetupPath))
-        return Results.NotFound(new { error = "The installer is not published on this server yet." });
+        return Results.NotFound(new { error = AppText.Get("Error.InstallerNotPublished") });
     var code = installs.UnprotectCode(link);
     var fileName = string.IsNullOrWhiteSpace(code) ? $"OpControlParental-Setup-{release.Version}.exe" : $"OpControlParental-{code}.exe";
     return Results.File(release.SetupPath, "application/vnd.microsoft.portable-executable", fileName, enableRangeProcessing: true);
@@ -595,14 +630,14 @@ app.MapGet("/i/{token}/qr.png", (string token, InstallService installs) =>
 app.MapGet("/downloads/setup", (ReleaseCatalog releases) =>
 {
     var release = releases.CurrentSetup();
-    if (release?.SetupPath is null || !File.Exists(release.SetupPath)) return Results.NotFound(new { error = "No installer is published yet." });
+    if (release?.SetupPath is null || !File.Exists(release.SetupPath)) return Results.NotFound(new { error = AppText.Get("Error.NoInstaller") });
     return Results.File(release.SetupPath, "application/vnd.microsoft.portable-executable", $"OpControlParental-Setup-{release.Version}.exe", enableRangeProcessing: true);
 }).RequireAuthorization();
 
 app.MapGet("/downloads/msi", (ReleaseCatalog releases) =>
 {
     var release = releases.Current();
-    if (release?.MsiPath is null || !File.Exists(release.MsiPath)) return Results.NotFound(new { error = "No MSI is published yet." });
+    if (release?.MsiPath is null || !File.Exists(release.MsiPath)) return Results.NotFound(new { error = AppText.Get("Error.NoMsi") });
     return Results.File(release.MsiPath, "application/octet-stream", $"OpControlParental-{release.Version}.msi", enableRangeProcessing: true);
 }).RequireAuthorization();
 
@@ -695,8 +730,9 @@ app.MapPost("/api/device/uninstall", async (UninstallReportRequest request, Clai
     });
     await db.SaveChangesAsync(ct);
     await alerts.AddAsync(device.FamilyId, device.ChildId, device.Id, "tampering",
-        "Uninstall attempted",
-        $"The Parental client was about to be removed from {device.Name}." + (string.IsNullOrWhiteSpace(request.Detail) ? "" : $" {request.Detail}"),
+        string.IsNullOrWhiteSpace(request.Detail)
+            ? new AlertContent("Alert.Uninstall.Title", "Alert.Uninstall.Detail", device.Name)
+            : new AlertContent("Alert.Uninstall.Title", "Alert.Uninstall.DetailMore", device.Name, request.Detail!),
         TimeSpan.FromMinutes(5), ct);
     return Results.Ok(new { ok = true });
 }).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
@@ -705,7 +741,7 @@ app.MapPost("/api/device/uninstall", async (UninstallReportRequest request, Clai
 app.MapGet("/api/alert-preferences", async (FamilyScope family, AlertService alerts, CancellationToken ct) =>
 {
     var access = await family.AccessAsync(ct);
-    if (!access.IsOwner) throw new PermissionDeniedException("Only the family owner can change alert controls.");
+    if (!access.IsOwner) throw new PermissionDeniedException(AppText.Get("Error.OwnerAlertControls"));
     return Results.Ok(AlertService.ToDto(await alerts.EnsurePreferenceAsync(family.FamilyId, ct)));
 }).RequireAuthorization();
 
@@ -713,7 +749,7 @@ app.MapPut("/api/alert-preferences", async (AlertPreferencesDto request, HttpCon
 {
     await antiforgery.ValidateRequestAsync(context);
     var access = await family.AccessAsync(ct);
-    if (!access.IsOwner) throw new PermissionDeniedException("Only the family owner can change alert controls.");
+    if (!access.IsOwner) throw new PermissionDeniedException(AppText.Get("Error.OwnerAlertControls"));
     await alerts.SavePreferenceAsync(family.FamilyId, request, ct);
     return Results.Ok(new { ok = true });
 }).RequireAuthorization();
@@ -721,7 +757,7 @@ app.MapPut("/api/alert-preferences", async (AlertPreferencesDto request, HttpCon
 app.MapGet("/api/parents", async (FamilyScope family, TeamService team, CancellationToken ct) =>
 {
     var access = await family.AccessAsync(ct);
-    if (!access.IsOwner) throw new PermissionDeniedException("Only the family owner can manage parents.");
+    if (!access.IsOwner) throw new PermissionDeniedException(AppText.Get("Error.OwnerManageParents"));
     return Results.Ok(await team.ListAsync(family.FamilyId, ct));
 }).RequireAuthorization();
 
@@ -729,7 +765,7 @@ app.MapPut("/api/parents/{parentId:guid}/permissions", async (Guid parentId, Par
 {
     await antiforgery.ValidateRequestAsync(context);
     var access = await family.AccessAsync(ct);
-    if (!access.IsOwner) throw new PermissionDeniedException("Only the family owner can change permissions.");
+    if (!access.IsOwner) throw new PermissionDeniedException(AppText.Get("Error.OwnerChangePermissions"));
     try
     {
         await team.SetPermissionsAsync(family.FamilyId, parentId, request.Permissions, ct);
@@ -742,7 +778,7 @@ app.MapDelete("/api/parents/{parentId:guid}", async (Guid parentId, HttpContext 
 {
     await antiforgery.ValidateRequestAsync(context);
     var access = await family.AccessAsync(ct);
-    if (!access.IsOwner) throw new PermissionDeniedException("Only the family owner can remove parents.");
+    if (!access.IsOwner) throw new PermissionDeniedException(AppText.Get("Error.OwnerRemoveParents"));
     try
     {
         await team.RemoveAsync(family.FamilyId, parentId, access.ParentId, ct);
@@ -754,7 +790,7 @@ app.MapDelete("/api/parents/{parentId:guid}", async (Guid parentId, HttpContext 
 app.MapGet("/api/invitations", async (FamilyScope family, InvitationService invites, CancellationToken ct) =>
 {
     var access = await family.AccessAsync(ct);
-    if (!access.IsOwner) throw new PermissionDeniedException("Only the family owner can manage invitations.");
+    if (!access.IsOwner) throw new PermissionDeniedException(AppText.Get("Error.OwnerManageInvitations"));
     return Results.Ok(await invites.ListForFamilyAsync(family.FamilyId, ct));
 }).RequireAuthorization();
 
@@ -762,7 +798,7 @@ app.MapPost("/api/invitations/co-parent", async (CoParentInviteRequest request, 
 {
     await antiforgery.ValidateRequestAsync(context);
     var access = await family.AccessAsync(ct);
-    if (!access.IsOwner) throw new PermissionDeniedException("Only the family owner can invite parents.");
+    if (!access.IsOwner) throw new PermissionDeniedException(AppText.Get("Error.OwnerInviteParents"));
     try
     {
         var created = await invites.CreateCoParentAsync(family.FamilyId, access.ParentId, request.Email, request.Permissions, ct);
@@ -775,16 +811,16 @@ app.MapPost("/api/invitations/{id:guid}/revoke", async (Guid id, HttpContext con
 {
     await antiforgery.ValidateRequestAsync(context);
     var access = await family.AccessAsync(ct);
-    if (!access.IsOwner) throw new PermissionDeniedException("Only the family owner can manage invitations.");
+    if (!access.IsOwner) throw new PermissionDeniedException(AppText.Get("Error.OwnerManageInvitations"));
     var ok = await invites.RevokeAsync(id, family.FamilyId, ct);
-    return ok ? Results.Ok(new { ok = true }) : Results.NotFound(new { error = "Invitation not found." });
+    return ok ? Results.Ok(new { ok = true }) : Results.NotFound(new { error = AppText.Get("Error.InvitationNotFound") });
 }).RequireAuthorization();
 
 app.MapPost("/api/invitations/{id:guid}/resend", async (Guid id, HttpContext context, IAntiforgery antiforgery, FamilyScope family, InvitationService invites, CancellationToken ct) =>
 {
     await antiforgery.ValidateRequestAsync(context);
     var access = await family.AccessAsync(ct);
-    if (!access.IsOwner) throw new PermissionDeniedException("Only the family owner can manage invitations.");
+    if (!access.IsOwner) throw new PermissionDeniedException(AppText.Get("Error.OwnerManageInvitations"));
     var result = await invites.ResendAsync(id, family.FamilyId, ct);
     return result.Ok ? Results.Ok(new { ok = true, emailSent = result.EmailSent, warning = result.Error }) : Results.BadRequest(new { error = result.Error });
 }).RequireAuthorization().RequireRateLimiting("invite");
@@ -792,7 +828,7 @@ app.MapPost("/api/invitations/{id:guid}/resend", async (Guid id, HttpContext con
 app.MapGet("/api/server/families", async (FamilyScope family, ServerAdminService admin, CancellationToken ct) =>
 {
     var access = await family.AccessAsync(ct);
-    if (!access.IsServerAdmin) throw new PermissionDeniedException("Server administrator only.");
+    if (!access.IsServerAdmin) throw new PermissionDeniedException(AppText.Get("Error.ServerAdminOnly"));
     return Results.Ok(await admin.ListFamiliesAsync(ct));
 }).RequireAuthorization();
 
@@ -800,7 +836,7 @@ app.MapPost("/api/server/families/{familyId:guid}/{action}", async (Guid familyI
 {
     await antiforgery.ValidateRequestAsync(context);
     var access = await family.AccessAsync(ct);
-    if (!access.IsServerAdmin) throw new PermissionDeniedException("Server administrator only.");
+    if (!access.IsServerAdmin) throw new PermissionDeniedException(AppText.Get("Error.ServerAdminOnly"));
     try
     {
         switch (action.ToLowerInvariant())
@@ -812,7 +848,7 @@ app.MapPost("/api/server/families/{familyId:guid}/{action}", async (Guid familyI
                 await admin.SetStatusAsync(familyId, FamilyStatus.Active, access.ParentId, access.DisplayName, ct);
                 return Results.Ok(new { ok = true });
             default:
-                return Results.BadRequest(new { error = "Unknown action." });
+                return Results.BadRequest(new { error = AppText.Get("Error.UnknownAction") });
         }
     }
     catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
@@ -822,9 +858,9 @@ app.MapPost("/api/server/families/{familyId:guid}/purge", async (Guid familyId, 
 {
     await antiforgery.ValidateRequestAsync(context);
     var access = await family.AccessAsync(ct);
-    if (!access.IsServerAdmin) throw new PermissionDeniedException("Server administrator only.");
+    if (!access.IsServerAdmin) throw new PermissionDeniedException(AppText.Get("Error.ServerAdminOnly"));
     if (!string.Equals(request.Confirmation?.Trim(), request.FamilyName?.Trim(), StringComparison.Ordinal))
-        return Results.BadRequest(new { error = "Type the family name exactly to confirm." });
+        return Results.BadRequest(new { error = AppText.Get("Error.ConfirmFamilyName") });
     try
     {
         await admin.DeleteFamilyAsync(familyId, access.ParentId, access.DisplayName, ct);
@@ -836,7 +872,7 @@ app.MapPost("/api/server/families/{familyId:guid}/purge", async (Guid familyId, 
 app.MapGet("/api/server/invitations", async (FamilyScope family, InvitationService invites, CancellationToken ct) =>
 {
     var access = await family.AccessAsync(ct);
-    if (!access.IsServerAdmin) throw new PermissionDeniedException("Server administrator only.");
+    if (!access.IsServerAdmin) throw new PermissionDeniedException(AppText.Get("Error.ServerAdminOnly"));
     return Results.Ok(await invites.ListAllPendingAsync(ct));
 }).RequireAuthorization();
 
@@ -844,7 +880,7 @@ app.MapPost("/api/server/invitations", async (ServerInviteRequest request, HttpC
 {
     await antiforgery.ValidateRequestAsync(context);
     var access = await family.AccessAsync(ct);
-    if (!access.IsServerAdmin) throw new PermissionDeniedException("Server administrator only.");
+    if (!access.IsServerAdmin) throw new PermissionDeniedException(AppText.Get("Error.ServerAdminOnly"));
     try
     {
         var created = await invites.CreateFamilyInviteAsync(access.ParentId, request.Email, request.FamilyName, ct);
@@ -858,16 +894,16 @@ app.MapPost("/api/server/invitations/{id:guid}/revoke", async (Guid id, HttpCont
 {
     await antiforgery.ValidateRequestAsync(context);
     var access = await family.AccessAsync(ct);
-    if (!access.IsServerAdmin) throw new PermissionDeniedException("Server administrator only.");
+    if (!access.IsServerAdmin) throw new PermissionDeniedException(AppText.Get("Error.ServerAdminOnly"));
     var ok = await invites.RevokeAsync(id, null, ct);
-    return ok ? Results.Ok(new { ok = true }) : Results.NotFound(new { error = "Invitation not found." });
+    return ok ? Results.Ok(new { ok = true }) : Results.NotFound(new { error = AppText.Get("Error.InvitationNotFound") });
 }).RequireAuthorization();
 
 app.MapPost("/api/server/invitations/{id:guid}/resend", async (Guid id, HttpContext context, IAntiforgery antiforgery, FamilyScope family, InvitationService invites, CancellationToken ct) =>
 {
     await antiforgery.ValidateRequestAsync(context);
     var access = await family.AccessAsync(ct);
-    if (!access.IsServerAdmin) throw new PermissionDeniedException("Server administrator only.");
+    if (!access.IsServerAdmin) throw new PermissionDeniedException(AppText.Get("Error.ServerAdminOnly"));
     var result = await invites.ResendAsync(id, null, ct);
     return result.Ok ? Results.Ok(new { ok = true, emailSent = result.EmailSent, warning = result.Error }) : Results.BadRequest(new { error = result.Error });
 }).RequireAuthorization().RequireRateLimiting("invite");
@@ -875,7 +911,7 @@ app.MapPost("/api/server/invitations/{id:guid}/resend", async (Guid id, HttpCont
 app.MapGet("/api/server/smtp", async (FamilyScope family, EmailSender email, CancellationToken ct) =>
 {
     var access = await family.AccessAsync(ct);
-    if (!access.IsServerAdmin) throw new PermissionDeniedException("Server administrator only.");
+    if (!access.IsServerAdmin) throw new PermissionDeniedException(AppText.Get("Error.ServerAdminOnly"));
     var settings = await email.EnsureSettingsAsync(ct);
     return Results.Ok(new { host = settings.SmtpHost, port = settings.SmtpPort, useSsl = settings.SmtpUseSsl,
         username = settings.SmtpUsername, fromAddress = settings.FromAddress, fromName = settings.FromName,
@@ -886,7 +922,7 @@ app.MapPut("/api/server/smtp", async (ServerSmtpRequest request, HttpContext con
 {
     await antiforgery.ValidateRequestAsync(context);
     var access = await family.AccessAsync(ct);
-    if (!access.IsServerAdmin) throw new PermissionDeniedException("Server administrator only.");
+    if (!access.IsServerAdmin) throw new PermissionDeniedException(AppText.Get("Error.ServerAdminOnly"));
     await email.SaveSettingsAsync(request.Host, request.Port, request.UseSsl, request.Username, request.Password, request.FromAddress, request.FromName, ct);
     await admin.AuditAsync(access.ParentId, access.DisplayName, "server.smtp.update", null, request.Host, ct);
     return Results.Ok(new { ok = true });
@@ -895,7 +931,7 @@ app.MapPut("/api/server/smtp", async (ServerSmtpRequest request, HttpContext con
 app.MapGet("/api/server/audit", async (FamilyScope family, ServerAdminService admin, CancellationToken ct) =>
 {
     var access = await family.AccessAsync(ct);
-    if (!access.IsServerAdmin) throw new PermissionDeniedException("Server administrator only.");
+    if (!access.IsServerAdmin) throw new PermissionDeniedException(AppText.Get("Error.ServerAdminOnly"));
     return Results.Ok(await admin.RecentAuditAsync(100, ct));
 }).RequireAuthorization();
 
@@ -910,7 +946,7 @@ app.MapPost("/api/remote/camera-consent", async (CameraConsentAcceptRequest requ
     await antiforgery.ValidateRequestAsync(context);
     await family.RequireAsync(ParentPermissions.RemoteView, ct);
     if (!request.Accepted || request.Version != CameraConsentService.CurrentVersion)
-        return Results.BadRequest(new { error = "Camera supervision terms were not accepted." });
+        return Results.BadRequest(new { error = AppText.Get("Error.CameraConsentNotAccepted") });
     await consent.AcceptAsync(family.FamilyId, family.ParentId,
         context.Connection.RemoteIpAddress?.ToString(), context.Request.Headers.UserAgent.ToString(), ct);
     return Results.Ok(await consent.StatusAsync(family.ParentId, ct));
@@ -981,9 +1017,9 @@ app.MapPost("/api/devices/{deviceId:guid}/notices", async (Guid deviceId, Device
 {
     await antiforgery.ValidateRequestAsync(context);
     var access = await family.AccessAsync(ct);
-    if (!access.IsOwner) throw new PermissionDeniedException("Only the family owner can change the on-screen notice settings.");
+    if (!access.IsOwner) throw new PermissionDeniedException(AppText.Get("Error.OwnerNotice"));
     var device = await db.Devices.FirstOrDefaultAsync(d => d.Id == deviceId && d.FamilyId == family.FamilyId, ct);
-    if (device is null) return Results.NotFound(new { error = "Device not found in this family." });
+    if (device is null) return Results.NotFound(new { error = AppText.Get("Error.DeviceNotFoundFamily") });
     device.ScreenNoticeEnabled = request.ScreenNotice;
     device.CameraNoticeEnabled = request.CameraNotice;
     device.HasCameraLightOrShutter = request.HasCameraLightOrShutter;
@@ -994,7 +1030,7 @@ app.MapPost("/api/devices/{deviceId:guid}/notices", async (Guid deviceId, Device
         DeviceId = device.Id,
         CreatedByParentId = access.ParentId,
         Option = "remote-notice-changed",
-        Detail = $"{device.Name}: screen={(request.ScreenNotice ? "on" : "off")}, camera={(request.CameraNotice ? "on" : "off")}, camera light/shutter={(request.HasCameraLightOrShutter ? "yes" : "no")}",
+        Detail = $"{device.Name}|{(request.ScreenNotice ? "1" : "0")}|{(request.CameraNotice ? "1" : "0")}|{(request.HasCameraLightOrShutter ? "1" : "0")}",
         CreatedUtc = DateTime.UtcNow
     });
     await db.SaveChangesAsync(ct);
@@ -1006,7 +1042,7 @@ app.MapPost("/api/devices/{deviceId:guid}/timezone", async (Guid deviceId, Devic
     await antiforgery.ValidateRequestAsync(context);
     await family.RequireAsync(ParentPermissions.ManageDevices, ct);
     var device = await db.Devices.FirstOrDefaultAsync(d => d.Id == deviceId && d.FamilyId == family.FamilyId, ct);
-    if (device is null) return Results.NotFound(new { error = "Device not found in this family." });
+    if (device is null) return Results.NotFound(new { error = AppText.Get("Error.DeviceNotFoundFamily") });
     var zone = TimeZoneResolver.Resolve(request.TimeZoneId);
     device.TimeZoneId = zone.Id;
     await db.SaveChangesAsync(ct);

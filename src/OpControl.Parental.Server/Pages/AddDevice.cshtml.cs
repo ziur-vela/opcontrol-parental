@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using OpControl.Parental.Contracts;
 using OpControl.Parental.Server.Data;
 using OpControl.Parental.Server.Services;
+using Microsoft.Extensions.Localization;
+using OpControl.Parental.Server.Resources;
 
 namespace OpControl.Parental.Server.Pages;
 
@@ -16,13 +18,15 @@ public class AddDeviceModel : PageModel
     private readonly FamilyScope _family;
     private readonly InstallService _installs;
     private readonly ILogger<AddDeviceModel> _logger;
+    private readonly IStringLocalizer<AppStrings> _l;
 
-    public AddDeviceModel(ParentalDbContext db, FamilyScope family, InstallService installs, ILogger<AddDeviceModel> logger)
+    public AddDeviceModel(ParentalDbContext db, FamilyScope family, InstallService installs, ILogger<AddDeviceModel> logger, IStringLocalizer<AppStrings> localizer)
     {
         _db = db;
         _family = family;
         _installs = installs;
         _logger = logger;
+        _l = localizer;
     }
 
     [BindProperty]

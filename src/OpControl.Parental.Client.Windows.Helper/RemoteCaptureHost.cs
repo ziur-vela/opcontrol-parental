@@ -7,6 +7,7 @@ using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 using OpenCvSharp;
+using OpControl.Parental.Localization;
 
 namespace OpControl.Parental.Helper;
 
@@ -85,7 +86,7 @@ internal sealed class RemoteCaptureHost : IDisposable
         kind = command?.Kind ?? "";
         var showNotice = command?.ShowNotice == true;
         var noticeText = command?.NoticeText;
-        _noticeText = string.IsNullOrWhiteSpace(noticeText) ? "Parent's watching you" : noticeText.Trim();
+        _noticeText = string.IsNullOrWhiteSpace(noticeText) ? Loc.NoticeDefault : noticeText.Trim();
         _noticeActive = showNotice;
         NoticeChanged?.Invoke();
         try
@@ -133,7 +134,7 @@ internal sealed class RemoteCaptureHost : IDisposable
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                await WriteStatusAsync(pipe, "Screen capture failed: " + ex.Message, ct);
+                await WriteStatusAsync(pipe, Loc.T("Client.Remote.ScreenFailed", ex.Message), ct);
                 return;
             }
             await Task.Delay(200, ct);
@@ -191,7 +192,7 @@ internal sealed class RemoteCaptureHost : IDisposable
 
             if (capture is null)
             {
-                await WriteStatusAsync(pipe, "No camera detected (or the camera is covered).", ct);
+                await WriteStatusAsync(pipe, Loc.T("Client.Remote.NoCamera"), ct);
                 return;
             }
             using (capture)
@@ -202,7 +203,7 @@ internal sealed class RemoteCaptureHost : IDisposable
                 {
                     if (!capture.Read(frame) || frame.Empty())
                     {
-                        await WriteStatusAsync(pipe, "Camera stopped responding.", ct);
+                        await WriteStatusAsync(pipe, Loc.T("Client.Remote.CameraStopped"), ct);
                         return;
                     }
                     if (frame.Width > 640)
@@ -220,7 +221,7 @@ internal sealed class RemoteCaptureHost : IDisposable
         catch (Exception ex)
         {
             HelperPaths.LogEvent($"remote-camera-error {ex.GetType().Name}");
-            try { await WriteStatusAsync(pipe, "Camera error: " + ex.Message, ct); } catch { }
+            try { await WriteStatusAsync(pipe, Loc.T("Client.Remote.CameraError", ex.Message), ct); } catch { }
         }
     }
 

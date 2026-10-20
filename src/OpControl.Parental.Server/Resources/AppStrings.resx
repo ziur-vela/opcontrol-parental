@@ -1,0 +1,809 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Activity.ActiveToday" xml:space="preserve"><value>Active use today</value></data>
+  <data name="Activity.AppBlocked" xml:space="preserve"><value>App blocked</value></data>
+  <data name="Activity.AppRuleAllowed" xml:space="preserve"><value>App rule allowed</value></data>
+  <data name="Activity.AppRuleBlocked" xml:space="preserve"><value>App rule blocked</value></data>
+  <data name="Activity.AppRuleRemoved" xml:space="preserve"><value>App rule removed</value></data>
+  <data name="Activity.BlockedToday" xml:space="preserve"><value>Blocked attempts today</value></data>
+  <data name="Activity.By" xml:space="preserve"><value> · by {0}</value></data>
+  <data name="Activity.CategoryAllowed" xml:space="preserve"><value>{0}: allowed</value></data>
+  <data name="Activity.CategoryBlocked" xml:space="preserve"><value>{0}: blocked</value></data>
+  <data name="Activity.ClientTampering" xml:space="preserve"><value>Client tampering sign</value></data>
+  <data name="Activity.DailyLimitDetail" xml:space="preserve"><value>date {0}</value></data>
+  <data name="Activity.Events" xml:space="preserve"><value>Events</value></data>
+  <data name="Activity.IdleToday" xml:space="preserve"><value>Idle today</value></data>
+  <data name="Activity.Latest200" xml:space="preserve"><value>Latest 200</value></data>
+  <data name="Activity.NewAppInstalled" xml:space="preserve"><value>New app installed</value></data>
+  <data name="Activity.NoActivity" xml:space="preserve"><value>No activity recorded yet.</value></data>
+  <data name="Activity.NoticeDetail" xml:space="preserve"><value>{0}: screen={1}, camera={2}, camera light/shutter={3}</value></data>
+  <data name="Activity.Option.AppBonus" xml:space="preserve"><value>App bonus</value></data>
+  <data name="Activity.Option.AppLimitRemoved" xml:space="preserve"><value>App limit removed</value></data>
+  <data name="Activity.Option.AppLimitSet" xml:space="preserve"><value>App limit set</value></data>
+  <data name="Activity.Option.CategoryChanged" xml:space="preserve"><value>Website category changed</value></data>
+  <data name="Activity.Option.DashboardBonus" xml:space="preserve"><value>Bonus time given</value></data>
+  <data name="Activity.Option.DashboardLock" xml:space="preserve"><value>Dashboard lock</value></data>
+  <data name="Activity.Option.DashboardUnlock" xml:space="preserve"><value>Dashboard unlock</value></data>
+  <data name="Activity.Option.LimitDisabled" xml:space="preserve"><value>Screen time limit disabled</value></data>
+  <data name="Activity.Option.LimitSet" xml:space="preserve"><value>Screen time limit set</value></data>
+  <data name="Activity.Option.NoticeChanged" xml:space="preserve"><value>Remote-view notice changed</value></data>
+  <data name="Activity.Option.PinBonus" xml:space="preserve"><value>PIN override: bonus time</value></data>
+  <data name="Activity.Option.PinUnlock" xml:space="preserve"><value>PIN override: unlock until next cycle</value></data>
+  <data name="Activity.Option.ScheduleAdded" xml:space="preserve"><value>Schedule added</value></data>
+  <data name="Activity.Option.ScheduleChanged" xml:space="preserve"><value>Schedule changed</value></data>
+  <data name="Activity.Option.ScheduleEnded" xml:space="preserve"><value>Schedule ended</value></data>
+  <data name="Activity.Option.ScheduleRemoved" xml:space="preserve"><value>Schedule removed</value></data>
+  <data name="Activity.Option.ScheduleStarted" xml:space="preserve"><value>Schedule started</value></data>
+  <data name="Activity.Option.SiteBonus" xml:space="preserve"><value>Website bonus</value></data>
+  <data name="Activity.PageTitle" xml:space="preserve"><value>Activity · Parental OpControl</value></data>
+  <data name="Activity.SiteRuleAllowed" xml:space="preserve"><value>Website rule allowed</value></data>
+  <data name="Activity.SiteRuleBlocked" xml:space="preserve"><value>Website rule blocked</value></data>
+  <data name="Activity.SiteRuleRemoved" xml:space="preserve"><value>Website rule removed</value></data>
+  <data name="Activity.Subtitle" xml:space="preserve"><value>Lock and unlock, bonus time, PIN overrides, schedules, blocked attempts, new installs and limits.</value></data>
+  <data name="Activity.Tamper.Clock" xml:space="preserve"><value>System clock changed</value></data>
+  <data name="Activity.Tamper.Dns" xml:space="preserve"><value>DNS settings were changed and restored</value></data>
+  <data name="Activity.Tamper.HelperAuth" xml:space="preserve"><value>Helper authentication failed</value></data>
+  <data name="Activity.Tamper.HelperKilled" xml:space="preserve"><value>Helper stopped and was restarted</value></data>
+  <data name="Activity.Tamper.HelperKilledDetail" xml:space="preserve"><value>{0} times in 10 minutes</value></data>
+  <data name="Activity.Tamper.Minutes" xml:space="preserve"><value>about {0} minutes</value></data>
+  <data name="Activity.Tamper.ServiceStopped" xml:space="preserve"><value>Client service stopped unexpectedly</value></data>
+  <data name="Activity.Tamper.Uninstall" xml:space="preserve"><value>Uninstall attempted</value></data>
+  <data name="Activity.Tamper.UsageSanity" xml:space="preserve"><value>Usage data failed sanity checks</value></data>
+  <data name="Activity.Timeline" xml:space="preserve"><value>Timeline</value></data>
+  <data name="Activity.WebsiteBlocked" xml:space="preserve"><value>Website blocked</value></data>
+  <data name="AddDevice.AddChildFirst" xml:space="preserve"><value>Add a child profile first.</value></data>
+  <data name="AddDevice.AndroidSoon" xml:space="preserve"><value>Android — coming soon</value></data>
+  <data name="AddDevice.AssignChild" xml:space="preserve"><value>Assign to child</value></data>
+  <data name="AddDevice.ConnectedLabel" xml:space="preserve"><value>Connected</value></data>
+  <data name="AddDevice.Copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="AddDevice.CreateButton" xml:space="preserve"><value>Create install link</value></data>
+  <data name="AddDevice.CreateLink" xml:space="preserve"><value>Create an install link</value></data>
+  <data name="AddDevice.CreateToSee" xml:space="preserve"><value>Create a link to see the code and QR.</value></data>
+  <data name="AddDevice.CreatedExpires" xml:space="preserve"><value>Created {0} · expires {1}</value></data>
+  <data name="AddDevice.DeviceFallback" xml:space="preserve"><value>device</value></data>
+  <data name="AddDevice.DeviceLabel" xml:space="preserve"><value>Device: {0}</value></data>
+  <data name="AddDevice.DeviceType" xml:space="preserve"><value>Device type</value></data>
+  <data name="AddDevice.EmailIt" xml:space="preserve"><value>Email it</value></data>
+  <data name="AddDevice.Eyebrow" xml:space="preserve"><value>Enrollment</value></data>
+  <data name="AddDevice.InstallLink" xml:space="preserve"><value>Install link</value></data>
+  <data name="AddDevice.Link" xml:space="preserve"><value>Link</value></data>
+  <data name="AddDevice.LinuxSoon" xml:space="preserve"><value>Linux — coming soon</value></data>
+  <data name="AddDevice.MailSubject" xml:space="preserve"><value>Install Parental OpControl</value></data>
+  <data name="AddDevice.NoLinks" xml:space="preserve"><value>No install links yet.</value></data>
+  <data name="AddDevice.OneTimeCode" xml:space="preserve"><value>One-time code</value></data>
+  <data name="AddDevice.OpenLink" xml:space="preserve"><value>Open link page</value></data>
+  <data name="AddDevice.QrAlt" xml:space="preserve"><value>QR code for the install link</value></data>
+  <data name="AddDevice.Recent" xml:space="preserve"><value>Recent install links</value></data>
+  <data name="AddDevice.ScanQr" xml:space="preserve"><value>Scan this QR with the child's computer or open the link on that PC.</value></data>
+  <data name="AddDevice.SingleUse" xml:space="preserve"><value>Single use</value></data>
+  <data name="AddDevice.StateExpired" xml:space="preserve"><value>Expired</value></data>
+  <data name="AddDevice.StateRevoked" xml:space="preserve"><value>Revoked</value></data>
+  <data name="AddDevice.StateWaiting" xml:space="preserve"><value>Waiting</value></data>
+  <data name="AddDevice.Subtitle" xml:space="preserve"><value>Create a one-time install link, then open it on the child's computer while signed in as an administrator. Links and codes expire and can be used once.</value></data>
+  <data name="AddDevice.Title" xml:space="preserve"><value>Add device</value></data>
+  <data name="AddDevice.WaitingDevice" xml:space="preserve"><value>Waiting for the device…</value></data>
+  <data name="AddDevice.WindowsPc" xml:space="preserve"><value>Windows PC</value></data>
+  <data name="Alert.AppLimit.Detail" xml:space="preserve"><value>{0} reached its {1} minute daily limit.</value></data>
+  <data name="Alert.AppLimit.LegacyTitle" xml:space="preserve"><value>App limit reached</value></data>
+  <data name="Alert.AppLimit.Title" xml:space="preserve"><value>App limit reached: {0}</value></data>
+  <data name="Alert.ClockChanged.Detail" xml:space="preserve"><value>{0}'s clock differs from the server by {1} minutes.</value></data>
+  <data name="Alert.ClockChanged.Title" xml:space="preserve"><value>System clock changed</value></data>
+  <data name="Alert.DailyLimit.Detail" xml:space="preserve"><value>The {0} minute limit for {1} has been reached.</value></data>
+  <data name="Alert.DailyLimit.Title" xml:space="preserve"><value>Daily screen time limit reached</value></data>
+  <data name="Alert.DeviceOffline.Detail" xml:space="preserve"><value>{0} has not contacted the server since {1}.</value></data>
+  <data name="Alert.DeviceOffline.LegacyTitle" xml:space="preserve"><value>Device offline</value></data>
+  <data name="Alert.DeviceOffline.Title" xml:space="preserve"><value>Device offline: {0}</value></data>
+  <data name="Alert.NewApp.Detail" xml:space="preserve"><value>{0} ({1}) was installed on {2}.</value></data>
+  <data name="Alert.NewApp.LegacyTitle" xml:space="preserve"><value>New app installed</value></data>
+  <data name="Alert.NewApp.Title" xml:space="preserve"><value>New app installed: {0}</value></data>
+  <data name="Alert.PinOverride.BonusDetail" xml:space="preserve"><value>Bonus time was used on {0} for {1} minutes.</value></data>
+  <data name="Alert.PinOverride.BonusTitle" xml:space="preserve"><value>Override PIN used</value></data>
+  <data name="Alert.PinOverride.UnlockDetail" xml:space="preserve"><value>Unlock until the next lock cycle was used on {0}.</value></data>
+  <data name="Alert.PinOverride.UnlockTitle" xml:space="preserve"><value>Override PIN used</value></data>
+  <data name="Alert.RepeatedBlocked.Detail" xml:space="preserve"><value>{1} blocked attempts to {0} in the last 10 minutes on {2}.</value></data>
+  <data name="Alert.RepeatedBlocked.LegacyTitle" xml:space="preserve"><value>Repeated blocked attempts</value></data>
+  <data name="Alert.RepeatedBlocked.Title" xml:space="preserve"><value>Repeated blocked attempts: {0}</value></data>
+  <data name="Alert.Tampering.Detail" xml:space="preserve"><value>{0} was reported on {1}.</value></data>
+  <data name="Alert.Tampering.DetailMore" xml:space="preserve"><value>{0} was reported on {1}: {2}</value></data>
+  <data name="Alert.Tampering.DeviceKind" xml:space="preserve"><value>{0}: {1}.</value></data>
+  <data name="Alert.Tampering.DeviceKindMore" xml:space="preserve"><value>{0}: {1} ({2}).</value></data>
+  <data name="Alert.Tampering.Title" xml:space="preserve"><value>Client tampering sign</value></data>
+  <data name="Alert.Uninstall.Detail" xml:space="preserve"><value>The Parental client was about to be removed from {0}.</value></data>
+  <data name="Alert.Uninstall.DetailMore" xml:space="preserve"><value>The Parental client was about to be removed from {0}. {1}</value></data>
+  <data name="Alert.Uninstall.Title" xml:space="preserve"><value>Uninstall attempted</value></data>
+  <data name="Alert.Update.Detail" xml:space="preserve"><value>{0}: {1}</value></data>
+  <data name="Alert.Update.NoHealth" xml:space="preserve"><value>the client did not report healthy</value></data>
+  <data name="Alert.UpdateFailed.Title" xml:space="preserve"><value>Client update failed</value></data>
+  <data name="Alert.UpdateRolledBack.Title" xml:space="preserve"><value>Client update rolled back</value></data>
+  <data name="Alert.UsageSanity.Detail" xml:space="preserve"><value>{0}: usage records were rejected or truncated ({1}).</value></data>
+  <data name="Alert.UsageSanity.Title" xml:space="preserve"><value>Usage data failed sanity checks</value></data>
+  <data name="Alerts.All" xml:space="preserve"><value>All alerts</value></data>
+  <data name="Alerts.EmailSettings" xml:space="preserve"><value>Email settings</value></data>
+  <data name="Alerts.MarkAllRead" xml:space="preserve"><value>Mark all read</value></data>
+  <data name="Alerts.MarkRead" xml:space="preserve"><value>Mark read</value></data>
+  <data name="Alerts.NoAlertsFilter" xml:space="preserve"><value>No alerts for this filter.</value></data>
+  <data name="Alerts.PageTitle" xml:space="preserve"><value>Alerts · Parental OpControl</value></data>
+  <data name="Alerts.Subtitle" xml:space="preserve"><value>New installs, repeated blocked attempts, PIN overrides, limits reached, offline devices and tampering signs.</value></data>
+  <data name="Alerts.UnreadFilter" xml:space="preserve"><value>Unread ({0})</value></data>
+  <data name="App.Name" xml:space="preserve"><value>Parental OpControl</value></data>
+  <data name="Apps.Add" xml:space="preserve"><value>Add</value></data>
+  <data name="Apps.AddByPath" xml:space="preserve"><value>Add by path, e.g. C:\Program Files\App\app.exe</value></data>
+  <data name="Apps.AllowedReviewed" xml:space="preserve"><value>Allowed always (reviewed)</value></data>
+  <data name="Apps.AlwaysAllowedNote" xml:space="preserve"><value>Always allowed — not counted toward the daily limit</value></data>
+  <data name="Apps.DailyLimitNote" xml:space="preserve"><value>Daily limit {0} min</value></data>
+  <data name="Apps.DisplayNameOptional" xml:space="preserve"><value>Display name (optional)</value></data>
+  <data name="Apps.EnterFullPath" xml:space="preserve"><value>Enter a full path to an executable.</value></data>
+  <data name="Apps.FilterStore" xml:space="preserve"><value>Store apps</value></data>
+  <data name="Apps.FilterWin32" xml:space="preserve"><value>Win32</value></data>
+  <data name="Apps.FirstSeen" xml:space="preserve"><value>{0} · first seen {1}</value></data>
+  <data name="Apps.Installed" xml:space="preserve"><value>Installed apps</value></data>
+  <data name="Apps.InstalledCount" xml:space="preserve"><value>{0} on {1}</value></data>
+  <data name="Apps.Limited" xml:space="preserve"><value>Limited {0} min</value></data>
+  <data name="Apps.New" xml:space="preserve"><value>New</value></data>
+  <data name="Apps.NewCount" xml:space="preserve"><value>{0} new</value></data>
+  <data name="Apps.NewToReview" xml:space="preserve"><value>New apps to review</value></data>
+  <data name="Apps.NoAllowed" xml:space="preserve"><value>No allowed app rules.</value></data>
+  <data name="Apps.NoAlwaysBlocked" xml:space="preserve"><value>No always-blocked apps.</value></data>
+  <data name="Apps.NoHistory" xml:space="preserve"><value>No app rule changes recorded yet.</value></data>
+  <data name="Apps.NoScheduled" xml:space="preserve"><value>No scheduled app rules.</value></data>
+  <data name="Apps.NothingNew" xml:space="preserve"><value>Nothing new since the last review.</value></data>
+  <data name="Apps.PageTitle" xml:space="preserve"><value>Apps · Parental OpControl</value></data>
+  <data name="Apps.RemoveLimit" xml:space="preserve"><value>Remove limit</value></data>
+  <data name="Apps.Rules" xml:space="preserve"><value>App rules</value></data>
+  <data name="Apps.Search" xml:space="preserve"><value>Search installed apps</value></data>
+  <data name="Apps.Subtitle" xml:space="preserve"><value>Installed apps, new installs to review, and app rules.</value></data>
+  <data name="Apps.UnknownPublisher" xml:space="preserve"><value>unknown publisher</value></data>
+  <data name="Category.Adult" xml:space="preserve"><value>Adult content</value></data>
+  <data name="Category.FakeNews" xml:space="preserve"><value>Fake news</value></data>
+  <data name="Category.Gambling" xml:space="preserve"><value>Gambling</value></data>
+  <data name="Category.Social" xml:space="preserve"><value>Social media</value></data>
+  <data name="Common.AccountNotReported" xml:space="preserve"><value>account not reported</value></data>
+  <data name="Common.AlertCount" xml:space="preserve"><value>{0} alert</value></data>
+  <data name="Common.AlertCountPlural" xml:space="preserve"><value>{0} alerts</value></data>
+  <data name="Common.All" xml:space="preserve"><value>All</value></data>
+  <data name="Common.Allow" xml:space="preserve"><value>Allow</value></data>
+  <data name="Common.Allowed" xml:space="preserve"><value>Allowed</value></data>
+  <data name="Common.AlwaysAllowed" xml:space="preserve"><value>Always allowed</value></data>
+  <data name="Common.AppCount" xml:space="preserve"><value>{0} app</value></data>
+  <data name="Common.AppCountPlural" xml:space="preserve"><value>{0} apps</value></data>
+  <data name="Common.Back" xml:space="preserve"><value>Back</value></data>
+  <data name="Common.Block" xml:space="preserve"><value>Block</value></data>
+  <data name="Common.Blocked" xml:space="preserve"><value>Blocked</value></data>
+  <data name="Common.Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Common.CategoryCount" xml:space="preserve"><value>{0} category</value></data>
+  <data name="Common.CategoryCountPlural" xml:space="preserve"><value>{0} categories</value></data>
+  <data name="Common.Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Common.Connected" xml:space="preserve"><value>Connected</value></data>
+  <data name="Common.CreateChildFirst" xml:space="preserve"><value>Create a child profile first.</value></data>
+  <data name="Common.DayCount" xml:space="preserve"><value>{0} day</value></data>
+  <data name="Common.DayCountPlural" xml:space="preserve"><value>{0} days</value></data>
+  <data name="Common.Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Common.DeviceCount" xml:space="preserve"><value>{0} device</value></data>
+  <data name="Common.DeviceCountPlural" xml:space="preserve"><value>{0} devices</value></data>
+  <data name="Common.Email" xml:space="preserve"><value>Email</value></data>
+  <data name="Common.Error" xml:space="preserve"><value>Something went wrong.</value></data>
+  <data name="Common.HourShort" xml:space="preserve"><value>{0} h {1} min</value></data>
+  <data name="Common.LimitMinutes" xml:space="preserve"><value>Limit {0} min</value></data>
+  <data name="Common.Locked" xml:space="preserve"><value>Locked</value></data>
+  <data name="Common.MinuteShort" xml:space="preserve"><value>{0} min</value></data>
+  <data name="Common.Minutes" xml:space="preserve"><value>{0} min</value></data>
+  <data name="Common.Never" xml:space="preserve"><value>never</value></data>
+  <data name="Common.Next" xml:space="preserve"><value>Next</value></data>
+  <data name="Common.No" xml:space="preserve"><value>No</value></data>
+  <data name="Common.NoChildYet" xml:space="preserve"><value>No child yet</value></data>
+  <data name="Common.None" xml:space="preserve"><value>None</value></data>
+  <data name="Common.Offline" xml:space="preserve"><value>Offline</value></data>
+  <data name="Common.Online" xml:space="preserve"><value>Online</value></data>
+  <data name="Common.Owner" xml:space="preserve"><value>Owner</value></data>
+  <data name="Common.ParentFallback" xml:space="preserve"><value>Parent</value></data>
+  <data name="Common.Password" xml:space="preserve"><value>Password</value></data>
+  <data name="Common.Previous" xml:space="preserve"><value>Previous</value></data>
+  <data name="Common.Read" xml:space="preserve"><value>Read</value></data>
+  <data name="Common.ReadOnly" xml:space="preserve"><value>Read only</value></data>
+  <data name="Common.Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="Common.Remove" xml:space="preserve"><value>Remove</value></data>
+  <data name="Common.Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Common.SiteCount" xml:space="preserve"><value>{0} site</value></data>
+  <data name="Common.SiteCountPlural" xml:space="preserve"><value>{0} sites</value></data>
+  <data name="Common.Today" xml:space="preserve"><value>Today</value></data>
+  <data name="Common.Unlock" xml:space="preserve"><value>Unlock</value></data>
+  <data name="Common.Unlocked" xml:space="preserve"><value>Unlocked</value></data>
+  <data name="Common.Unread" xml:space="preserve"><value>Unread</value></data>
+  <data name="Common.VersionUnknown" xml:space="preserve"><value>version unknown</value></data>
+  <data name="Common.VisitCount" xml:space="preserve"><value>{0} visit</value></data>
+  <data name="Common.VisitCountPlural" xml:space="preserve"><value>{0} visits</value></data>
+  <data name="Common.Yes" xml:space="preserve"><value>Yes</value></data>
+  <data name="Consent.Text" xml:space="preserve"><value>CAMERA SUPERVISION ACKNOWLEDGEMENT (v1)
+
+I confirm that I am the parent or legal guardian of the child associated with this device, or that I have the family owner's express permission to view this camera.
+
+I will use this camera view only for lawful parental supervision of that child. I will not use it to monitor any other person, and I will not use it in any place where a person has a reasonable expectation of privacy, including bedrooms, bathrooms, changing areas or similar private spaces. I will not record, share, publish or use the feed for harassment, stalking, intimidation or any unlawful purpose.
+
+I understand that camera access is logged with my account, device and time, and that misuse can result in loss of access and legal action. I will comply with all applicable privacy, consent and monitoring laws in my jurisdiction. This notice is not legal advice; I am responsible for confirming that my use is lawful.
+
+By selecting "I agree", I confirm that I have read and accept these conditions.</value></data>
+  <data name="Day.Fri" xml:space="preserve"><value>Fri</value></data>
+  <data name="Day.Mon" xml:space="preserve"><value>Mon</value></data>
+  <data name="Day.Sat" xml:space="preserve"><value>Sat</value></data>
+  <data name="Day.Sun" xml:space="preserve"><value>Sun</value></data>
+  <data name="Day.Thu" xml:space="preserve"><value>Thu</value></data>
+  <data name="Day.Tue" xml:space="preserve"><value>Tue</value></data>
+  <data name="Day.Wed" xml:space="preserve"><value>Wed</value></data>
+  <data name="Devices.CameraLight" xml:space="preserve"><value>This device has a camera light or physical privacy shutter</value></data>
+  <data name="Devices.ClientLanguage" xml:space="preserve"><value>Client language</value></data>
+  <data name="Devices.FollowFamily" xml:space="preserve"><value>Follow family ({0})</value></data>
+  <data name="Devices.Latest" xml:space="preserve"><value>latest {0}</value></data>
+  <data name="Devices.None" xml:space="preserve"><value>No devices enrolled yet. Use Add device to create a one-time enrollment code.</value></data>
+  <data name="Devices.NoticeCamera" xml:space="preserve"><value>Show on-screen notice during camera view</value></data>
+  <data name="Devices.NoticeScreen" xml:space="preserve"><value>Show on-screen notice during screen view</value></data>
+  <data name="Devices.PageTitle" xml:space="preserve"><value>Devices · Parental OpControl</value></data>
+  <data name="Devices.Subtitle" xml:space="preserve"><value>Every enrolled device, with live connection status.</value></data>
+  <data name="Devices.TimeZone" xml:space="preserve"><value>Time zone</value></data>
+  <data name="Devices.UpdateAvailable" xml:space="preserve"><value>Update available</value></data>
+  <data name="Devices.UpdateNow" xml:space="preserve"><value>Update now</value></data>
+  <data name="Devices.UpdateStatus" xml:space="preserve"><value>Update: {0}</value></data>
+  <data name="Downloads.DownloadMsi" xml:space="preserve"><value>Download MSI</value></data>
+  <data name="Downloads.DownloadSetup" xml:space="preserve"><value>Download setup ({0})</value></data>
+  <data name="Downloads.Eyebrow" xml:space="preserve"><value>Installer</value></data>
+  <data name="Downloads.InstallerHelp" xml:space="preserve"><value>The installer sets up the service and user helper, keeps the device credential on upgrade, and supports silent deployment.</value></data>
+  <data name="Downloads.NoRelease" xml:space="preserve"><value>No client release is published on this server yet.</value></data>
+  <data name="Downloads.PageTitle" xml:space="preserve"><value>Downloads · Parental OpControl</value></data>
+  <data name="Downloads.Published" xml:space="preserve"><value>Published {0}.</value></data>
+  <data name="Downloads.Sha" xml:space="preserve"><value>SHA-256 (MSI): {0}</value></data>
+  <data name="Downloads.Silent" xml:space="preserve"><value>Silent install</value></data>
+  <data name="Downloads.SilentHelp" xml:space="preserve"><value>Run from an elevated command prompt:</value></data>
+  <data name="Downloads.SilentNote" xml:space="preserve"><value>Upgrades keep the existing device credential and do not require a code. Uninstalling requires administrator rights and is reported to the dashboard before it completes.</value></data>
+  <data name="Downloads.Subtitle" xml:space="preserve"><value>Install Parental OpControl manually on a Windows PC. The installer asks for a server URL, one-time code and the Windows account to protect.</value></data>
+  <data name="Downloads.WindowsInstaller" xml:space="preserve"><value>Windows installer</value></data>
+  <data name="Email.DigestIntroMany" xml:space="preserve"><value>{0} alerts for your family:</value></data>
+  <data name="Email.DigestIntroOne" xml:space="preserve"><value>{0} alert for your family:</value></data>
+  <data name="Email.DigestSubject" xml:space="preserve"><value>Parental OpControl daily digest</value></data>
+  <data name="Email.InviteCoParentBody" xml:space="preserve"><value>Hello,
+
+You have been invited to join {0} as a co-parent on Parental OpControl.
+
+Open this one-time link within 72 hours:
+{1}
+
+If you were not expecting this, ignore this email.</value></data>
+  <data name="Email.InviteCoParentSubject" xml:space="preserve"><value>You have been invited as a co-parent on Parental OpControl</value></data>
+  <data name="Email.InviteNewFamilyBody" xml:space="preserve"><value>Hello,
+
+You have been invited to create a family on Parental OpControl.
+
+Open this one-time link within 7 days:
+{0}
+
+If you were not expecting this, ignore this email.</value></data>
+  <data name="Email.InviteNewFamilySubject" xml:space="preserve"><value>Invitation to create your family on Parental OpControl</value></data>
+  <data name="Email.SmtpNotConfigured" xml:space="preserve"><value>Server SMTP is not configured.</value></data>
+  <data name="Error.AccountInactive" xml:space="preserve"><value>This account is no longer active. Sign in again.</value></data>
+  <data name="Error.AllowNoSchedule" xml:space="preserve"><value>Always-allow rules cannot be tied to a schedule.</value></data>
+  <data name="Error.Back" xml:space="preserve"><value>Back to dashboard</value></data>
+  <data name="Error.Body" xml:space="preserve"><value>Please try again. If the problem continues, check the server logs.</value></data>
+  <data name="Error.CameraConsent" xml:space="preserve"><value>Accept the camera supervision terms before starting a camera session.</value></data>
+  <data name="Error.CameraConsentNotAccepted" xml:space="preserve"><value>Camera supervision terms were not accepted.</value></data>
+  <data name="Error.CannotRemoveOwner" xml:space="preserve"><value>The family owner cannot be removed.</value></data>
+  <data name="Error.CannotRemoveSelf" xml:space="preserve"><value>You cannot remove your own account.</value></data>
+  <data name="Error.CategoryNotFound" xml:space="preserve"><value>Category not found.</value></data>
+  <data name="Error.ChildNotFound" xml:space="preserve"><value>Child not found in this family.</value></data>
+  <data name="Error.ChildNotFoundShort" xml:space="preserve"><value>Child not found.</value></data>
+  <data name="Error.ChooseApp" xml:space="preserve"><value>Choose an app.</value></data>
+  <data name="Error.ConfirmFamilyName" xml:space="preserve"><value>Type the family name exactly to confirm.</value></data>
+  <data name="Error.DeviceNameRequired" xml:space="preserve"><value>Device name is required (max 120 characters).</value></data>
+  <data name="Error.DeviceNotFound" xml:space="preserve"><value>Device not found.</value></data>
+  <data name="Error.DeviceNotFoundFamily" xml:space="preserve"><value>Device not found in this family.</value></data>
+  <data name="Error.EnrollmentCodeInvalid" xml:space="preserve"><value>Enrollment code is invalid or has expired.</value></data>
+  <data name="Error.EnrollmentCodeRequired" xml:space="preserve"><value>Enrollment code is required.</value></data>
+  <data name="Error.EnterDomain" xml:space="preserve"><value>Enter a domain.</value></data>
+  <data name="Error.FamilyNotFound" xml:space="preserve"><value>Family not found.</value></data>
+  <data name="Error.FamilySuspended" xml:space="preserve"><value>This family is suspended. Contact the server administrator.</value></data>
+  <data name="Error.FamilySuspendedShort" xml:space="preserve"><value>This family is suspended.</value></data>
+  <data name="Error.InstallLinkUsed" xml:space="preserve"><value>This install link has already been used.</value></data>
+  <data name="Error.InstallerNotPublished" xml:space="preserve"><value>The installer is not published on this server yet.</value></data>
+  <data name="Error.InvalidDomain" xml:space="preserve"><value>That does not look like a valid domain.</value></data>
+  <data name="Error.InvitationNotFound" xml:space="preserve"><value>Invitation not found.</value></data>
+  <data name="Error.MissingFamilyScope" xml:space="preserve"><value>Missing family scope.</value></data>
+  <data name="Error.MissingParent" xml:space="preserve"><value>Missing parent identity.</value></data>
+  <data name="Error.MobileInstallersSoon" xml:space="preserve"><value>Linux and Android installers are coming soon.</value></data>
+  <data name="Error.NeedsPermission" xml:space="preserve"><value>This action needs the {0} permission.</value></data>
+  <data name="Error.NoInstaller" xml:space="preserve"><value>No installer is published yet.</value></data>
+  <data name="Error.NoMsi" xml:space="preserve"><value>No MSI is published yet.</value></data>
+  <data name="Error.NoRelease" xml:space="preserve"><value>No client release is published on the server yet.</value></data>
+  <data name="Error.OwnerAlertControls" xml:space="preserve"><value>Only the family owner can change alert controls.</value></data>
+  <data name="Error.OwnerAllPermissions" xml:space="preserve"><value>The owner always has every permission.</value></data>
+  <data name="Error.OwnerChangePermissions" xml:space="preserve"><value>Only the family owner can change permissions.</value></data>
+  <data name="Error.OwnerInviteParents" xml:space="preserve"><value>Only the family owner can invite parents.</value></data>
+  <data name="Error.OwnerManageInvitations" xml:space="preserve"><value>Only the family owner can manage invitations.</value></data>
+  <data name="Error.OwnerManageParents" xml:space="preserve"><value>Only the family owner can manage parents.</value></data>
+  <data name="Error.OwnerNotice" xml:space="preserve"><value>Only the family owner can change the on-screen notice settings.</value></data>
+  <data name="Error.OwnerRemoveParents" xml:space="preserve"><value>Only the family owner can remove parents.</value></data>
+  <data name="Error.ParentNotFoundFamily" xml:space="preserve"><value>Parent not found in this family.</value></data>
+  <data name="Error.PickSchedule" xml:space="preserve"><value>Pick a schedule for a scheduled rule.</value></data>
+  <data name="Error.PinFormat" xml:space="preserve"><value>PIN must be 4 to 12 digits.</value></data>
+  <data name="Error.RemoteBusy" xml:space="preserve"><value>A remote session is already active for this device.</value></data>
+  <data name="Error.ScheduleNotFound" xml:space="preserve"><value>Schedule not found for this child.</value></data>
+  <data name="Error.ServerAdminOnly" xml:space="preserve"><value>Server administrator only.</value></data>
+  <data name="Error.SignInAgain" xml:space="preserve"><value>Sign in again.</value></data>
+  <data name="Error.Title" xml:space="preserve"><value>Something went wrong</value></data>
+  <data name="Error.UnknownAction" xml:space="preserve"><value>Unknown action.</value></data>
+  <data name="Error.UnknownOverride" xml:space="preserve"><value>Unknown override option.</value></data>
+  <data name="Error.UnknownRuleType" xml:space="preserve"><value>Unknown rule type.</value></data>
+  <data name="Error.UnsupportedPlatform" xml:space="preserve"><value>Unsupported device platform.</value></data>
+  <data name="Home.AParent" xml:space="preserve"><value>a parent</value></data>
+  <data name="Home.ASchedule" xml:space="preserve"><value>a schedule</value></data>
+  <data name="Home.AllSchedules" xml:space="preserve"><value>All schedules</value></data>
+  <data name="Home.AlwaysBlocked" xml:space="preserve"><value>Always blocked</value></data>
+  <data name="Home.BlockedAttempts" xml:space="preserve"><value>Blocked attempts</value></data>
+  <data name="Home.Bonus15" xml:space="preserve"><value>+15 min</value></data>
+  <data name="Home.Bonus30" xml:space="preserve"><value>+30 min</value></data>
+  <data name="Home.BonusActive" xml:space="preserve"><value>Bonus time active</value></data>
+  <data name="Home.ChangePin" xml:space="preserve"><value>Change PIN</value></data>
+  <data name="Home.ChildSections" xml:space="preserve"><value>Child sections</value></data>
+  <data name="Home.ClientVersion" xml:space="preserve"><value>client {0}</value></data>
+  <data name="Home.DevicesOnline" xml:space="preserve"><value>Devices online</value></data>
+  <data name="Home.DistinctSiteMany" xml:space="preserve"><value>Today · {0} distinct sites</value></data>
+  <data name="Home.DistinctSiteOne" xml:space="preserve"><value>Today · {0} distinct site</value></data>
+  <data name="Home.GoodAfternoon" xml:space="preserve"><value>Good afternoon</value></data>
+  <data name="Home.GoodEvening" xml:space="preserve"><value>Good evening</value></data>
+  <data name="Home.GoodMorning" xml:space="preserve"><value>Good morning</value></data>
+  <data name="Home.LimitReachedUntilMidnight" xml:space="preserve"><value>Daily limit reached — device locked until midnight.</value></data>
+  <data name="Home.LockNow" xml:space="preserve"><value>Lock now</value></data>
+  <data name="Home.MissingFamilyScope" xml:space="preserve"><value>Family scope is missing from the session.</value></data>
+  <data name="Home.NextLock" xml:space="preserve"><value>Next lock</value></data>
+  <data name="Home.NextSchedule" xml:space="preserve"><value>Next schedule</value></data>
+  <data name="Home.NoAlertsToday" xml:space="preserve"><value>No alerts today.</value></data>
+  <data name="Home.NoChildBody" xml:space="preserve"><value>Create a child profile to start managing devices.</value></data>
+  <data name="Home.NoDailyLimitSet" xml:space="preserve"><value>No daily limit set</value></data>
+  <data name="Home.NoDevices" xml:space="preserve"><value>No devices</value></data>
+  <data name="Home.NoDevicesEnrolled" xml:space="preserve"><value>No devices enrolled yet.</value></data>
+  <data name="Home.NoLimit" xml:space="preserve"><value>no limit</value></data>
+  <data name="Home.NoLockPermission" xml:space="preserve"><value>You can view this family but you do not have permission to lock or give bonus time.</value></data>
+  <data name="Home.NoScheduleSet" xml:space="preserve"><value>No schedule set</value></data>
+  <data name="Home.NoUsageToday" xml:space="preserve"><value>No usage recorded today.</value></data>
+  <data name="Home.NoUsageYet" xml:space="preserve"><value>No usage yet</value></data>
+  <data name="Home.OfLimit" xml:space="preserve"><value>of {0} min limit</value></data>
+  <data name="Home.OfflineCount" xml:space="preserve"><value>{0} offline</value></data>
+  <data name="Home.OnlineOf" xml:space="preserve"><value>{0} of {1} online</value></data>
+  <data name="Home.OnlineOfShort" xml:space="preserve"><value>{0} of {1}</value></data>
+  <data name="Home.OpenProfile" xml:space="preserve"><value>Open profile →</value></data>
+  <data name="Home.Overview" xml:space="preserve"><value>Overview</value></data>
+  <data name="Home.PageTitle" xml:space="preserve"><value>Home · Parental OpControl</value></data>
+  <data name="Home.ParentFallback" xml:space="preserve"><value>parent</value></data>
+  <data name="Home.PinIsSet" xml:space="preserve"><value>Unlock PIN is set (works offline on the lock screen).</value></data>
+  <data name="Home.PinNotSet" xml:space="preserve"><value>Unlock PIN is not set.</value></data>
+  <data name="Home.ReasonBonus" xml:space="preserve"><value>Bonus time is active.</value></data>
+  <data name="Home.ReasonDailyLimit" xml:space="preserve"><value>Daily limit reached. Resets at local midnight.</value></data>
+  <data name="Home.ReasonManual" xml:space="preserve"><value>Locked by {0}.</value></data>
+  <data name="Home.ReasonNone" xml:space="preserve"><value>No lock is active.</value></data>
+  <data name="Home.ReasonOverride" xml:space="preserve"><value>Unlocked until the next lock cycle.</value></data>
+  <data name="Home.ReasonSchedule" xml:space="preserve"><value>Locked by {0}.</value></data>
+  <data name="Home.Report" xml:space="preserve"><value>Report</value></data>
+  <data name="Home.ScheduleUntil" xml:space="preserve"><value>{0} until</value></data>
+  <data name="Home.ScreenTimeToday" xml:space="preserve"><value>Screen time today</value></data>
+  <data name="Home.SetPin" xml:space="preserve"><value>Set PIN</value></data>
+  <data name="Home.StatusBonus" xml:space="preserve"><value>Bonus time</value></data>
+  <data name="Home.StatusDailyLimit" xml:space="preserve"><value>Daily limit reached</value></data>
+  <data name="Home.StatusManual" xml:space="preserve"><value>Manually locked</value></data>
+  <data name="Home.StatusOverride" xml:space="preserve"><value>Unlocked until next cycle</value></data>
+  <data name="Home.StatusRules" xml:space="preserve"><value>Following rules</value></data>
+  <data name="Home.StatusSchedule" xml:space="preserve"><value>Schedule: {0}</value></data>
+  <data name="Home.TimeLeftToday" xml:space="preserve"><value>{0} left today.</value></data>
+  <data name="Home.TodaysAlerts" xml:space="preserve"><value>Today's alerts</value></data>
+  <data name="Home.TodaysSchedule" xml:space="preserve"><value>Today's schedule</value></data>
+  <data name="Home.TopAppToday" xml:space="preserve"><value>Top app today</value></data>
+  <data name="Home.TopAppsToday" xml:space="preserve"><value>Top apps today</value></data>
+  <data name="Home.ViewAll" xml:space="preserve"><value>View all</value></data>
+  <data name="Identity.Default" xml:space="preserve"><value>The account could not be created. Check the details and try again.</value></data>
+  <data name="Identity.DuplicateEmail" xml:space="preserve"><value>An account with that email already exists.</value></data>
+  <data name="Identity.InvalidEmail" xml:space="preserve"><value>Enter a valid email address.</value></data>
+  <data name="Identity.PasswordMismatch" xml:space="preserve"><value>The passwords do not match.</value></data>
+  <data name="Identity.PasswordRequiresDigit" xml:space="preserve"><value>The password must include a number.</value></data>
+  <data name="Identity.PasswordRequiresLower" xml:space="preserve"><value>The password must include a lowercase letter.</value></data>
+  <data name="Identity.PasswordRequiresNonAlphanumeric" xml:space="preserve"><value>The password must include a symbol.</value></data>
+  <data name="Identity.PasswordRequiresUpper" xml:space="preserve"><value>The password must include an uppercase letter.</value></data>
+  <data name="Identity.PasswordTooShort" xml:space="preserve"><value>The password is too short.</value></data>
+  <data name="Install.AdminHelp" xml:space="preserve"><value>Signed in as an administrator? The installer will ask which Windows account to protect.</value></data>
+  <data name="Install.AndroidBody" xml:space="preserve"><value>This install link is for {0}'s Windows computer. The Android app is not available yet.</value></data>
+  <data name="Install.AndroidHelp" xml:space="preserve"><value>Open this link on the child's Windows PC while signed in as an administrator.</value></data>
+  <data name="Install.AndroidSoon" xml:space="preserve"><value>Android coming soon</value></data>
+  <data name="Install.CodeHelp" xml:space="preserve"><value>Installer didn't include the code?</value></data>
+  <data name="Install.CodeHelpBody" xml:space="preserve"><value>Run the installer and type the one-time code shown in the parent dashboard. You can also download the latest installer from the dashboard's Downloads page.</value></data>
+  <data name="Install.Connected" xml:space="preserve"><value>Connected</value></data>
+  <data name="Install.ConnectedBody" xml:space="preserve"><value>{0} is now protected by Parental OpControl.</value></data>
+  <data name="Install.ConnectedClose" xml:space="preserve"><value>You can close this page. The device will appear in the dashboard immediately.</value></data>
+  <data name="Install.Download" xml:space="preserve"><value>Download installer</value></data>
+  <data name="Install.Expires" xml:space="preserve"><value>Link expires {0}. The link and code work once.</value></data>
+  <data name="Install.ForChild1" xml:space="preserve"><value>This will install Parental OpControl on the computer of</value></data>
+  <data name="Install.ForChild2" xml:space="preserve"><value>.</value></data>
+  <data name="Install.LinkExpired" xml:space="preserve"><value>Link expired</value></data>
+  <data name="Install.LinkHelp1" xml:space="preserve"><value>Open the dashboard, choose</value></data>
+  <data name="Install.LinkHelp2" xml:space="preserve"><value>and create a new install link.</value></data>
+  <data name="Install.LinkInvalid" xml:space="preserve"><value>Link not valid</value></data>
+  <data name="Install.LinkRevoked" xml:space="preserve"><value>Link revoked</value></data>
+  <data name="Install.NoInstaller" xml:space="preserve"><value>The installer is not published on this server yet.</value></data>
+  <data name="Install.OnThisPc" xml:space="preserve"><value>Install on this PC</value></data>
+  <data name="Install.Title" xml:space="preserve"><value>Install Parental OpControl</value></data>
+  <data name="InstallLink.Expired" xml:space="preserve"><value>This install link has expired. Ask the parent to create a new one.</value></data>
+  <data name="InstallLink.Invalid" xml:space="preserve"><value>This install link is not valid.</value></data>
+  <data name="InstallLink.Revoked" xml:space="preserve"><value>This install link was revoked. Ask the parent to create a new one.</value></data>
+  <data name="Invite.CannotResend" xml:space="preserve"><value>This invitation can no longer be resent.</value></data>
+  <data name="Invite.CreateLogin" xml:space="preserve"><value>Create login</value></data>
+  <data name="Invite.EmailExists" xml:space="preserve"><value>A parent with that email already has an account on this server.</value></data>
+  <data name="Invite.EmailFailed" xml:space="preserve"><value>The invitation is valid but the email could not be sent.</value></data>
+  <data name="Invite.EnterChildName" xml:space="preserve"><value>Enter the first child's name.</value></data>
+  <data name="Invite.EnterEmail" xml:space="preserve"><value>Enter your email address.</value></data>
+  <data name="Invite.EnterFamilyName" xml:space="preserve"><value>Enter a family name.</value></data>
+  <data name="Invite.Expired" xml:space="preserve"><value>This invitation has expired.</value></data>
+  <data name="Invite.FamilyNotFound" xml:space="preserve"><value>Family not found.</value></data>
+  <data name="Invite.FamilySuspended" xml:space="preserve"><value>This family is suspended.</value></data>
+  <data name="Invite.FirstChild" xml:space="preserve"><value>First child's name</value></data>
+  <data name="Invite.GoSignIn" xml:space="preserve"><value>Go to sign in</value></data>
+  <data name="Invite.Invalid" xml:space="preserve"><value>This invitation link is not valid.</value></data>
+  <data name="Invite.JoinBody" xml:space="preserve"><value>You were invited as a co-parent. Create your own login. An authenticator app can be added later in Settings.</value></data>
+  <data name="Invite.JoinHeading" xml:space="preserve"><value>Join {0}</value></data>
+  <data name="Invite.JoinTitle" xml:space="preserve"><value>Join as a co-parent</value></data>
+  <data name="Invite.Missing" xml:space="preserve"><value>Invitation link is missing.</value></data>
+  <data name="Invite.NewBody" xml:space="preserve"><value>You were invited to the server. Create the family owner account and the first child. You will land in your own empty dashboard.</value></data>
+  <data name="Invite.NewTitle" xml:space="preserve"><value>Create your family</value></data>
+  <data name="Invite.NoEmail" xml:space="preserve"><value>This invitation has no email address; copy the link again instead.</value></data>
+  <data name="Invite.NotCoParent" xml:space="preserve"><value>This invitation is not a co-parent invitation.</value></data>
+  <data name="Invite.NotFound" xml:space="preserve"><value>Invitation not found.</value></data>
+  <data name="Invite.NotNewFamily" xml:space="preserve"><value>This invitation is not a new-family invitation.</value></data>
+  <data name="Invite.Revoked" xml:space="preserve"><value>This invitation was revoked.</value></data>
+  <data name="Invite.Unavailable" xml:space="preserve"><value>Invitation unavailable</value></data>
+  <data name="Invite.UnavailableBody" xml:space="preserve"><value>This invitation link is invalid, expired, already used or revoked. Ask the person who invited you for a new link. New families can only join by invitation.</value></data>
+  <data name="Invite.UseInvitedEmail" xml:space="preserve"><value>Use the email address this invitation was sent to.</value></data>
+  <data name="Invite.Used" xml:space="preserve"><value>This invitation was already used.</value></data>
+  <data name="Js.CameraLive" xml:space="preserve"><value>Camera live</value></data>
+  <data name="Js.Connecting" xml:space="preserve"><value>Connecting…</value></data>
+  <data name="Js.ConnectionError" xml:space="preserve"><value>Connection error.</value></data>
+  <data name="Js.Live" xml:space="preserve"><value>Live</value></data>
+  <data name="Js.Requesting" xml:space="preserve"><value>Requesting…</value></data>
+  <data name="Js.ScreenLive" xml:space="preserve"><value>Screen live</value></data>
+  <data name="Js.SessionCreating" xml:space="preserve"><value>Creating session…</value></data>
+  <data name="Js.SessionEnded" xml:space="preserve"><value>Session ended.</value></data>
+  <data name="Js.SessionStartFailed" xml:space="preserve"><value>Could not start: </value></data>
+  <data name="Js.SessionWaiting" xml:space="preserve"><value>Waiting for the device…</value></data>
+  <data name="Js.UpdateFailed" xml:space="preserve"><value>Could not request the update: </value></data>
+  <data name="Js.UpdateRequested" xml:space="preserve"><value>Update requested</value></data>
+  <data name="Language.Auto" xml:space="preserve"><value>Automatic (browser)</value></data>
+  <data name="Language.English" xml:space="preserve"><value>English</value></data>
+  <data name="Language.Saved" xml:space="preserve"><value>Language saved.</value></data>
+  <data name="Language.ServerDefault" xml:space="preserve"><value>Family default</value></data>
+  <data name="Language.Spanish" xml:space="preserve"><value>Español</value></data>
+  <data name="Layout.CreatedBy" xml:space="preserve"><value>CREATED BY OpControl</value></data>
+  <data name="Layout.English" xml:space="preserve"><value>English</value></data>
+  <data name="Layout.FamilyDashboard" xml:space="preserve"><value>Family dashboard</value></data>
+  <data name="Layout.Language" xml:space="preserve"><value>Language</value></data>
+  <data name="Layout.SignOut" xml:space="preserve"><value>Sign out</value></data>
+  <data name="Layout.Spanish" xml:space="preserve"><value>Español</value></data>
+  <data name="Layout.ToggleTheme" xml:space="preserve"><value>Toggle theme</value></data>
+  <data name="Layout.VersionDetails" xml:space="preserve"><value>Version details</value></data>
+  <data name="Login.Google" xml:space="preserve"><value>Continue with Google</value></data>
+  <data name="Login.Incorrect" xml:space="preserve"><value>Email or password is incorrect.</value></data>
+  <data name="Login.InviteNote" xml:space="preserve"><value>New families join by invitation from the server owner.</value></data>
+  <data name="Login.LockedOut" xml:space="preserve"><value>This account is temporarily locked.</value></data>
+  <data name="Login.Microsoft" xml:space="preserve"><value>Continue with Microsoft</value></data>
+  <data name="Login.OAuthOff" xml:space="preserve"><value>OAuth is off by default in Job 1</value></data>
+  <data name="Login.Or" xml:space="preserve"><value>OR</value></data>
+  <data name="Login.RememberMe" xml:space="preserve"><value>Keep me signed in</value></data>
+  <data name="Login.Subtitle" xml:space="preserve"><value>Manage your family’s devices.</value></data>
+  <data name="Login.Suspended" xml:space="preserve"><value>This family is suspended. Contact the server administrator.</value></data>
+  <data name="Login.Title" xml:space="preserve"><value>Sign in</value></data>
+  <data name="Login.TooMany" xml:space="preserve"><value>Too many sign-in attempts. Try again in a few minutes.</value></data>
+  <data name="Nav.Activity" xml:space="preserve"><value>Activity</value></data>
+  <data name="Nav.AddDevice" xml:space="preserve"><value>Add device</value></data>
+  <data name="Nav.Alerts" xml:space="preserve"><value>Alerts</value></data>
+  <data name="Nav.Apps" xml:space="preserve"><value>Apps</value></data>
+  <data name="Nav.Devices" xml:space="preserve"><value>Devices</value></data>
+  <data name="Nav.Downloads" xml:space="preserve"><value>Downloads</value></data>
+  <data name="Nav.Home" xml:space="preserve"><value>Home</value></data>
+  <data name="Nav.Parents" xml:space="preserve"><value>Parents</value></data>
+  <data name="Nav.Remote" xml:space="preserve"><value>Remote</value></data>
+  <data name="Nav.Schedules" xml:space="preserve"><value>Schedules</value></data>
+  <data name="Nav.ScreenTime" xml:space="preserve"><value>Screen time</value></data>
+  <data name="Nav.ServerAdmin" xml:space="preserve"><value>Server admin</value></data>
+  <data name="Nav.Settings" xml:space="preserve"><value>Settings</value></data>
+  <data name="Nav.Websites" xml:space="preserve"><value>Websites</value></data>
+  <data name="NotFound.Body" xml:space="preserve"><value>That page does not exist.</value></data>
+  <data name="NotFound.Title" xml:space="preserve"><value>Not found</value></data>
+  <data name="Pin.Back" xml:space="preserve"><value>Back to settings</value></data>
+  <data name="Pin.Clear" xml:space="preserve"><value>Clear PIN</value></data>
+  <data name="Pin.Cleared" xml:space="preserve"><value>PIN cleared.</value></data>
+  <data name="Pin.Confirm" xml:space="preserve"><value>Confirm PIN</value></data>
+  <data name="Pin.IsSet" xml:space="preserve"><value>An override PIN is set for this child.</value></data>
+  <data name="Pin.Mismatch" xml:space="preserve"><value>The PINs do not match.</value></data>
+  <data name="Pin.New" xml:space="preserve"><value>New PIN</value></data>
+  <data name="Pin.NotSet" xml:space="preserve"><value>No override PIN is set.</value></data>
+  <data name="Pin.Rule" xml:space="preserve"><value>4 to 12 digits. Five wrong attempts lock the override for 60 seconds.</value></data>
+  <data name="Pin.Save" xml:space="preserve"><value>Save PIN</value></data>
+  <data name="Pin.Saved" xml:space="preserve"><value>PIN saved and synced to the child's devices.</value></data>
+  <data name="Pin.Status" xml:space="preserve"><value>Status</value></data>
+  <data name="Pin.Subtitle" xml:space="preserve"><value>The PIN is verified on the device. Only a PBKDF2 hash is stored, and the user-session helper never receives it.</value></data>
+  <data name="Pin.Title" xml:space="preserve"><value>Parent override PIN</value></data>
+  <data name="Remote.Camera" xml:space="preserve"><value>Camera</value></data>
+  <data name="Remote.ConsentAccepted" xml:space="preserve"><value>✓ Camera supervision terms accepted</value></data>
+  <data name="Remote.ConsentOneTime" xml:space="preserve"><value>One-time acceptance</value></data>
+  <data name="Remote.ConsentSaveFailed" xml:space="preserve"><value>The acceptance could not be saved. Try again.</value></data>
+  <data name="Remote.ConsentTitle" xml:space="preserve"><value>Camera supervision terms</value></data>
+  <data name="Remote.Fullscreen" xml:space="preserve"><value>Fullscreen</value></data>
+  <data name="Remote.IAgree" xml:space="preserve"><value>I agree</value></data>
+  <data name="Remote.NoDevices" xml:space="preserve"><value>No devices are enrolled yet.</value></data>
+  <data name="Remote.PageTitle" xml:space="preserve"><value>Remote · Parental OpControl</value></data>
+  <data name="Remote.Screen" xml:space="preserve"><value>Screen</value></data>
+  <data name="Remote.SessionLimit" xml:space="preserve"><value>Parent-initiated · 10 min max</value></data>
+  <data name="Remote.Stop" xml:space="preserve"><value>Stop</value></data>
+  <data name="Remote.Subtitle" xml:space="preserve"><value>View the device screen or camera on demand. Screen view is silent; camera access is indicated by the device's hardware light.</value></data>
+  <data name="Remote.ViewCamera" xml:space="preserve"><value>View camera</value></data>
+  <data name="Remote.ViewScreen" xml:space="preserve"><value>View screen</value></data>
+  <data name="Schedules.Add" xml:space="preserve"><value>Add schedule</value></data>
+  <data name="Schedules.AddTitle" xml:space="preserve"><value>Add a schedule</value></data>
+  <data name="Schedules.Days" xml:space="preserve"><value>Days</value></data>
+  <data name="Schedules.DeleteConfirm" xml:space="preserve"><value>Delete this schedule?</value></data>
+  <data name="Schedules.Disabled" xml:space="preserve"><value>Disabled</value></data>
+  <data name="Schedules.Enabled" xml:space="preserve"><value>Enabled</value></data>
+  <data name="Schedules.End" xml:space="preserve"><value>End</value></data>
+  <data name="Schedules.EveryDay" xml:space="preserve"><value>Every day</value></data>
+  <data name="Schedules.Example" xml:space="preserve"><value>Example: 21:00 to 07:00 is an overnight window.</value></data>
+  <data name="Schedules.InvalidTimes" xml:space="preserve"><value>Start and end must be valid times.</value></data>
+  <data name="Schedules.Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Schedules.NamePlaceholder" xml:space="preserve"><value>Bedtime</value></data>
+  <data name="Schedules.NameRequired" xml:space="preserve"><value>Schedule name is required.</value></data>
+  <data name="Schedules.NoSchedule" xml:space="preserve"><value>No schedule</value></data>
+  <data name="Schedules.None" xml:space="preserve"><value>No schedules yet.</value></data>
+  <data name="Schedules.PickDay" xml:space="preserve"><value>Pick at least one day.</value></data>
+  <data name="Schedules.SameTimes" xml:space="preserve"><value>Start and end cannot be the same.</value></data>
+  <data name="Schedules.ScheduleFallback" xml:space="preserve"><value>Schedule</value></data>
+  <data name="Schedules.Start" xml:space="preserve"><value>Start</value></data>
+  <data name="Schedules.Subtitle" xml:space="preserve"><value>Schedules apply to every device assigned to this child. Overnight windows are supported.</value></data>
+  <data name="Schedules.Title" xml:space="preserve"><value>Lock schedules</value></data>
+  <data name="ScreenTime.ActiveUse" xml:space="preserve"><value>Active use</value></data>
+  <data name="ScreenTime.ApproximateTime" xml:space="preserve"><value>Time is approximate</value></data>
+  <data name="ScreenTime.AveragePerDay" xml:space="preserve"><value>Average {0} per day</value></data>
+  <data name="ScreenTime.EnableLimit" xml:space="preserve"><value>Enable a daily screen time limit</value></data>
+  <data name="ScreenTime.Idle" xml:space="preserve"><value>Idle</value></data>
+  <data name="ScreenTime.IdleNote" xml:space="preserve"><value>Excluded from screen time</value></data>
+  <data name="ScreenTime.Limit1h" xml:space="preserve"><value>Limit 1 h</value></data>
+  <data name="ScreenTime.LimitReachedMidnight" xml:space="preserve"><value>Daily limit reached. The device is locked until local midnight.</value></data>
+  <data name="ScreenTime.MostUsedApps" xml:space="preserve"><value>Most used apps</value></data>
+  <data name="ScreenTime.MostVisitedSites" xml:space="preserve"><value>Most visited sites</value></data>
+  <data name="ScreenTime.NoAppUsage" xml:space="preserve"><value>No app usage recorded for this period.</value></data>
+  <data name="ScreenTime.NoSiteUsage" xml:space="preserve"><value>No website usage recorded for this period.</value></data>
+  <data name="ScreenTime.PageTitle" xml:space="preserve"><value>Screen time · Parental OpControl</value></data>
+  <data name="ScreenTime.PeriodDay" xml:space="preserve"><value>Day</value></data>
+  <data name="ScreenTime.PeriodMonth" xml:space="preserve"><value>Month</value></data>
+  <data name="ScreenTime.PeriodWeek" xml:space="preserve"><value>Week</value></data>
+  <data name="ScreenTime.SaveLimits" xml:space="preserve"><value>Save limits</value></data>
+  <data name="ScreenTime.SharedAcross" xml:space="preserve"><value>Shared across all of {0}'s devices. Resets at local midnight.</value></data>
+  <data name="ScreenTime.SpokenWarnings" xml:space="preserve"><value>Spoken warnings before the limit</value></data>
+  <data name="ScreenTime.Subtitle" xml:space="preserve"><value>Active use, app limits and reports for every device of this child.</value></data>
+  <data name="ScreenTime.ThisMonth" xml:space="preserve"><value>This month</value></data>
+  <data name="ScreenTime.ThisWeek" xml:space="preserve"><value>This week</value></data>
+  <data name="ScreenTime.TimeNote" xml:space="preserve"><value>Time is stored in UTC and grouped by the device time zone (local midnight). Website time is approximate, derived from the DNS visit log and browser foreground time.</value></data>
+  <data name="ScreenTime.TodayVsAverage" xml:space="preserve"><value>Today vs average</value></data>
+  <data name="ScreenTime.TodaysLimit" xml:space="preserve"><value>Today's limit</value></data>
+  <data name="ScreenTime.Unaccounted" xml:space="preserve"><value>Unaccounted</value></data>
+  <data name="ScreenTime.UnaccountedNote" xml:space="preserve"><value>Helper was not running</value></data>
+  <data name="ScreenTime.Usage" xml:space="preserve"><value>Usage</value></data>
+  <data name="ScreenTime.UsedOfLimit" xml:space="preserve"><value>{0} used of {1} min</value></data>
+  <data name="ScreenTime.UsedToday" xml:space="preserve"><value>{0} today</value></data>
+  <data name="ServerAdmin.Audit" xml:space="preserve"><value>Server admin activity</value></data>
+  <data name="ServerAdmin.CopyLink" xml:space="preserve"><value>Copy this link and send it to the invitee.</value></data>
+  <data name="ServerAdmin.Created" xml:space="preserve"><value>created {0}</value></data>
+  <data name="ServerAdmin.DeleteConfirm1" xml:space="preserve"><value>Delete</value></data>
+  <data name="ServerAdmin.DeleteConfirm2" xml:space="preserve"><value>and all of its data? This cannot be undone.</value></data>
+  <data name="ServerAdmin.DeleteFamily" xml:space="preserve"><value>Delete family</value></data>
+  <data name="ServerAdmin.Deleted" xml:space="preserve"><value>Family deleted.</value></data>
+  <data name="ServerAdmin.EmailSent" xml:space="preserve"><value>Email sent to the invitee.</value></data>
+  <data name="ServerAdmin.Eyebrow" xml:space="preserve"><value>Server</value></data>
+  <data name="ServerAdmin.Families" xml:space="preserve"><value>Families</value></data>
+  <data name="ServerAdmin.FamilyCounts" xml:space="preserve"><value>{0} child(ren) · {1} device(s)</value></data>
+  <data name="ServerAdmin.FamilyHint" xml:space="preserve"><value>Family name hint (optional)</value></data>
+  <data name="ServerAdmin.FamilyNameChosen" xml:space="preserve"><value>Family name chosen by invitee</value></data>
+  <data name="ServerAdmin.FromName" xml:space="preserve"><value>From name</value></data>
+  <data name="ServerAdmin.InviteFamily" xml:space="preserve"><value>Invite a family</value></data>
+  <data name="ServerAdmin.InviteHelp" xml:space="preserve"><value>New families can only join by invitation. The link expires in 7 days and can be used once. There is no public sign-up.</value></data>
+  <data name="ServerAdmin.LastActivity" xml:space="preserve"><value>last activity {0}</value></data>
+  <data name="ServerAdmin.NoAudit" xml:space="preserve"><value>No server admin actions yet.</value></data>
+  <data name="ServerAdmin.NoPending" xml:space="preserve"><value>No pending invitations.</value></data>
+  <data name="ServerAdmin.NotAllowed" xml:space="preserve"><value>Not allowed</value></data>
+  <data name="ServerAdmin.NotAllowedBody" xml:space="preserve"><value>This page is for the server administrator.</value></data>
+  <data name="ServerAdmin.OneTimeInviteLink" xml:space="preserve"><value>One-time invitation link</value></data>
+  <data name="ServerAdmin.PageTitle" xml:space="preserve"><value>Server admin · Parental OpControl</value></data>
+  <data name="ServerAdmin.PendingFamilies" xml:space="preserve"><value>Pending family invitations</value></data>
+  <data name="ServerAdmin.Port" xml:space="preserve"><value>Port</value></data>
+  <data name="ServerAdmin.Reactivate" xml:space="preserve"><value>Reactivate</value></data>
+  <data name="ServerAdmin.Reactivated" xml:space="preserve"><value>Family reactivated.</value></data>
+  <data name="ServerAdmin.SaveSmtp" xml:space="preserve"><value>Save SMTP</value></data>
+  <data name="ServerAdmin.ServerSmtp" xml:space="preserve"><value>Server SMTP</value></data>
+  <data name="ServerAdmin.SmtpHelp" xml:space="preserve"><value>Used for family invitations and alert emails. Existing family SMTP settings remain as a fallback.</value></data>
+  <data name="ServerAdmin.SmtpSaved" xml:space="preserve"><value>SMTP settings saved.</value></data>
+  <data name="ServerAdmin.Subtitle" xml:space="preserve"><value>Invite families, manage server settings and see only family metadata. Family rules, reports and activity stay private unless you are a member of that family.</value></data>
+  <data name="ServerAdmin.Suspend" xml:space="preserve"><value>Suspend</value></data>
+  <data name="ServerAdmin.Suspended" xml:space="preserve"><value>· suspended</value></data>
+  <data name="ServerAdmin.SuspendedNotice" xml:space="preserve"><value>Family suspended.</value></data>
+  <data name="ServerAdmin.TypeName" xml:space="preserve"><value>Type the family name to confirm</value></data>
+  <data name="ServerAdmin.Username" xml:space="preserve"><value>Username</value></data>
+  <data name="Settings.Accent" xml:space="preserve"><value>accent</value></data>
+  <data name="Settings.AlertControls" xml:space="preserve"><value>Alert controls</value></data>
+  <data name="Settings.AlertControlsFootnote" xml:space="preserve"><value>Muted types still appear in the dashboard; only email delivery is muted. Quiet hours suppress email until the end of the window. Failed emails retry with backoff (up to 6 attempts).</value></data>
+  <data name="Settings.AlertControlsHelp" xml:space="preserve"><value>Mute an alert type, delay emails during quiet hours, or send one daily digest instead of individual emails.</value></data>
+  <data name="Settings.AlertEmails" xml:space="preserve"><value>Alert emails</value></data>
+  <data name="Settings.AlertEmailsHelp" xml:space="preserve"><value>Email notifications are off by default. When enabled, new alerts are sent to every parent account with an email address.</value></data>
+  <data name="Settings.Brand" xml:space="preserve"><value>Brand</value></data>
+  <data name="Settings.BrandHelp1" xml:space="preserve"><value>The product name, logo and accent color come from one server configuration (</value></data>
+  <data name="Settings.BrandHelp2" xml:space="preserve"><value>) .</value></data>
+  <data name="Settings.BuildDetail" xml:space="preserve"><value>Version {0} · commit {1} · built {2}</value></data>
+  <data name="Settings.BuildHelp" xml:space="preserve"><value>This comes from the running image, not from a typed setting.</value></data>
+  <data name="Settings.BuildVersion" xml:space="preserve"><value>Build version</value></data>
+  <data name="Settings.ChangeOrClearPin" xml:space="preserve"><value>Change or clear PIN</value></data>
+  <data name="Settings.Digest" xml:space="preserve"><value>Send a daily digest instead</value></data>
+  <data name="Settings.DigestHour" xml:space="preserve"><value>Digest hour (local, 0-23)</value></data>
+  <data name="Settings.FamilyEyebrow" xml:space="preserve"><value>Family</value></data>
+  <data name="Settings.FamilyLanguage" xml:space="preserve"><value>Family default language</value></data>
+  <data name="Settings.FamilyLanguageHelp" xml:space="preserve"><value>Each device can override the family language on the Devices page.</value></data>
+  <data name="Settings.FromAddress" xml:space="preserve"><value>From address</value></data>
+  <data name="Settings.Language" xml:space="preserve"><value>Language</value></data>
+  <data name="Settings.LanguageHelp" xml:space="preserve"><value>Choose the language for your account. The family default is used for emails to people without an account and for devices that follow the family.</value></data>
+  <data name="Settings.LeaveBlankToKeep" xml:space="preserve"><value>Leave blank to keep</value></data>
+  <data name="Settings.MuteLimit" xml:space="preserve"><value>Mute limit alerts</value></data>
+  <data name="Settings.MuteNewApp" xml:space="preserve"><value>Mute new app alerts</value></data>
+  <data name="Settings.MuteOffline" xml:space="preserve"><value>Mute offline alerts</value></data>
+  <data name="Settings.MutePin" xml:space="preserve"><value>Mute PIN override alerts</value></data>
+  <data name="Settings.MuteRepeated" xml:space="preserve"><value>Mute repeated blocked sites</value></data>
+  <data name="Settings.MuteTamper" xml:space="preserve"><value>Mute tampering alerts</value></data>
+  <data name="Settings.MyLanguage" xml:space="preserve"><value>My language</value></data>
+  <data name="Settings.Notice" xml:space="preserve"><value>On-screen notice</value></data>
+  <data name="Settings.NoticeDefault" xml:space="preserve"><value>Tus papás están viendo</value></data>
+  <data name="Settings.NoticeHelp" xml:space="preserve"><value>A transparent eye and this text appear at the top centre of the screen while a parent is viewing, when the device notice is enabled. Leave blank to use the default.</value></data>
+  <data name="Settings.NoticeText" xml:space="preserve"><value>Notice text</value></data>
+  <data name="Settings.OfflineAfter" xml:space="preserve"><value>Device offline alert after (minutes)</value></data>
+  <data name="Settings.OpenHealth" xml:space="preserve"><value>Open /health</value></data>
+  <data name="Settings.OpenVersion" xml:space="preserve"><value>Open /version</value></data>
+  <data name="Settings.OverridePin" xml:space="preserve"><value>Parent override PIN</value></data>
+  <data name="Settings.OwnerAccount" xml:space="preserve"><value>Owner account</value></data>
+  <data name="Settings.OwnerHelp1" xml:space="preserve"><value>The owner controls family settings, invitations and removing parents. Invite co-parents from</value></data>
+  <data name="Settings.PageTitle" xml:space="preserve"><value>Settings · Parental OpControl</value></data>
+  <data name="Settings.PinHelp" xml:space="preserve"><value>Used on {0}'s lock screen ("Parent override") to unlock until the next lock cycle or give bonus time. Works offline. Five wrong attempts block it for 60 seconds.</value></data>
+  <data name="Settings.PinNotSet" xml:space="preserve"><value>Not set</value></data>
+  <data name="Settings.PinSet" xml:space="preserve"><value>Set</value></data>
+  <data name="Settings.QuietEnd" xml:space="preserve"><value>Quiet hours end</value></data>
+  <data name="Settings.QuietStart" xml:space="preserve"><value>Quiet hours start</value></data>
+  <data name="Settings.SaveAlertControls" xml:space="preserve"><value>Save alert controls</value></data>
+  <data name="Settings.SaveEmail" xml:space="preserve"><value>Save email settings</value></data>
+  <data name="Settings.SaveNotice" xml:space="preserve"><value>Save notice text</value></data>
+  <data name="Settings.Saved" xml:space="preserve"><value>Settings saved.</value></data>
+  <data name="Settings.Security" xml:space="preserve"><value>Security</value></data>
+  <data name="Settings.SecurityHelp" xml:space="preserve"><value>Protect parent sign-in with an authenticator app (TOTP).</value></data>
+  <data name="Settings.SendAlertEmails" xml:space="preserve"><value>Send alert emails</value></data>
+  <data name="Settings.SmtpHost" xml:space="preserve"><value>SMTP host</value></data>
+  <data name="Settings.SmtpPassword" xml:space="preserve"><value>SMTP password</value></data>
+  <data name="Settings.SmtpPort" xml:space="preserve"><value>SMTP port</value></data>
+  <data name="Settings.SmtpUsername" xml:space="preserve"><value>SMTP username</value></data>
+  <data name="Settings.Stamped" xml:space="preserve"><value>stamped at build time</value></data>
+  <data name="Settings.Stored" xml:space="preserve"><value>(stored)</value></data>
+  <data name="Settings.Subtitle" xml:space="preserve"><value>Owner settings for alerts, email delivery and the family.</value></data>
+  <data name="Settings.TheChild" xml:space="preserve"><value>the child</value></data>
+  <data name="Settings.TwoFactor" xml:space="preserve"><value>Two-factor authentication</value></data>
+  <data name="Settings.UseSsl" xml:space="preserve"><value>Use SSL/TLS</value></data>
+  <data name="Setup.ChildName" xml:space="preserve"><value>Child’s name</value></data>
+  <data name="Setup.ChildPlaceholder" xml:space="preserve"><value>Child name</value></data>
+  <data name="Setup.ConfirmPassword" xml:space="preserve"><value>Confirm password</value></data>
+  <data name="Setup.CreateFamily" xml:space="preserve"><value>Create family</value></data>
+  <data name="Setup.FamilyName" xml:space="preserve"><value>Family name</value></data>
+  <data name="Setup.FamilyPlaceholder" xml:space="preserve"><value>Our family</value></data>
+  <data name="Setup.Note" xml:space="preserve"><value>The owner account is created by the server operator, not by this job’s automated tests.</value></data>
+  <data name="Setup.ParentPlaceholder" xml:space="preserve"><value>Parent name</value></data>
+  <data name="Setup.PasswordRule" xml:space="preserve"><value>At least 8 characters with upper, lower and a digit.</value></data>
+  <data name="Setup.Subtitle" xml:space="preserve"><value>Create the owner account and the first child profile. Signup closes after this step.</value></data>
+  <data name="Setup.Title" xml:space="preserve"><value>First-run setup</value></data>
+  <data name="Setup.YourName" xml:space="preserve"><value>Your name</value></data>
+  <data name="Team.AllPermissions" xml:space="preserve"><value>All permissions</value></data>
+  <data name="Team.CoParent" xml:space="preserve"><value>Co-parent</value></data>
+  <data name="Team.CopyLink" xml:space="preserve"><value>Copy this link and send it to the parent.</value></data>
+  <data name="Team.CreateInvitation" xml:space="preserve"><value>Create invitation</value></data>
+  <data name="Team.EmailOptional" xml:space="preserve"><value>Email (optional)</value></data>
+  <data name="Team.EmailSent" xml:space="preserve"><value>Email sent.</value></data>
+  <data name="Team.Expires" xml:space="preserve"><value>Expires {0}</value></data>
+  <data name="Team.Invite" xml:space="preserve"><value>Invite a co-parent</value></data>
+  <data name="Team.InviteHelp" xml:space="preserve"><value>Email invitations expire in 72 hours. A link-only invitation is also possible; copy it and send it yourself. Each link is single-use.</value></data>
+  <data name="Team.InviteResent" xml:space="preserve"><value>Invitation email sent again.</value></data>
+  <data name="Team.InviteRevoked" xml:space="preserve"><value>Invitation revoked.</value></data>
+  <data name="Team.LinkOnly" xml:space="preserve"><value>Link-only invitation</value></data>
+  <data name="Team.NoPending" xml:space="preserve"><value>No pending co-parent invitations.</value></data>
+  <data name="Team.OneTimeLink" xml:space="preserve"><value>One-time link</value></data>
+  <data name="Team.OwnerOnly" xml:space="preserve"><value>Only the family owner can manage parents and invitations.</value></data>
+  <data name="Team.PageTitle" xml:space="preserve"><value>Parents · Parental OpControl</value></data>
+  <data name="Team.ParentNotFound" xml:space="preserve"><value>Parent not found.</value></data>
+  <data name="Team.ParentRemoved" xml:space="preserve"><value>Parent removed and signed out.</value></data>
+  <data name="Team.Pending" xml:space="preserve"><value>Pending invitations</value></data>
+  <data name="Team.Perm.App" xml:space="preserve"><value>App rules</value></data>
+  <data name="Team.Perm.Devices" xml:space="preserve"><value>Manage devices</value></data>
+  <data name="Team.Perm.Lock" xml:space="preserve"><value>Lock / unlock and bonus time</value></data>
+  <data name="Team.Perm.Pin" xml:space="preserve"><value>Manage PIN</value></data>
+  <data name="Team.Perm.Remote" xml:space="preserve"><value>Remote screen and camera view</value></data>
+  <data name="Team.Perm.Reports" xml:space="preserve"><value>View reports and activity</value></data>
+  <data name="Team.Perm.Schedules" xml:space="preserve"><value>Schedules and limits</value></data>
+  <data name="Team.Perm.Website" xml:space="preserve"><value>Website rules</value></data>
+  <data name="Team.Permissions" xml:space="preserve"><value>Permissions</value></data>
+  <data name="Team.PermissionsFor" xml:space="preserve"><value>Permissions for {0}</value></data>
+  <data name="Team.PermissionsSaved" xml:space="preserve"><value>Permissions saved. The parent's next request uses the new set.</value></data>
+  <data name="Team.Resend" xml:space="preserve"><value>Resend</value></data>
+  <data name="Team.Revoke" xml:space="preserve"><value>Revoke</value></data>
+  <data name="Team.SavePermissions" xml:space="preserve"><value>Save permissions</value></data>
+  <data name="Team.ServerAdmin" xml:space="preserve"><value>· server admin</value></data>
+  <data name="Team.Subtitle" xml:space="preserve"><value>Invite a co-parent and choose exactly what they can do. Every action is recorded with their name.</value></data>
+  <data name="TwoFactor.Active" xml:space="preserve"><value>Two-factor authentication is active for this account.</value></data>
+  <data name="TwoFactor.Back" xml:space="preserve"><value>Back to sign in</value></data>
+  <data name="TwoFactor.Code" xml:space="preserve"><value>Authenticator code</value></data>
+  <data name="TwoFactor.Code6" xml:space="preserve"><value>6-digit code</value></data>
+  <data name="TwoFactor.Disable" xml:space="preserve"><value>Disable 2FA</value></data>
+  <data name="TwoFactor.DisableConfirm" xml:space="preserve"><value>Disable two-factor authentication?</value></data>
+  <data name="TwoFactor.Disabled" xml:space="preserve"><value>Two-factor authentication disabled.</value></data>
+  <data name="TwoFactor.Enable" xml:space="preserve"><value>Enable 2FA</value></data>
+  <data name="TwoFactor.EnableFirst" xml:space="preserve"><value>Enable two-factor authentication first.</value></data>
+  <data name="TwoFactor.Enabled" xml:space="preserve"><value>Two-factor authentication enabled. Save your recovery codes now.</value></data>
+  <data name="TwoFactor.Eyebrow" xml:space="preserve"><value>Account security</value></data>
+  <data name="TwoFactor.InvalidCode" xml:space="preserve"><value>The code is not valid.</value></data>
+  <data name="TwoFactor.InvalidCodeClock" xml:space="preserve"><value>The code is not valid. Check the device clock and try again.</value></data>
+  <data name="TwoFactor.ManualKey" xml:space="preserve"><value>Manual key</value></data>
+  <data name="TwoFactor.NewRecovery" xml:space="preserve"><value>New recovery codes generated. The previous codes no longer work.</value></data>
+  <data name="TwoFactor.NotEnabled" xml:space="preserve"><value>Not enabled</value></data>
+  <data name="TwoFactor.QrAlt" xml:space="preserve"><value>TOTP QR code</value></data>
+  <data name="TwoFactor.Recovery" xml:space="preserve"><value>Recovery codes</value></data>
+  <data name="TwoFactor.RecoveryHelp" xml:space="preserve"><value>Recovery codes are generated when you enable 2FA, or when you regenerate them.</value></data>
+  <data name="TwoFactor.RecoveryNote" xml:space="preserve"><value>Store these codes somewhere safe. They are shown once.</value></data>
+  <data name="TwoFactor.Regenerate" xml:space="preserve"><value>Regenerate recovery codes</value></data>
+  <data name="TwoFactor.ScanHelp" xml:space="preserve"><value>Scan the QR code with Google Authenticator, Microsoft Authenticator, 1Password or another TOTP app, then enter the 6-digit code.</value></data>
+  <data name="TwoFactor.Subtitle" xml:space="preserve"><value>Enter the 6-digit code from your authenticator app.</value></data>
+  <data name="TwoFactor.SubtitleLong" xml:space="preserve"><value>Use an authenticator app (TOTP) for parent sign-in.</value></data>
+  <data name="TwoFactor.Title" xml:space="preserve"><value>Two-factor sign-in</value></data>
+  <data name="TwoFactor.UseRecovery" xml:space="preserve"><value>Use a recovery code instead</value></data>
+  <data name="TwoFactor.Verify" xml:space="preserve"><value>Verify</value></data>
+  <data name="UpdateStatus.failed" xml:space="preserve"><value>failed</value></data>
+  <data name="UpdateStatus.healthy" xml:space="preserve"><value>healthy</value></data>
+  <data name="UpdateStatus.installing" xml:space="preserve"><value>installing</value></data>
+  <data name="UpdateStatus.rolledback" xml:space="preserve"><value>rolled back</value></data>
+  <data name="UpdateStatus.updated" xml:space="preserve"><value>updated</value></data>
+  <data name="Validation.Required" xml:space="preserve"><value>This field is required.</value></data>
+  <data name="Websites.AllowAgain" xml:space="preserve"><value>Allow again</value></data>
+  <data name="Websites.AllowedAlways" xml:space="preserve"><value>Allowed always</value></data>
+  <data name="Websites.Always" xml:space="preserve"><value>Always</value></data>
+  <data name="Websites.BlockAgain" xml:space="preserve"><value>Block again</value></data>
+  <data name="Websites.BlockPlaceholder" xml:space="preserve"><value>Block a website, e.g. youtube.com</value></data>
+  <data name="Websites.BlockedAlways" xml:space="preserve"><value>Blocked always</value></data>
+  <data name="Websites.BlockedAttemptMany" xml:space="preserve"><value>{0} blocked attempts</value></data>
+  <data name="Websites.BlockedAttemptOne" xml:space="preserve"><value>{0} blocked attempt</value></data>
+  <data name="Websites.BlockedDuringSchedule" xml:space="preserve"><value>Blocked during schedule</value></data>
+  <data name="Websites.Categories" xml:space="preserve"><value>Categories</value></data>
+  <data name="Websites.DuringSchedule" xml:space="preserve"><value>During schedule</value></data>
+  <data name="Websites.FilterAll" xml:space="preserve"><value>All visits</value></data>
+  <data name="Websites.FilterBlocked" xml:space="preserve"><value>Blocked attempts</value></data>
+  <data name="Websites.FilterNotBlocked" xml:space="preserve"><value>Not blocked</value></data>
+  <data name="Websites.History" xml:space="preserve"><value>Previously blocked or allowed</value></data>
+  <data name="Websites.LastVisit" xml:space="preserve"><value>last {0}</value></data>
+  <data name="Websites.LatestCount" xml:space="preserve"><value>Latest {0}</value></data>
+  <data name="Websites.NewThisWeek" xml:space="preserve"><value>New this week</value></data>
+  <data name="Websites.NextDay" xml:space="preserve"><value>Next day</value></data>
+  <data name="Websites.NoAlwaysAllowed" xml:space="preserve"><value>No always-allowed sites.</value></data>
+  <data name="Websites.NoAlwaysBlocked" xml:space="preserve"><value>No always-blocked sites.</value></data>
+  <data name="Websites.NoHistory" xml:space="preserve"><value>No website rule changes recorded yet.</value></data>
+  <data name="Websites.NoScheduledRules" xml:space="preserve"><value>No scheduled site rules.</value></data>
+  <data name="Websites.NoVisitsDay" xml:space="preserve"><value>No visits recorded for this day.</value></data>
+  <data name="Websites.Overrides" xml:space="preserve"><value>Overrides categories and schedules</value></data>
+  <data name="Websites.PageTitle" xml:space="preserve"><value>Websites · Parental OpControl</value></data>
+  <data name="Websites.PreviousDay" xml:space="preserve"><value>Previous day</value></data>
+  <data name="Websites.RuleCounts" xml:space="preserve"><value>{0} blocked · {1} allowed</value></data>
+  <data name="Websites.RuleRemoved" xml:space="preserve"><value>Rule removed</value></data>
+  <data name="Websites.Rules" xml:space="preserve"><value>Website rules</value></data>
+  <data name="Websites.SchedulePlaceholder" xml:space="preserve"><value>Schedule…</value></data>
+  <data name="Websites.Since" xml:space="preserve"><value>Since {0}</value></data>
+  <data name="Websites.Subtitle" xml:space="preserve"><value>Visited sites, block rules and curated categories. Domain and time only.</value></data>
+  <data name="Websites.Unblock" xml:space="preserve"><value>Unblock</value></data>
+  <data name="Websites.VisitedSites" xml:space="preserve"><value>Visited sites</value></data>
+</root>

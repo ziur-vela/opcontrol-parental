@@ -2,13 +2,13 @@
 @model AccountTwoFactorModel
 @{
     Layout = "_Layout";
-    ViewData["Title"] = "Two-factor authentication";
+    ViewData["Title"] = L["Settings.TwoFactor"];
 }
 <div class="page-head">
     <div>
-        <div class="eyebrow">Account security</div>
-        <h1>Two-factor authentication</h1>
-        <p class="muted">Use an authenticator app (TOTP) for parent sign-in.</p>
+        <div class="eyebrow">@L["TwoFactor.Eyebrow"]</div>
+        <h1>@L["Settings.TwoFactor"]</h1>
+        <p class="muted">@L["TwoFactor.SubtitleLong"]</p>
     </div>
 </div>
 
@@ -20,38 +20,38 @@
 <div class="grid-2">
     <div class="card">
         <div class="card-title-row">
-            <h2>Status</h2>
-            <span class="pill-soft">@(Model.IsEnabled ? "Enabled" : "Not enabled")</span>
+            <h2>@L["Pin.Status"]</h2>
+            <span class="pill-soft">@(Model.IsEnabled ? L["TwoFactor.Enabled"] : L["TwoFactor.NotEnabled"])</span>
         </div>
         @if (Model.IsEnabled)
         {
-            <p class="muted">Two-factor authentication is active for this account.</p>
-            <form method="post" asp-page-handler="Disable" onsubmit="return confirm('Disable two-factor authentication?');">
-                <button type="submit" class="btn btn-danger">Disable 2FA</button>
+            <p class="muted">@L["TwoFactor.Active"]</p>
+            <form method="post" asp-page-handler="Disable" onsubmit="return confirm('@L["TwoFactor.DisableConfirm"]');">
+                <button type="submit" class="btn btn-danger">@L["TwoFactor.Disable"]</button>
             </form>
             <form method="post" asp-page-handler="RegenerateRecoveryCodes">
-                <button type="submit" class="btn btn-ghost">Regenerate recovery codes</button>
+                <button type="submit" class="btn btn-ghost">@L["TwoFactor.Regenerate"]</button>
             </form>
         }
         else
         {
-            <p class="muted">Scan the QR code with Google Authenticator, Microsoft Authenticator, 1Password or another TOTP app, then enter the 6-digit code.</p>
-            <div class="qr-box"><img src="@Model.QrDataUri" alt="TOTP QR code" /></div>
+            <p class="muted">@L["TwoFactor.ScanHelp"]</p>
+            <div class="qr-box"><img src="@Model.QrDataUri" alt="@L["TwoFactor.QrAlt"]" /></div>
             <div>
-                <div class="muted tiny">Manual key</div>
+                <div class="muted tiny">@L["TwoFactor.ManualKey"]</div>
                 <div class="key-box">@Model.ManualKey</div>
             </div>
             <form method="post" asp-page-handler="Enable" class="stack">
-                <label class="field"><span>6-digit code</span><input name="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" /></label>
-                <button type="submit" class="btn btn-primary">Enable 2FA</button>
+                <label class="field"><span>@L["TwoFactor.Code6"]</span><input name="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" /></label>
+                <button type="submit" class="btn btn-primary">@L["TwoFactor.Enable"]</button>
             </form>
         }
     </div>
     <div class="card">
-        <h2>Recovery codes</h2>
+        <h2>@L["TwoFactor.Recovery"]</h2>
         @if (Model.RecoveryCodes.Count > 0)
         {
-            <div class="alert">Store these codes somewhere safe. They are shown once.</div>
+            <div class="alert">@L["TwoFactor.RecoveryNote"]</div>
             <div class="recovery-list">
                 @foreach (var code in Model.RecoveryCodes)
                 {
@@ -61,8 +61,8 @@
         }
         else
         {
-            <p class="muted">Recovery codes are generated when you enable 2FA, or when you regenerate them.</p>
+            <p class="muted">@L["TwoFactor.RecoveryHelp"]</p>
         }
-        <a class="btn btn-ghost" href="/settings">Back to settings</a>
+        <a class="btn btn-ghost" href="/settings">@L["Pin.Back"]</a>
     </div>
 </div>

@@ -49,7 +49,7 @@ public sealed class UsageService
     public async Task EnsureChildAsync(Guid familyId, Guid childId, CancellationToken ct = default)
     {
         if (!await _db.Children.AnyAsync(c => c.Id == childId && c.FamilyId == familyId, ct))
-            throw new InvalidOperationException("Child not found in this family.");
+            throw new InvalidOperationException(AppText.Get("Error.ChildNotFound"));
     }
 
     public async Task<ScreenTimeLimit> EnsureLimitAsync(Guid familyId, Guid childId, CancellationToken ct = default)
@@ -295,8 +295,7 @@ public sealed class UsageService
             });
             await _db.SaveChangesAsync(ct);
             await _alerts.AddAsync(device.FamilyId, device.ChildId, device.Id, "tampering",
-                "Usage data failed sanity checks",
-                $"{device.Name}: usage records were rejected or truncated ({detail}).",
+                new AlertContent("Alert.UsageSanity.Title", "Alert.UsageSanity.Detail", device.Name, detail),
                 TimeSpan.FromHours(1), ct);
             return;
         }

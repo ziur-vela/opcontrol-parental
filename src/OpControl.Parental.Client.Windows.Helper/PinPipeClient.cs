@@ -1,6 +1,7 @@
 using System.IO.Pipes;
 using System.Text.Json;
 using OpControl.Parental.Contracts;
+using OpControl.Parental.Localization;
 
 namespace OpControl.Parental.Helper;
 
@@ -32,12 +33,12 @@ public static class PinPipeClient
             await writer.WriteLineAsync(JsonSerializer.Serialize(request, JsonOptions));
             var line = await reader.ReadLineAsync(timeout.Token);
             if (string.IsNullOrWhiteSpace(line))
-                return new PinPipeResponse(false, "The device service did not respond.");
-            return JsonSerializer.Deserialize<PinPipeResponse>(line, JsonOptions) ?? new PinPipeResponse(false, "Invalid response.");
+                return new PinPipeResponse(false, Loc.T("Client.Pipe.NoService"));
+            return JsonSerializer.Deserialize<PinPipeResponse>(line, JsonOptions) ?? new PinPipeResponse(false, Loc.T("Client.Pipe.InvalidResponse"));
         }
         catch (Exception ex)
         {
-            return new PinPipeResponse(false, "The device service is not available: " + ex.Message);
+            return new PinPipeResponse(false, Loc.T("Client.Pipe.ServiceUnavailable", ex.Message));
         }
     }
 }

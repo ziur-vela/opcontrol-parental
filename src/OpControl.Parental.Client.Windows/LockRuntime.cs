@@ -187,7 +187,8 @@ public sealed class LockRuntime
             LockRules.DailyLimitRemainingSeconds(state.DailyLimit, now),
             state.DailyLimit is { Enabled: true } ? state.DailyLimit.TodayMinutes : null,
             state.SpokenWarnings,
-            _settings.Value.IdleThresholdSeconds);
+            _settings.Value.IdleThresholdSeconds,
+            state.Language);
         var changed = _runtime is null
             || _runtime.IsLocked != runtime.IsLocked
             || _runtime.Reason != runtime.Reason

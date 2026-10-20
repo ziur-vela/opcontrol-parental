@@ -5,23 +5,28 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using OpControl.Parental.Server.Data;
 using OpControl.Parental.Server.Services;
+using Microsoft.Extensions.Localization;
+using OpControl.Parental.Server.Resources;
 
 namespace OpControl.Parental.Server.Pages;
 
 [Authorize(Policy = ParentalPolicies.SchedulesLimits)]
 public class SchedulesModel : PageModel
 {
-    public static readonly string[] DayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    public readonly string[] DayNames;
 
     private readonly ParentalDbContext _db;
     private readonly FamilyScope _family;
     private readonly LockService _locks;
+    private readonly IStringLocalizer<AppStrings> _l;
 
-    public SchedulesModel(ParentalDbContext db, FamilyScope family, LockService locks)
+    public SchedulesModel(ParentalDbContext db, FamilyScope family, LockService locks, IStringLocalizer<AppStrings> localizer)
     {
         _db = db;
         _family = family;
         _locks = locks;
+        _l = localizer;
+        DayNames = [_l["Day.Sun"], _l["Day.Mon"], _l["Day.Tue"], _l["Day.Wed"], _l["Day.Thu"], _l["Day.Fri"], _l["Day.Sat"]];
     }
 
     public Guid ChildId { get; set; }
@@ -46,19 +51,19 @@ public class SchedulesModel : PageModel
         if (ChildId == Guid.Empty) return RedirectToPage("/Login");
 
         if (string.IsNullOrWhiteSpace(NewName) || NewName.Length > 120)
-            return Fail("Schedule name is required.");
+            return Fail(_l["Schedules.NameRequired"]);
         if (days.Length == 0)
-            return Fail("Pick at least one day.");
+            return Fail(_l["Schedules.PickDay"]);
         if (!TimeOnly.TryParse(NewStart, out var start) || !TimeOnly.TryParse(NewEnd, out var end))
-            return Fail("Start and end must be valid times.");
+            return Fail(_l["Schedules.InvalidTimes"]);
         var startMinutes = start.Hour * 60 + start.Minute;
         var endMinutes = end.Hour * 60 + end.Minute;
         if (startMinutes == endMinutes)
-            return Fail("Start and end cannot be the same.");
+            return Fail(_l["Schedules.SameTimes"]);
 
         var mask = 0;
         foreach (var day in days.Where(d => d is >= 0 and <= 6)) mask |= 1 << day;
-        if (mask == 0) return Fail("Pick at least one day.");
+        if (mask == 0) return Fail(_l["Schedules.PickDay"]);
 
         _db.Schedules.Add(new Schedule
         {
@@ -97,7 +102,7 @@ public class SchedulesModel : PageModel
                 ChildId = schedule.ChildId,
                 CreatedByParentId = _family.ParentId,
                 Option = "schedule-toggled",
-                Detail = $"{schedule.Name} {(schedule.IsEnabled ? "enabled" : "disabled")}",
+                Detail = $"{schedule.Name} {(schedule.IsEnabled ? _l["Schedules.Enabled"] : _l["Schedules.Disabled"])}",
                 CreatedUtc = DateTime.UtcNow
             });
             await _db.SaveChangesAsync();
@@ -149,11 +154,12 @@ public class SchedulesModel : PageModel
             .ToListAsync();
     }
 
-    public static string TimeLabel(int minutes) => $"{minutes / 60:00}:{minutes % 60:00}";
+    public static string TimeLabel(int minutes) =>
+        DateTime.Today.AddMinutes(minutes).ToString("t", System.Globalization.CultureInfo.CurrentCulture);
 
-    public static string DaysLabel(int mask)
+    public string DaysLabel(int mask)
     {
-        if (mask == 0x7F) return "Every day";
+        if (mask == 0x7F) return _l["Schedules.EveryDay"];
         return string.Join(", ", Enumerable.Range(0, 7).Where(i => (mask & (1 << i)) != 0).Select(i => DayNames[i]));
     }
 }

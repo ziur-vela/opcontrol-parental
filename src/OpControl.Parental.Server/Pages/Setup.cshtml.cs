@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using OpControl.Parental.Contracts;
 using OpControl.Parental.Server.Data;
+using OpControl.Parental.Server.Services;
 
 namespace OpControl.Parental.Server.Pages;
 
@@ -20,6 +21,8 @@ public class SetupModel : PageModel
         _users = users;
         _signIn = signIn;
     }
+
+    private string BrowserLanguage => AppCulture.FromAcceptLanguage(Request.Headers.AcceptLanguage);
 
     [BindProperty]
     public SetupInput Input { get; set; } = new();
@@ -56,7 +59,7 @@ public class SetupModel : PageModel
         if (!ModelState.IsValid)
             return Page();
 
-        var family = new Family { Name = Input.FamilyName.Trim() };
+        var family = new Family { Name = Input.FamilyName.Trim(), DefaultLanguage = BrowserLanguage };
         _db.Families.Add(family);
 
         var user = new ParentUser
@@ -66,13 +69,14 @@ public class SetupModel : PageModel
             RoleInFamily = FamilyRole.Owner,
             UserName = Input.Email.Trim(),
             Email = Input.Email.Trim(),
+            PreferredLanguage = BrowserLanguage,
             EmailConfirmed = true
         };
 
         var created = await _users.CreateAsync(user, Input.Password);
         if (!created.Succeeded)
         {
-            Errors.AddRange(created.Errors.Select(e => e.Description));
+            Errors.Add(IdentityErrorText.Describe(created.Errors));
             _db.Families.Remove(family);
             await _db.SaveChangesAsync();
             return Page();

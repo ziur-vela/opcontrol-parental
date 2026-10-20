@@ -39,12 +39,12 @@ public sealed class InvitationService
     public async Task<InvitationCreatedDto> CreateCoParentAsync(Guid familyId, Guid inviterId, string? email, ParentPermissions permissions, CancellationToken ct = default)
     {
         var family = await _db.Families.FirstOrDefaultAsync(f => f.Id == familyId, ct)
-            ?? throw new InvitationException("Family not found.");
+            ?? throw new InvitationException(AppText.Get("Invite.FamilyNotFound"));
         var address = NormalizeEmail(email);
         if (address.Length > 0)
         {
             var exists = await _db.Users.AsNoTracking().AnyAsync(u => u.Email != null && u.Email.ToLower() == address, ct);
-            if (exists) throw new InvitationException("A parent with that email already has an account on this server.");
+            if (exists) throw new InvitationException(AppText.Get("Invite.EmailExists"));
         }
 
         return await CreateAsync(InvitationKind.CoParent, familyId, family.Name, address.Length == 0 ? null : address,
@@ -100,16 +100,16 @@ public sealed class InvitationService
     {
         var invitation = await ValidForUpdateAsync(token, ct);
         if (invitation.Kind != InvitationKind.CoParent || invitation.FamilyId is null)
-            throw new InvitationException("This invitation is not a co-parent invitation.");
+            throw new InvitationException(AppText.Get("Invite.NotCoParent"));
         var family = await _db.Families.FirstOrDefaultAsync(f => f.Id == invitation.FamilyId, ct)
-            ?? throw new InvitationException("Family not found.");
+            ?? throw new InvitationException(AppText.Get("Invite.FamilyNotFound"));
         if (family.Status == FamilyStatus.Suspended)
-            throw new InvitationException("This family is suspended.");
+            throw new InvitationException(AppText.Get("Invite.FamilySuspended"));
 
         var address = NormalizeEmail(email);
-        if (address.Length == 0) throw new InvitationException("Enter your email address.");
+        if (address.Length == 0) throw new InvitationException(AppText.Get("Invite.EnterEmail"));
         if (invitation.Email is not null && !string.Equals(invitation.Email, address, StringComparison.OrdinalIgnoreCase))
-            throw new InvitationException("Use the email address this invitation was sent to.");
+            throw new InvitationException(AppText.Get("Invite.UseInvitedEmail"));
 
         var user = new ParentUser
         {
@@ -123,7 +123,7 @@ public sealed class InvitationService
         };
         var created = await _users.CreateAsync(user, password);
         if (!created.Succeeded)
-            throw new InvitationException(string.Join(" ", created.Errors.Select(e => e.Description)));
+            throw new InvitationException(IdentityErrorText.Describe(created.Errors));
 
         invitation.UsedUtc = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
@@ -131,20 +131,20 @@ public sealed class InvitationService
         return (user, family.Id);
     }
 
-    public async Task<(ParentUser User, Guid FamilyId)> AcceptNewFamilyAsync(string token, string familyName, string ownerName, string email, string password, string childName, CancellationToken ct = default)
+    public async Task<(ParentUser User, Guid FamilyId)> AcceptNewFamilyAsync(string token, string familyName, string ownerName, string email, string password, string childName, string? language = null, CancellationToken ct = default)
     {
         var invitation = await ValidForUpdateAsync(token, ct);
         if (invitation.Kind != InvitationKind.NewFamily)
-            throw new InvitationException("This invitation is not a new-family invitation.");
-        if (string.IsNullOrWhiteSpace(familyName)) throw new InvitationException("Enter a family name.");
-        if (string.IsNullOrWhiteSpace(childName)) throw new InvitationException("Enter the first child's name.");
+            throw new InvitationException(AppText.Get("Invite.NotNewFamily"));
+        if (string.IsNullOrWhiteSpace(familyName)) throw new InvitationException(AppText.Get("Invite.EnterFamilyName"));
+        if (string.IsNullOrWhiteSpace(childName)) throw new InvitationException(AppText.Get("Invite.EnterChildName"));
 
         var address = NormalizeEmail(email);
-        if (address.Length == 0) throw new InvitationException("Enter your email address.");
+        if (address.Length == 0) throw new InvitationException(AppText.Get("Invite.EnterEmail"));
         if (invitation.Email is not null && !string.Equals(invitation.Email, address, StringComparison.OrdinalIgnoreCase))
-            throw new InvitationException("Use the email address this invitation was sent to.");
+            throw new InvitationException(AppText.Get("Invite.UseInvitedEmail"));
 
-        var family = new Family { Name = familyName.Trim() };
+        var family = new Family { Name = familyName.Trim(), DefaultLanguage = AppCulture.Normalize(language) };
         _db.Families.Add(family);
         var user = new ParentUser
         {
@@ -154,13 +154,14 @@ public sealed class InvitationService
             Permissions = ParentPermissions.All,
             UserName = address,
             Email = address,
+            PreferredLanguage = AppCulture.Normalize(language),
             EmailConfirmed = true
         };
         var created = await _users.CreateAsync(user, password);
         if (!created.Succeeded)
         {
             _db.Families.Remove(family);
-            throw new InvitationException(string.Join(" ", created.Errors.Select(e => e.Description)));
+            throw new InvitationException(IdentityErrorText.Describe(created.Errors));
         }
 
         var child = new Child { FamilyId = family.Id, Name = childName.Trim() };
@@ -177,14 +178,14 @@ public sealed class InvitationService
 
     private async Task<Invitation> ValidForUpdateAsync(string token, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(token)) throw new InvitationException("Invitation link is missing.");
+        if (string.IsNullOrWhiteSpace(token)) throw new InvitationException(AppText.Get("Invite.Missing"));
         var hash = SecretToken.Hash(token);
         var now = DateTime.UtcNow;
         var invitation = await _db.Invitations.FirstOrDefaultAsync(i => i.TokenHash == hash, ct)
-            ?? throw new InvitationException("This invitation link is not valid.");
-        if (invitation.RevokedUtc is not null) throw new InvitationException("This invitation was revoked.");
-        if (invitation.UsedUtc is not null) throw new InvitationException("This invitation was already used.");
-        if (invitation.ExpiresUtc <= now) throw new InvitationException("This invitation has expired.");
+            ?? throw new InvitationException(AppText.Get("Invite.Invalid"));
+        if (invitation.RevokedUtc is not null) throw new InvitationException(AppText.Get("Invite.Revoked"));
+        if (invitation.UsedUtc is not null) throw new InvitationException(AppText.Get("Invite.Used"));
+        if (invitation.ExpiresUtc <= now) throw new InvitationException(AppText.Get("Invite.Expired"));
         return invitation;
     }
 
@@ -222,28 +223,45 @@ public sealed class InvitationService
     public async Task<(bool Ok, string? Error, bool EmailSent)> ResendAsync(Guid invitationId, Guid? familyId = null, CancellationToken ct = default)
     {
         var invitation = await _db.Invitations.FirstOrDefaultAsync(i => i.Id == invitationId, ct);
-        if (invitation is null) return (false, "Invitation not found.", false);
-        if (familyId is not null && invitation.FamilyId != familyId) return (false, "Invitation not found.", false);
+        if (invitation is null) return (false, AppText.Get("Invite.NotFound"), false);
+        if (familyId is not null && invitation.FamilyId != familyId) return (false, AppText.Get("Invite.NotFound"), false);
         if (invitation.UsedUtc is not null || invitation.RevokedUtc is not null || invitation.ExpiresUtc <= DateTime.UtcNow)
-            return (false, "This invitation can no longer be resent.", false);
-        if (invitation.Email is null) return (false, "This invitation has no email address; copy the link again instead.", false);
+            return (false, AppText.Get("Invite.CannotResend"), false);
+        if (invitation.Email is null) return (false, AppText.Get("Invite.NoEmail"), false);
 
         var token = _protector.Unprotect(invitation.TokenProtected);
         var sent = await SendInviteEmailAsync(invitation, $"{BaseUrl}/invite/{token}", ct);
-        return (true, sent ? null : "The invitation is valid but the email could not be sent.", sent);
+        return (true, sent ? null : AppText.Get("Invite.EmailFailed"), sent);
     }
 
     private async Task<bool> SendInviteEmailAsync(Invitation invitation, string link, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(invitation.Email)) return false;
-        var subject = invitation.Kind == InvitationKind.NewFamily
-            ? "Invitation to create your family on Parental OpControl"
-            : "You have been invited as a co-parent on Parental OpControl";
+        var language = await InvitationLanguageAsync(invitation, ct);
+        using var scope = CultureScope.Use(language);
+        var subject = AppText.Get(invitation.Kind == InvitationKind.NewFamily
+            ? "Email.InviteNewFamilySubject"
+            : "Email.InviteCoParentSubject", language);
         var body = invitation.Kind == InvitationKind.NewFamily
-            ? $"Hello,\n\nYou have been invited to create a family on Parental OpControl.\n\nOpen this one-time link within 7 days:\n{link}\n\nIf you were not expecting this, ignore this email."
-            : $"Hello,\n\nYou have been invited to join {invitation.FamilyName} as a co-parent on Parental OpControl.\n\nOpen this one-time link within 72 hours:\n{link}\n\nIf you were not expecting this, ignore this email.";
+            ? AppText.Get("Email.InviteNewFamilyBody", language, link)
+            : AppText.Get("Email.InviteCoParentBody", language, invitation.FamilyName ?? "", link);
         var (sent, _) = await _email.SendAsync(invitation.Email, subject, body, ct);
         return sent;
+    }
+
+    private async Task<string> InvitationLanguageAsync(Invitation invitation, CancellationToken ct)
+    {
+        if (invitation.FamilyId is { } familyId)
+        {
+            var familyLanguage = await _db.Families.AsNoTracking()
+                .Where(f => f.Id == familyId).Select(f => f.DefaultLanguage).FirstOrDefaultAsync(ct);
+            if (!string.IsNullOrWhiteSpace(familyLanguage)) return AppCulture.Normalize(familyLanguage);
+        }
+        var inviterLanguage = await _db.Users.AsNoTracking()
+            .Where(u => u.Id == invitation.CreatedByParentId)
+            .Join(_db.Families.AsNoTracking(), u => u.FamilyId, f => f.Id, (u, f) => f.DefaultLanguage)
+            .FirstOrDefaultAsync(ct);
+        return AppCulture.Normalize(inviterLanguage);
     }
 
     private static InvitationDto ToDto(Invitation i) =>

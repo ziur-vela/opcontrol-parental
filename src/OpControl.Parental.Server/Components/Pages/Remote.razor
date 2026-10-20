@@ -10,18 +10,19 @@
 @inject IServiceScopeFactory Scopes
 @inject DevicePresenceService Presence
 @inject IJSRuntime JS
+@inject IStringLocalizer<AppStrings> L
 
-<PageTitle>Remote · Parental OpControl</PageTitle>
+<PageTitle>@L["Remote.PageTitle"]</PageTitle>
 
 <div class="page-head">
     <div>
-        <div class="eyebrow">Family</div>
-        <h1>Remote</h1>
-        <p class="muted">View the device screen or camera on demand. Screen view is silent; camera access is indicated by the device's hardware light.</p>
+        <div class="eyebrow">@L["Settings.FamilyEyebrow"]</div>
+        <h1>@L["Nav.Remote"]</h1>
+        <p class="muted">@L["Remote.Subtitle"]</p>
     </div>
     @if (_cameraConsentAccepted)
     {
-        <span class="pill-soft consent-ok">✓ Camera supervision terms accepted</span>
+        <span class="pill-soft consent-ok">@L["Remote.ConsentAccepted"]</span>
     }
 </div>
 
@@ -32,12 +33,12 @@
 
 <section class="card">
     <div class="card-title-row">
-        <h2>Devices</h2>
-        <span class="pill-soft">Parent-initiated · 10 min max</span>
+        <h2>@L["Nav.Devices"]</h2>
+        <span class="pill-soft">@L["Remote.SessionLimit"]</span>
     </div>
     @if (_devices.Count == 0)
     {
-        <p class="muted">No devices are enrolled yet.</p>
+        <p class="muted">@L["Remote.NoDevices"]</p>
     }
     else
     {
@@ -48,11 +49,11 @@
                     <span class="status-dot @(device.Online ? "online" : "offline")"></span>
                     <div class="device-main">
                         <div class="device-name">@device.Name</div>
-                        <div class="muted tiny">@device.ChildName · @(device.Online ? "Online" : "Offline")</div>
+                        <div class="muted tiny">@device.ChildName · @(device.Online ? L["Common.Online"] : L["Common.Offline"])</div>
                     </div>
                     <div class="device-meta">
-                        <button class="btn btn-ghost" disabled="@(!device.Online || _starting)" @onclick="() => StartAsync(device, RemoteSessionKind.Screen)">View screen</button>
-                        <button class="btn btn-ghost" disabled="@(!device.Online || _starting)" @onclick="() => StartAsync(device, RemoteSessionKind.Camera)">View camera</button>
+                        <button class="btn btn-ghost" disabled="@(!device.Online || _starting)" @onclick="() => StartAsync(device, RemoteSessionKind.Screen)">@L["Remote.ViewScreen"]</button>
+                        <button class="btn btn-ghost" disabled="@(!device.Online || _starting)" @onclick="() => StartAsync(device, RemoteSessionKind.Camera)">@L["Remote.ViewCamera"]</button>
                     </div>
                 </div>
             }
@@ -65,8 +66,8 @@
     <div class="modal-backdrop">
         <section class="card modal">
             <div class="card-title-row">
-                <h2>Camera supervision terms</h2>
-                <span class="pill-soft">One-time acceptance</span>
+                <h2>@L["Remote.ConsentTitle"]</h2>
+                <span class="pill-soft">@L["Remote.ConsentOneTime"]</span>
             </div>
             <pre class="consent-text">@_consentText</pre>
             @if (_consentError is not null)
@@ -74,8 +75,8 @@
                 <div class="alert danger">@_consentError</div>
             }
             <div class="button-row">
-                <button class="btn btn-primary" @onclick="AcceptConsentAsync">I agree</button>
-                <button class="btn btn-ghost" @onclick="CancelConsent">Cancel</button>
+                <button class="btn btn-primary" @onclick="AcceptConsentAsync">@L["Remote.IAgree"]</button>
+                <button class="btn btn-ghost" @onclick="CancelConsent">@L["Common.Cancel"]</button>
             </div>
         </section>
     </div>
@@ -87,14 +88,14 @@
         <div class="card-title-row">
             <h2>@_activeLabel</h2>
             <div class="button-row">
-                <button class="btn btn-ghost" @onclick="FullscreenAsync">Fullscreen</button>
-                <button class="btn btn-danger" @onclick="StopAsync">Stop</button>
+                <button class="btn btn-ghost" @onclick="FullscreenAsync">@L["Remote.Fullscreen"]</button>
+                <button class="btn btn-danger" @onclick="StopAsync">@L["Remote.Stop"]</button>
             </div>
         </div>
         <div class="remote-canvas-wrap">
             <canvas id="remote-canvas"></canvas>
         </div>
-        <div id="remote-status" class="muted tiny">Waiting for the device…</div>
+        <div id="remote-status" class="muted tiny">@L["Js.SessionWaiting"]</div>
     </section>
 }
 
@@ -147,7 +148,7 @@
         try
         {
             _active = true;
-            _activeLabel = $"{device.Name} · {(kind == RemoteSessionKind.Camera ? "Camera" : "Screen")}";
+            _activeLabel = $"{device.Name} · {(kind == RemoteSessionKind.Camera ? L["Remote.Camera"] : L["Remote.Screen"])}";
             StateHasChanged();
             await Task.Delay(120);
             var started = await JS.InvokeAsync<bool>("ocpRemote.start", device.DeviceId.ToString(), (int)kind, "remote-canvas", "remote-status");
@@ -165,7 +166,7 @@
             var ok = await JS.InvokeAsync<bool>("ocpRemote.acceptCameraConsent");
             if (!ok)
             {
-                _consentError = "The acceptance could not be saved. Try again.";
+                _consentError = L["Remote.ConsentSaveFailed"];
                 return;
             }
             _cameraConsentAccepted = true;

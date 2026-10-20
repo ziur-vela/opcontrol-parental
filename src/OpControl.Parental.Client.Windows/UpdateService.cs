@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using OpControl.Parental.Contracts;
+using OpControl.Parental.Localization;
 
 namespace OpControl.Parental.Client;
 
@@ -154,13 +155,13 @@ catch {
                 await Task.Delay(TimeSpan.FromSeconds(10), ct);
                 Directory.CreateDirectory(Path.GetDirectoryName(pending.HealthFile)!);
                 await File.WriteAllTextAsync(pending.HealthFile, DateTime.UtcNow.ToString("o"), ct);
-                await PostHealthAsync(pending.ToVersion, pending.FromVersion, "healthy", "New service started and reported healthy.", ct);
+                await PostHealthAsync(pending.ToVersion, pending.FromVersion, "healthy", Loc.T("Client.Update.Healthy"), ct);
                 CleanupPending();
                 _logger.LogInformation("Update to {Version} reported healthy", pending.ToVersion);
             }
             else if (string.Equals(current, pending.FromVersion, StringComparison.OrdinalIgnoreCase))
             {
-                await PostHealthAsync(pending.FromVersion, pending.ToVersion, "rolledback", "The previous version is running after the update watchdog.", ct);
+                await PostHealthAsync(pending.FromVersion, pending.ToVersion, "rolledback", Loc.T("Client.Update.RolledBack"), ct);
                 CleanupPending();
                 _logger.LogWarning("Update to {Version} appears to have rolled back", pending.ToVersion);
             }
@@ -243,7 +244,7 @@ catch {
         {
             _logger.LogError("Update {Version} failed SHA-256 verification", info.Version);
             try { File.Delete(targetPath); } catch { }
-            await PostHealthAsync(info.Version, Version, "failed", "SHA-256 verification failed.", ct);
+            await PostHealthAsync(info.Version, Version, "failed", Loc.T("Client.Update.ShaFailed"), ct);
             return;
         }
 
@@ -277,7 +278,7 @@ catch {
             WorkingDirectory = ClientPaths.UpdateDirectory
         });
         _logger.LogInformation("Update runner started (pid {Pid}); service will be replaced by MSI", process?.Id);
-        await PostHealthAsync(info.Version, Version, "installing", "The installer was verified and the update runner started.", ct);
+        await PostHealthAsync(info.Version, Version, "installing", Loc.T("Client.Update.Installing"), ct);
     }
 
     private async Task<bool> DownloadAsync(HttpClient client, DeviceCredential credential, string path, string destination, CancellationToken ct)

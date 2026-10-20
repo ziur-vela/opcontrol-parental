@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
 using OpControl.Parental.Contracts;
+using OpControl.Parental.Localization;
 
 namespace OpControl.Parental.Client;
 
@@ -285,11 +286,8 @@ public sealed class HelperSupervisor : BackgroundService
                     if (now - _lastKilledReport > TimeSpan.FromMinutes(1))
                     {
                         _lastKilledReport = now;
-                        var repeated = _recentKills.Count >= 3;
                         _sync.QueueTamper(new TamperEventDto("helper-killed",
-                            repeated
-                                ? $"The helper was killed {_recentKills.Count} times in 10 minutes; it is relaunched automatically."
-                                : "The helper process stopped unexpectedly; it is relaunched automatically.",
+                            _recentKills.Count.ToString(System.Globalization.CultureInfo.InvariantCulture),
                             now));
                         _logger.LogWarning("Helper stopped unexpectedly (count {Count} in 10 min)", _recentKills.Count);
                     }

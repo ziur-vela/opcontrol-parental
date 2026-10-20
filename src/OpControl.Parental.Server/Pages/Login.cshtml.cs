@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using OpControl.Parental.Server.Data;
+using Microsoft.Extensions.Localization;
+using OpControl.Parental.Server.Resources;
+using OpControl.Parental.Server.Services;
 
 namespace OpControl.Parental.Server.Pages;
 
@@ -11,13 +14,15 @@ public class LoginModel : PageModel
 {
     private readonly SignInManager<ParentUser> _signIn;
     private readonly ParentalDbContext _db;
-    private readonly Services.LoginThrottle _throttle;
+    private readonly LoginThrottle _throttle;
+    private readonly IStringLocalizer<AppStrings> _l;
 
-    public LoginModel(SignInManager<ParentUser> signIn, ParentalDbContext db, Services.LoginThrottle throttle)
+    public LoginModel(SignInManager<ParentUser> signIn, ParentalDbContext db, LoginThrottle throttle, IStringLocalizer<AppStrings> localizer)
     {
         _signIn = signIn;
         _db = db;
         _throttle = throttle;
+        _l = localizer;
     }
 
     [BindProperty]
@@ -38,7 +43,7 @@ public class LoginModel : PageModel
     {
         if (!await _db.Families.AnyAsync())
             return RedirectToPage("/Setup");
-        if (error == "suspended") Error = "This family is suspended. Contact the server administrator.";
+        if (error == "suspended") Error = _l["Login.Suspended"];
         if (User.Identity?.IsAuthenticated == true && Error is null)
             return LocalRedirect("/");
         return Page();
@@ -53,7 +58,7 @@ public class LoginModel : PageModel
         if (_throttle.IsBlocked(key))
         {
             Response.StatusCode = 429;
-            Error = "Too many sign-in attempts. Try again in a few minutes.";
+            Error = _l["Login.TooMany"];
             return Page();
         }
 
@@ -70,7 +75,7 @@ public class LoginModel : PageModel
         }
 
         _throttle.RecordFailure(key);
-        Error = result.IsLockedOut ? "This account is temporarily locked." : "Email or password is incorrect.";
+        Error = result.IsLockedOut ? _l["Login.LockedOut"] : _l["Login.Incorrect"];
         return Page();
     }
 }

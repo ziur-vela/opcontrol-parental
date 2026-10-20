@@ -8,8 +8,9 @@
 @using OpControl.Parental.Server.Services
 @inject AuthenticationStateProvider AuthState
 @inject IServiceScopeFactory Scopes
+@inject IStringLocalizer<AppStrings> L
 
-<PageTitle>Apps · Parental OpControl</PageTitle>
+<PageTitle>@L["Apps.PageTitle"]</PageTitle>
 
 @if (_loading)
 {
@@ -17,19 +18,19 @@
 }
 else if (_childId == Guid.Empty)
 {
-    <div class="card"><h1>No child yet</h1><p class="muted">Create a child profile first.</p></div>
+    <div class="card"><h1>@L["Common.NoChildYet"]</h1><p class="muted">@L["Common.CreateChildFirst"]</p></div>
 }
 else
 {
     <div class="page-head">
         <div>
             <div class="eyebrow">@_childName</div>
-            <h1>Apps</h1>
-            <p class="muted">Installed apps, new installs to review, and app rules.</p>
+            <h1>@L["Nav.Apps"]</h1>
+            <p class="muted">@L["Apps.Subtitle"]</p>
         </div>
         <div class="button-row">
-            <a class="btn btn-ghost" href="/websites">Websites</a>
-            <a class="btn btn-ghost" href="/schedules">Schedules</a>
+            <a class="btn btn-ghost" href="/websites">@L["Nav.Websites"]</a>
+            <a class="btn btn-ghost" href="/schedules">@L["Nav.Schedules"]</a>
         </div>
     </div>
 
@@ -40,12 +41,12 @@ else
 
     <section class="card">
         <div class="card-title-row">
-            <h2>New apps to review</h2>
-            <span class="pill-soft">@_newApps.Count new</span>
+            <h2>@L["Apps.NewToReview"]</h2>
+            <span class="pill-soft">@L["Apps.NewCount", _newApps.Count]</span>
         </div>
         @if (_newApps.Count == 0)
         {
-            <p class="muted">Nothing new since the last review.</p>
+            <p class="muted">@L["Apps.NothingNew"]</p>
         }
         else
         {
@@ -55,13 +56,13 @@ else
                     <div class="app-card">
                         <div class="app-badge">@Initial(app.DisplayName)</div>
                         <div class="app-main">
-                            <div class="rule-title">@app.DisplayName <span class="pill-soft tiny-pill">New</span></div>
-                            <div class="muted tiny">@SourceLabel(app.Source) · @(string.IsNullOrWhiteSpace(app.Publisher) ? "unknown publisher" : app.Publisher)</div>
-                            <div class="muted tiny">@app.DeviceName · first seen @FormatLocal(app.FirstSeenUtc)</div>
+                            <div class="rule-title">@app.DisplayName <span class="pill-soft tiny-pill">@L["Apps.New"]</span></div>
+                            <div class="muted tiny">@SourceLabel(app.Source) · @(string.IsNullOrWhiteSpace(app.Publisher) ? L["Apps.UnknownPublisher"] : app.Publisher)</div>
+                            <div class="muted tiny">@L["Apps.FirstSeen", app.DeviceName, FormatLocal(app.FirstSeenUtc)]</div>
                         </div>
                         <div class="rule-actions">
-                            <button class="btn btn-accent" @onclick="() => BlockAppAsync(app)">Block</button>
-                            <button class="ghost-btn" @onclick="() => AllowAppAsync(app)">Allow</button>
+                            <button class="btn btn-accent" @onclick="() => BlockAppAsync(app)">@L["Common.Block"]</button>
+                            <button class="ghost-btn" @onclick="() => AllowAppAsync(app)">@L["Common.Allow"]</button>
                         </div>
                     </div>
                 }
@@ -72,23 +73,23 @@ else
     <div class="grid-2">
         <section class="card">
             <div class="card-title-row">
-                <h2>Installed apps</h2>
-                <span class="pill-soft">@_installed.Count on @_deviceCount device@(_deviceCount == 1 ? "" : "s")</span>
+                <h2>@L["Apps.Installed"]</h2>
+                <span class="pill-soft">@L["Apps.InstalledCount", _installed.Count, L[_deviceCount == 1 ? "Common.DeviceCount" : "Common.DeviceCountPlural", _deviceCount]]</span>
             </div>
 
             <form class="inline-add" @onsubmit="AddManualAsync" @onsubmit:preventDefault>
-                <input class="mini-input grow" placeholder="Add by path, e.g. C:\Program Files\App\app.exe" @bind="_manualPath" />
-                <input class="mini-input" placeholder="Display name (optional)" @bind="_manualName" />
-                <button class="btn btn-primary" type="submit">Add</button>
+                <input class="mini-input grow" placeholder="@L["Apps.AddByPath"]" @bind="_manualPath" />
+                <input class="mini-input" placeholder="@L["Apps.DisplayNameOptional"]" @bind="_manualName" />
+                <button class="btn btn-primary" type="submit">@L["Apps.Add"]</button>
             </form>
 
             <div class="chip-row">
                 @foreach (var filter in Filters)
                 {
-                    <button class="chip @(_filter == filter.Key ? "active" : "")" @onclick="() => SetFilter(filter.Key)">@filter.Label</button>
+                    <button class="chip @(_filter == filter.Key ? "active" : "")" @onclick="() => SetFilter(filter.Key)">@L[filter.LabelKey]</button>
                 }
             </div>
-            <input class="mini-input" placeholder="Search installed apps" @bind="_search" @bind:after="ApplyFilter" />
+            <input class="mini-input" placeholder="@L["Apps.Search"]" @bind="_search" @bind:after="ApplyFilter" />
 
             <div class="rule-list">
                 @foreach (var app in _filtered)
@@ -105,38 +106,38 @@ else
                                 }
                                 @if (app.IsNew)
                                 {
-                                    <span class="pill-soft tiny-pill">New</span>
+                                    <span class="pill-soft tiny-pill">@L["Apps.New"]</span>
                                 }
                             </div>
-                            <div class="muted tiny">@(string.IsNullOrWhiteSpace(app.Publisher) ? "unknown publisher" : app.Publisher)</div>
+                            <div class="muted tiny">@(string.IsNullOrWhiteSpace(app.Publisher) ? L["Apps.UnknownPublisher"] : app.Publisher)</div>
                         </div>
                         <div class="rule-actions">
                             @if (app.Blocked)
                             {
-                                <span class="state-pill blocked">Blocked</span>
-                                <button class="ghost-btn" @onclick="() => RemoveRuleAsync(app.RuleId)">Unblock</button>
+                                <span class="state-pill blocked">@L["Common.Blocked"]</span>
+                                <button class="ghost-btn" @onclick="() => RemoveRuleAsync(app.RuleId)">@L["Websites.Unblock"]</button>
                             }
                             else if (app.Allowed)
                             {
-                                <span class="state-pill allowed">@(app.AlwaysAllowed ? "Always allowed" : $"Limited {app.LimitMinutes} min")</span>
-                                <button class="ghost-btn" @onclick="() => BlockAppAsync(app)">Block</button>
+                                <span class="state-pill allowed">@(app.AlwaysAllowed ? L["Common.AlwaysAllowed"] : L["Apps.Limited", app.LimitMinutes ?? 0])</span>
+                                <button class="ghost-btn" @onclick="() => BlockAppAsync(app)">@L["Common.Block"]</button>
                                 @if (app.LimitMinutes is not null)
                                 {
-                                    <button class="ghost-btn" @onclick="() => AllowAppAsync(app)">Remove limit</button>
+                                    <button class="ghost-btn" @onclick="() => AllowAppAsync(app)">@L["Apps.RemoveLimit"]</button>
                                 }
                             }
                             else
                             {
-                                <button class="btn btn-accent" @onclick="() => BlockAppAsync(app)">Block</button>
-                                <button class="ghost-btn" @onclick="() => AllowAppAsync(app)">Allow</button>
+                                <button class="btn btn-accent" @onclick="() => BlockAppAsync(app)">@L["Common.Block"]</button>
+                                <button class="ghost-btn" @onclick="() => AllowAppAsync(app)">@L["Common.Allow"]</button>
                             }
                             @if (!app.Blocked)
                             {
-                                <button class="ghost-btn" @onclick="() => LimitAppAsync(app)">Limit 1 h</button>
+                                <button class="ghost-btn" @onclick="() => LimitAppAsync(app)">@L["ScreenTime.Limit1h"]</button>
                             }
                             @if (app.Blocked)
                             {
-                                <button class="ghost-btn" @onclick="() => BonusAsync(app.Identity, 15)">+15 min</button>
+                                <button class="ghost-btn" @onclick="() => BonusAsync(app.Identity, 15)">@L["Home.Bonus15"]</button>
                             }
                         </div>
                     </div>
@@ -146,33 +147,33 @@ else
 
         <section class="card">
             <div class="card-title-row">
-                <h2>App rules</h2>
-                <span class="pill-soft">@_rules.Count(r => r.IsBlocked) blocked · @_rules.Count(r => !r.IsBlocked) allowed</span>
+                <h2>@L["Apps.Rules"]</h2>
+                <span class="pill-soft">@L["Websites.RuleCounts", _rules.Count(r => r.IsBlocked), _rules.Count(r => !r.IsBlocked)]</span>
             </div>
 
             <div class="rule-section">
-                <div class="eyebrow">Blocked always</div>
+                <div class="eyebrow">@L["Websites.BlockedAlways"]</div>
                 @foreach (var rule in _rules.Where(r => r.IsBlocked && r.Mode == RuleMode.Always))
                 {
                     <div class="rule-row compact">
                         <div class="rule-main">
                             <div class="rule-title">@rule.DisplayName</div>
-                            <div class="muted tiny">Since @FormatLocal(rule.UpdatedUtc)</div>
+                            <div class="muted tiny">@L["Websites.Since", FormatLocal(rule.UpdatedUtc)]</div>
                         </div>
                         <div class="rule-actions">
-                            <button class="ghost-btn" @onclick="() => BonusAsync(rule.AppIdentity, 15)">+15 min</button>
-                            <button class="ghost-btn" @onclick="() => RemoveRuleAsync(rule.Id)">Unblock</button>
+                            <button class="ghost-btn" @onclick="() => BonusAsync(rule.AppIdentity, 15)">@L["Home.Bonus15"]</button>
+                            <button class="ghost-btn" @onclick="() => RemoveRuleAsync(rule.Id)">@L["Websites.Unblock"]</button>
                         </div>
                     </div>
                 }
                 @if (!_rules.Any(r => r.IsBlocked && r.Mode == RuleMode.Always))
                 {
-                    <p class="muted tiny">No always-blocked apps.</p>
+                    <p class="muted tiny">@L["Apps.NoAlwaysBlocked"]</p>
                 }
             </div>
 
             <div class="rule-section">
-                <div class="eyebrow">Blocked during schedule</div>
+                <div class="eyebrow">@L["Websites.BlockedDuringSchedule"]</div>
                 @foreach (var rule in _rules.Where(r => r.IsBlocked && r.Mode == RuleMode.Scheduled))
                 {
                     <div class="rule-row compact">
@@ -181,37 +182,37 @@ else
                             <div class="muted tiny">@ScheduleName(rule.ScheduleId)</div>
                         </div>
                         <div class="rule-actions">
-                            <button class="ghost-btn" @onclick="() => RemoveRuleAsync(rule.Id)">Unblock</button>
+                            <button class="ghost-btn" @onclick="() => RemoveRuleAsync(rule.Id)">@L["Websites.Unblock"]</button>
                         </div>
                     </div>
                 }
                 @if (!_rules.Any(r => r.IsBlocked && r.Mode == RuleMode.Scheduled))
                 {
-                    <p class="muted tiny">No scheduled app rules.</p>
+                    <p class="muted tiny">@L["Apps.NoScheduled"]</p>
                 }
             </div>
 
             <div class="rule-section">
-                <div class="eyebrow">Allowed always (reviewed)</div>
+                <div class="eyebrow">@L["Apps.AllowedReviewed"]</div>
                 @foreach (var rule in _rules.Where(r => !r.IsBlocked))
                 {
                     <div class="rule-row compact">
                         <div class="rule-main">
                             <div class="rule-title">@rule.DisplayName</div>
-                            <div class="muted tiny">@(rule.AlwaysAllowed ? "Always allowed — not counted toward the daily limit" : $"Daily limit {rule.DailyLimitMinutes} min")</div>
+                            <div class="muted tiny">@(rule.AlwaysAllowed ? L["Apps.AlwaysAllowedNote"] : L["Apps.DailyLimitNote", rule.DailyLimitMinutes ?? 0])</div>
                         </div>
                         <div class="rule-actions">
                             @if (rule.DailyLimitMinutes is not null)
                             {
-                                <button class="ghost-btn" @onclick="() => ClearAppLimitAsync(rule)">Remove limit</button>
+                                <button class="ghost-btn" @onclick="() => ClearAppLimitAsync(rule)">@L["Apps.RemoveLimit"]</button>
                             }
-                            <button class="ghost-btn" @onclick="() => BlockAppRuleAsync(rule)">Block</button>
+                            <button class="ghost-btn" @onclick="() => BlockAppRuleAsync(rule)">@L["Common.Block"]</button>
                         </div>
                     </div>
                 }
                 @if (!_rules.Any(r => !r.IsBlocked))
                 {
-                    <p class="muted tiny">No allowed app rules.</p>
+                    <p class="muted tiny">@L["Apps.NoAllowed"]</p>
                 }
             </div>
         </section>
@@ -219,12 +220,12 @@ else
 
     <section class="card">
         <div class="card-title-row">
-            <h2>Previously blocked or allowed</h2>
-            <span class="pill-soft">Latest @Math.Min(_history.Count, 20)</span>
+            <h2>@L["Websites.History"]</h2>
+            <span class="pill-soft">@L["Websites.LatestCount", Math.Min(_history.Count, 20)]</span>
         </div>
         @if (_history.Count == 0)
         {
-            <p class="muted">No app rule changes recorded yet.</p>
+            <p class="muted">@L["Apps.NoHistory"]</p>
         }
         else
         {
@@ -237,8 +238,8 @@ else
                             <div class="muted tiny">@ActionLabel(item.Action) · @FormatLocal(item.ChangedUtc)</div>
                         </div>
                         <div class="rule-actions">
-                            <button class="ghost-btn" @onclick="() => BlockIdentityAsync(item.Identity, item.DisplayName, null)">Block again</button>
-                            <button class="ghost-btn" @onclick="() => AllowIdentityAsync(item.Identity, item.DisplayName, null)">Allow again</button>
+                            <button class="ghost-btn" @onclick="() => BlockIdentityAsync(item.Identity, item.DisplayName, null)">@L["Websites.BlockAgain"]</button>
+                            <button class="ghost-btn" @onclick="() => AllowIdentityAsync(item.Identity, item.DisplayName, null)">@L["Websites.AllowAgain"]</button>
                         </div>
                     </div>
                 }
@@ -248,14 +249,14 @@ else
 }
 
 @code {
-    private static readonly (string Key, string Label)[] Filters =
+    private static readonly (string Key, string LabelKey)[] Filters =
     [
-        ("all", "All"),
-        ("new", "New"),
-        ("store", "Store apps"),
-        ("win32", "Win32"),
-        ("notblocked", "Not blocked"),
-        ("blocked", "Blocked")
+        ("all", "Common.All"),
+        ("new", "Apps.New"),
+        ("store", "Apps.FilterStore"),
+        ("win32", "Apps.FilterWin32"),
+        ("notblocked", "Websites.FilterNotBlocked"),
+        ("blocked", "Common.Blocked")
     ];
 
     private sealed class AppRow
@@ -300,7 +301,7 @@ else
         if (!Guid.TryParse(auth.User.FindFirst("family_id")?.Value, out _familyId))
         {
             _loading = false;
-            _error = "Family scope is missing from the session.";
+            _error = L["Home.MissingFamilyScope"];
             return;
         }
         await RefreshAsync();
@@ -395,7 +396,7 @@ else
         var identity = AppIdentityPath();
         if (identity.Length == 0)
         {
-            _error = "Enter a full path to an executable.";
+            _error = L["Apps.EnterFullPath"];
             return;
         }
         var display = string.IsNullOrWhiteSpace(_manualName) ? Path.GetFileName(_manualPath) : _manualName;
@@ -507,9 +508,10 @@ else
         }
     }
 
-    private string ScheduleName(Guid? id) => id is { } value ? _schedules.FirstOrDefault(s => s.Id == value)?.Name ?? "Schedule" : "No schedule";
+    private string ScheduleName(Guid? id) => id is { } value ? _schedules.FirstOrDefault(s => s.Id == value)?.Name ?? L["Schedules.ScheduleFallback"] : L["Schedules.NoSchedule"];
 
-    private string FormatLocal(DateTime utc) => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), ResolveTimeZone(_timeZoneId)).ToString("MMM d, HH:mm");
+    private string FormatLocal(DateTime utc) => Formats.CompactDateTime(
+        TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), ResolveTimeZone(_timeZoneId)));
 
     private static TimeZoneInfo ResolveTimeZone(string? id) => TimeZoneResolver.Resolve(id);
 
@@ -517,11 +519,11 @@ else
 
     private static string SourceLabel(string source) => source.Equals("store", StringComparison.OrdinalIgnoreCase) ? "Microsoft Store" : "Win32";
 
-    private static string ActionLabel(string action) => action switch
+    private string ActionLabel(string action) => action switch
     {
-        "Blocked" => "Blocked",
-        "Allowed" => "Allowed",
-        "Removed" => "Rule removed",
+        "Blocked" => L["Common.Blocked"],
+        "Allowed" => L["Common.Allowed"],
+        "Removed" => L["Websites.RuleRemoved"],
         _ => action
     };
 }

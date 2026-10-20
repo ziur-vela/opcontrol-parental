@@ -1,3 +1,4 @@
+using OpControl.Parental.Localization;
 namespace OpControl.Parental.Helper;
 
 public sealed class PinDialog : Form
@@ -10,7 +11,7 @@ public sealed class PinDialog : Form
     public PinDialog()
     {
         AutoScaleMode = AutoScaleMode.None;
-        Text = "Parent override";
+        Text = Loc.T("Client.Pin.WindowTitle");
         FormBorderStyle = FormBorderStyle.FixedSingle;
         StartPosition = FormStartPosition.CenterScreen;
         ShowInTaskbar = false;
@@ -24,7 +25,7 @@ public sealed class PinDialog : Form
 
         var title = new Label
         {
-            Text = "Parent override PIN",
+            Text = Loc.T("Client.Pin.Title"),
             Font = Theme.Sans(16f, FontStyle.Bold),
             AutoSize = true,
             Location = new Point(22, 20)
@@ -49,7 +50,7 @@ public sealed class PinDialog : Form
         };
         _ok = new Button
         {
-            Text = "Unlock options",
+            Text = Loc.T("Client.Pin.UnlockOptions"),
             Width = 150,
             Height = 38,
             Location = new Point(22, 150),
@@ -59,7 +60,7 @@ public sealed class PinDialog : Form
         };
         var cancel = new Button
         {
-            Text = "Cancel",
+            Text = Loc.T("Client.Pin.Cancel"),
             Width = 120,
             Height = 38,
             Location = new Point(190, 150),
@@ -93,7 +94,7 @@ public sealed class PinDialog : Form
         if (string.IsNullOrWhiteSpace(_pin.Text)) return;
         _ok.Enabled = false;
         _status.ForeColor = Theme.Muted;
-        _status.Text = "Checking…";
+        _status.Text = Loc.T("Client.Pin.Checking");
         var response = await PinPipeClient.VerifyPinAsync(_pin.Text, CancellationToken.None);
         if (response.Ok && !string.IsNullOrWhiteSpace(response.Ticket))
         {
@@ -103,10 +104,10 @@ public sealed class PinDialog : Form
         }
 
         _status.ForeColor = Theme.Danger;
-        var attempts = response.AttemptsRemaining is { } remaining ? $" ({remaining} attempts left)" : "";
+        var attempts = response.AttemptsRemaining is { } remaining ? " (" + Loc.T("Client.Pin.AttemptsLeft", remaining) + ")" : "";
         _status.Text = response.LockedOut
-            ? $"Too many attempts. Try again in {response.RemainingSeconds ?? 60} s."
-            : $"{response.Error ?? "Incorrect PIN."}{attempts}";
+            ? Loc.T("Client.Pin.TooMany", response.RemainingSeconds ?? 60)
+            : $"{(response.Error ?? Loc.T("Client.Pin.Incorrect"))}{attempts}";
         _pin.SelectAll();
         _pin.Focus();
         _ok.Enabled = true;

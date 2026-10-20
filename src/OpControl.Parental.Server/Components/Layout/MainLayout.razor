@@ -8,6 +8,8 @@
 @inject DashboardEventBus Events
 @inject BuildInfo Build
 @inject Microsoft.Extensions.Options.IOptions<BrandOptions> BrandOptions
+@inject NavigationManager Nav
+@inject IStringLocalizer<AppStrings> L
 @implements IDisposable
 
 @{
@@ -21,66 +23,70 @@
             <img src="@brand.LogoLight" alt="@brand.ProductName" class="brand-logo brand-light" />
         </div>
         <nav class="nav">
-            <NavLink class="nav-link" href="/" Match="NavLinkMatch.All"><span class="nav-ico">⌂</span> Home</NavLink>
+            <NavLink class="nav-link" href="/" Match="NavLinkMatch.All"><span class="nav-ico">⌂</span> @L["Nav.Home"]</NavLink>
             @if (Can(PermissionFlags.ViewReports))
             {
-                <NavLink class="nav-link" href="/screen-time"><span class="nav-ico">◔</span> Screen time</NavLink>
-                <NavLink class="nav-link" href="/activity"><span class="nav-ico">≡</span> Activity</NavLink>
+                <NavLink class="nav-link" href="/screen-time"><span class="nav-ico">◔</span> @L["Nav.ScreenTime"]</NavLink>
+                <NavLink class="nav-link" href="/activity"><span class="nav-ico">≡</span> @L["Nav.Activity"]</NavLink>
             }
             @if (Can(PermissionFlags.WebsiteRules))
             {
-                <NavLink class="nav-link" href="/websites"><span class="nav-ico">◎</span> Websites</NavLink>
+                <NavLink class="nav-link" href="/websites"><span class="nav-ico">◎</span> @L["Nav.Websites"]</NavLink>
             }
             @if (Can(PermissionFlags.AppRules))
             {
-                <NavLink class="nav-link" href="/apps"><span class="nav-ico">▤</span> Apps</NavLink>
+                <NavLink class="nav-link" href="/apps"><span class="nav-ico">▤</span> @L["Nav.Apps"]</NavLink>
             }
             @if (Can(PermissionFlags.ManageDevices))
             {
-                <NavLink class="nav-link" href="/devices"><span class="nav-ico">▣</span> Devices</NavLink>
+                <NavLink class="nav-link" href="/devices"><span class="nav-ico">▣</span> @L["Nav.Devices"]</NavLink>
             }
             @if (Can(PermissionFlags.RemoteView))
             {
-                <NavLink class="nav-link" href="/remote"><span class="nav-ico">◉</span> Remote</NavLink>
+                <NavLink class="nav-link" href="/remote"><span class="nav-ico">◉</span> @L["Nav.Remote"]</NavLink>
             }
             @if (Can(PermissionFlags.SchedulesLimits))
             {
-                <NavLink class="nav-link" href="/schedules"><span class="nav-ico">◷</span> Schedules</NavLink>
+                <NavLink class="nav-link" href="/schedules"><span class="nav-ico">◷</span> @L["Nav.Schedules"]</NavLink>
             }
             @if (Can(PermissionFlags.ViewReports))
             {
                 <NavLink class="nav-link" href="/alerts">
-                    <span class="nav-ico">◉</span> Alerts
+                    <span class="nav-ico">◉</span> @L["Nav.Alerts"]
                     @if (_unread > 0) { <span class="nav-count">@_unread</span> }
                 </NavLink>
             }
             @if (Can(PermissionFlags.ManageDevices))
             {
-                <NavLink class="nav-link" href="/add-device"><span class="nav-ico">＋</span> Add device</NavLink>
-                <NavLink class="nav-link" href="/downloads"><span class="nav-ico">⤓</span> Downloads</NavLink>
+                <NavLink class="nav-link" href="/add-device"><span class="nav-ico">＋</span> @L["Nav.AddDevice"]</NavLink>
+                <NavLink class="nav-link" href="/downloads"><span class="nav-ico">⤓</span> @L["Nav.Downloads"]</NavLink>
             }
             @if (_isOwner)
             {
-                <NavLink class="nav-link" href="/team"><span class="nav-ico">👥</span> Parents</NavLink>
+                <NavLink class="nav-link" href="/team"><span class="nav-ico">👥</span> @L["Nav.Parents"]</NavLink>
             }
             @if (_isServerAdmin)
             {
-                <NavLink class="nav-link" href="/server-admin"><span class="nav-ico">☷</span> Server admin</NavLink>
+                <NavLink class="nav-link" href="/server-admin"><span class="nav-ico">☷</span> @L["Nav.ServerAdmin"]</NavLink>
             }
-            <NavLink class="nav-link" href="/settings"><span class="nav-ico">⚙</span> Settings</NavLink>
+            <NavLink class="nav-link" href="/settings"><span class="nav-ico">⚙</span> @L["Nav.Settings"]</NavLink>
         </nav>
         <div class="sidebar-foot">
             <div class="pill-soft">@Build.DisplayVersion</div>
             <div class="muted small">@brand.ProductName</div>
-            <a class="muted small" href="/settings">Version details</a>
+            <a class="muted small" href="/settings">@L["Layout.VersionDetails"]</a>
         </div>
     </aside>
 
     <div class="main-col">
         <header class="topbar">
-            <div class="topbar-title">Family dashboard</div>
+            <div class="topbar-title">@L["Layout.FamilyDashboard"]</div>
             <div class="topbar-actions">
-                <button type="button" class="icon-btn" onclick="ocpToggleTheme()" title="Toggle theme" aria-label="Toggle theme">◐</button>
+                <button type="button" class="icon-btn" onclick="ocpToggleTheme()" title="@L["Layout.ToggleTheme"]" aria-label="@L["Layout.ToggleTheme"]">◐</button>
+                <span class="lang-switch" role="group" aria-label="@L["Layout.Language"]">
+                    <a class="lang-link @(IsSpanish ? "" : "active")" href="/language/en?returnUrl=@CurrentPath" title="@L["Language.English"]">EN</a>
+                    <a class="lang-link @(IsSpanish ? "active" : "")" href="/language/es-MX?returnUrl=@CurrentPath" title="@L["Language.Spanish"]">ES</a>
+                </span>
                 <AuthorizeView>
                     <Authorized Context="auth">
                         <span class="user-chip">@auth.User.FindFirst("display_name")?.Value</span>
@@ -88,13 +94,13 @@
                 </AuthorizeView>
                 <form method="post" action="/logout" class="inline-form">
                     <AntiforgeryToken />
-                    <button type="submit" class="ghost-btn">Sign out</button>
+                    <button type="submit" class="ghost-btn">@L["Layout.SignOut"]</button>
                 </form>
             </div>
         </header>
         <main class="content">
             @Body
-            <div class="site-foot">CREATED BY OpControl</div>
+            <div class="site-foot">@L["Layout.CreatedBy"]</div>
         </main>
     </div>
 </div>
@@ -121,6 +127,18 @@
         ManageDevices = 32,
         ManagePin = 64,
         RemoteView = 128
+    }
+
+    private bool IsSpanish => System.Globalization.CultureInfo.CurrentUICulture.Name.StartsWith("es", StringComparison.OrdinalIgnoreCase);
+
+    private string CurrentPath
+    {
+        get
+        {
+            var uri = new Uri(Nav.Uri);
+            var value = uri.PathAndQuery;
+            return Uri.EscapeDataString(value);
+        }
     }
 
     private bool Can(PermissionFlags permission) =>

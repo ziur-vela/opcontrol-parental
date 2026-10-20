@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Management;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using OpControl.Parental.Localization;
 
 namespace OpControl.Parental.Setup;
 
@@ -10,6 +11,9 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        var language = Arg(args, "LANG") ?? Arg(args, "--lang")
+            ?? (System.Globalization.CultureInfo.CurrentUICulture.Name.StartsWith("es", StringComparison.OrdinalIgnoreCase) ? Loc.Spanish : Loc.English);
+        Loc.SetLanguage(language);
         ApplicationConfiguration.Initialize();
         var silent = args.Any(a => a is "/S" or "/s" or "--silent" or "/quiet" or "/qn");
         var server = Arg(args, "SERVER") ?? Arg(args, "--server") ?? "https://parental.opcontrol.net";
@@ -23,7 +27,7 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            if (!silent) MessageBox.Show("The installer package is missing.\n\n" + ex.Message, "Parental OpControl", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            if (!silent) MessageBox.Show(Loc.T("Setup.MissingPackage", ex.Message), "Parental OpControl", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return 3;
         }
 
@@ -83,7 +87,7 @@ internal static class Program
 
     internal static int RunMsi(string msi, string server, string code, string account, Action<string>? progress)
     {
-        progress?.Invoke("Installing Parental OpControl…");
+        progress?.Invoke(Loc.T("Setup.InstallingLabel"));
         var arguments = $"/i \"{msi}\" /qn /norestart SERVER=\"{server.TrimEnd('/')}\" CODE=\"{code.Trim()}\" ACCOUNT=\"{account.Trim()}\"";
         using var process = Process.Start(new ProcessStartInfo
         {
@@ -94,7 +98,7 @@ internal static class Program
         });
         if (process is null) return 4;
         process.WaitForExit();
-        progress?.Invoke(process.ExitCode == 0 ? "Installation complete." : $"Installation failed (exit code {process.ExitCode}).");
+        progress?.Invoke(process.ExitCode == 0 ? Loc.T("Setup.CompleteLabel") : Loc.T("Setup.FailedLabel", process.ExitCode));
         return process.ExitCode;
     }
 
@@ -160,19 +164,19 @@ internal sealed class InstallForm : Form
     public InstallForm(string msi, string server, string? code, string? account)
     {
         _msi = msi;
-        Text = "Install Parental OpControl";
+        Text = Loc.T("Setup.WindowTitle");
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
         AutoScaleMode = AutoScaleMode.Dpi;
         Theme.StyleForm(this);
-        ClientSize = new Size(560, 380);
+        ClientSize = new Size(560, 404);
         Padding = new Padding(20);
 
         var title = new Label
         {
-            Text = "PARENTAL OPCONTROL",
+            Text = Loc.T("Setup.Title"),
             Font = Theme.Sans(18f, FontStyle.Bold),
             ForeColor = Theme.Text,
             AutoSize = true,
@@ -180,26 +184,26 @@ internal sealed class InstallForm : Form
         };
         var subtitle = new Label
         {
-            Text = "Protect this Windows PC. Sign in as an administrator before continuing.",
+            Text = Loc.T("Setup.Subtitle"),
             AutoSize = false,
-            Size = new Size(510, 36),
+            Size = new Size(510, 54),
             Location = new Point(24, 58),
             ForeColor = Theme.Muted,
             Font = Theme.Mono(9f)
         };
 
-        var serverLabel = new Label { Text = "SERVER URL", AutoSize = true, Location = new Point(24, 104), ForeColor = Theme.Label, Font = Theme.Mono(9f) };
-        _server.Location = new Point(24, 124);
+        var serverLabel = new Label { Text = Loc.T("Setup.ServerLabel"), AutoSize = true, Location = new Point(24, 120), ForeColor = Theme.Label, Font = Theme.Mono(9f) };
+        _server.Location = new Point(24, 140);
         _server.Size = new Size(510, 28);
         _server.Text = server;
 
-        var codeLabel = new Label { Text = "ONE-TIME CODE", AutoSize = true, Location = new Point(24, 160), ForeColor = Theme.Label, Font = Theme.Mono(9f) };
-        _code.Location = new Point(24, 180);
+        var codeLabel = new Label { Text = Loc.T("Setup.CodeLabel"), AutoSize = true, Location = new Point(24, 176), ForeColor = Theme.Label, Font = Theme.Mono(9f) };
+        _code.Location = new Point(24, 196);
         _code.Size = new Size(240, 28);
         _code.Text = code ?? "";
 
-        var accountLabel = new Label { Text = "WINDOWS ACCOUNT TO PROTECT", AutoSize = true, Location = new Point(24, 216), ForeColor = Theme.Label, Font = Theme.Mono(9f) };
-        _account.Location = new Point(24, 236);
+        var accountLabel = new Label { Text = Loc.T("Setup.AccountLabel"), AutoSize = true, Location = new Point(24, 232), ForeColor = Theme.Label, Font = Theme.Mono(9f) };
+        _account.Location = new Point(24, 252);
         _account.Size = new Size(510, 28);
         _account.DropDownStyle = ComboBoxStyle.DropDownList;
 
@@ -211,7 +215,7 @@ internal sealed class InstallForm : Form
         foreach (var name in ordered)
         {
             var isAdmin = _admins.Any(a => a.Equals(name, StringComparison.OrdinalIgnoreCase));
-            _account.Items.Add(isAdmin ? $"{name} (administrator — not recommended)" : name);
+            _account.Items.Add(isAdmin ? $"{name} ({Loc.T("Setup.AdminSuffix")})" : name);
         }
         if (!string.IsNullOrWhiteSpace(account))
         {
@@ -223,28 +227,28 @@ internal sealed class InstallForm : Form
         _install.Enabled = _account.SelectedIndex >= 0;
         _account.SelectedIndexChanged += (_, _) => _install.Enabled = _account.SelectedIndex >= 0;
 
-        _status.Location = new Point(24, 274);
+        _status.Location = new Point(24, 290);
         _status.Size = new Size(510, 24);
         _status.AutoSize = false;
         _status.ForeColor = Theme.Muted;
         _status.Font = Theme.Mono(9f);
 
-        _progress.Location = new Point(24, 310);
+        _progress.Location = new Point(24, 326);
         _progress.Size = new Size(510, 8);
         _progress.Style = ProgressBarStyle.Marquee;
         _progress.Visible = false;
 
-        _install.Text = "Install";
+        _install.Text = Loc.T("Setup.Install");
         _install.Size = new Size(140, 34);
-        _install.Location = new Point(394, 326);
+        _install.Location = new Point(394, 342);
         Theme.StyleInput(_server); Theme.StyleInput(_code); Theme.StyleInput(_account);
         Theme.StyleButton(_install, primary: true);
         _install.Click += async (_, _) => await InstallAsync();
 
-        var cancel = new Button { Text = "CANCEL", Size = new Size(100, 34), Location = new Point(284, 326), DialogResult = DialogResult.Cancel };
+        var cancel = new Button { Text = Loc.T("Setup.Cancel"), Size = new Size(100, 34), Location = new Point(284, 342), DialogResult = DialogResult.Cancel };
         Theme.StyleButton(cancel);
 
-        var foot = new Label { Text = "CREATED BY OPCONTROL", AutoSize = true, Location = new Point(24, 356), ForeColor = Theme.Muted, Font = Theme.Mono(8f) };
+        var foot = new Label { Text = Loc.T("Setup.Footer"), AutoSize = true, Location = new Point(24, 372), ForeColor = Theme.Muted, Font = Theme.Mono(8f) };
         Controls.AddRange([title, subtitle, serverLabel, _server, codeLabel, _code, accountLabel, _account, _status, _progress, _install, cancel, foot]);
         AcceptButton = _install;
         CancelButton = cancel;
@@ -255,20 +259,20 @@ internal sealed class InstallForm : Form
     {
         var server = _server.Text.Trim();
         var code = _code.Text.Trim();
-        var account = (_account.SelectedItem?.ToString() ?? "").Replace(" (administrator — not recommended)", "");
+        var account = (_account.SelectedItem?.ToString() ?? "").Replace($" ({Loc.T("Setup.AdminSuffix")})", "");
         if (!Uri.TryCreate(server, UriKind.Absolute, out var uri) || (uri.Scheme != "https" && uri.Scheme != "http"))
         {
-            MessageBox.Show("Enter a valid server URL.", Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(Loc.T("Setup.InvalidUrl"), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
         if (code.Length < 6)
         {
-            MessageBox.Show("Enter the one-time code shown in the parent dashboard.", Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(Loc.T("Setup.EnterCode"), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
         if (string.IsNullOrWhiteSpace(account))
         {
-            MessageBox.Show("Choose the Windows account to protect.", Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(Loc.T("Setup.ChooseAccount"), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
@@ -277,19 +281,19 @@ internal sealed class InstallForm : Form
         _server.Enabled = false;
         _code.Enabled = false;
         _progress.Visible = true;
-        _status.Text = "Installing…";
+        _status.Text = Loc.T("Setup.StatusInstalling");
         var exit = await Task.Run(() => Program.RunMsi(_msi, server, code, account, text => BeginInvoke(() => _status.Text = text)));
         ExitCode = exit;
         _progress.Visible = false;
         if (exit == 0)
         {
-            MessageBox.Show("Parental OpControl is installed. The device will appear in the dashboard within a few seconds.", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(Loc.T("Setup.Success"), Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
             DialogResult = DialogResult.OK;
             Close();
         }
         else
         {
-            MessageBox.Show($"The installer failed with exit code {exit}. See the Windows installer log for details.", Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(Loc.T("Setup.Failed", exit), Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
             _install.Enabled = true;
             _account.Enabled = true;
             _server.Enabled = true;

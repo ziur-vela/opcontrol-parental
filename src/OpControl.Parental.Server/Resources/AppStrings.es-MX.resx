@@ -1,0 +1,809 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Activity.ActiveToday" xml:space="preserve"><value>Uso activo hoy</value></data>
+  <data name="Activity.AppBlocked" xml:space="preserve"><value>Aplicación bloqueada</value></data>
+  <data name="Activity.AppRuleAllowed" xml:space="preserve"><value>Regla de aplicación: permitida</value></data>
+  <data name="Activity.AppRuleBlocked" xml:space="preserve"><value>Regla de aplicación: bloqueada</value></data>
+  <data name="Activity.AppRuleRemoved" xml:space="preserve"><value>Regla de aplicación eliminada</value></data>
+  <data name="Activity.BlockedToday" xml:space="preserve"><value>Intentos bloqueados hoy</value></data>
+  <data name="Activity.By" xml:space="preserve"><value> · por {0}</value></data>
+  <data name="Activity.CategoryAllowed" xml:space="preserve"><value>{0}: permitida</value></data>
+  <data name="Activity.CategoryBlocked" xml:space="preserve"><value>{0}: bloqueada</value></data>
+  <data name="Activity.ClientTampering" xml:space="preserve"><value>Señal de manipulación del cliente</value></data>
+  <data name="Activity.DailyLimitDetail" xml:space="preserve"><value>fecha {0}</value></data>
+  <data name="Activity.Events" xml:space="preserve"><value>Eventos</value></data>
+  <data name="Activity.IdleToday" xml:space="preserve"><value>Inactivo hoy</value></data>
+  <data name="Activity.Latest200" xml:space="preserve"><value>Últimos 200</value></data>
+  <data name="Activity.NewAppInstalled" xml:space="preserve"><value>Se instaló una aplicación nueva</value></data>
+  <data name="Activity.NoActivity" xml:space="preserve"><value>Aún no hay actividad registrada.</value></data>
+  <data name="Activity.NoticeDetail" xml:space="preserve"><value>{0}: pantalla={1}, cámara={2}, luz o tapa de cámara={3}</value></data>
+  <data name="Activity.Option.AppBonus" xml:space="preserve"><value>Tiempo extra de aplicación</value></data>
+  <data name="Activity.Option.AppLimitRemoved" xml:space="preserve"><value>Se quitó un límite de aplicación</value></data>
+  <data name="Activity.Option.AppLimitSet" xml:space="preserve"><value>Se configuró un límite de aplicación</value></data>
+  <data name="Activity.Option.CategoryChanged" xml:space="preserve"><value>Se cambió una categoría de sitios web</value></data>
+  <data name="Activity.Option.DashboardBonus" xml:space="preserve"><value>Se dio tiempo extra</value></data>
+  <data name="Activity.Option.DashboardLock" xml:space="preserve"><value>Bloqueo desde el panel</value></data>
+  <data name="Activity.Option.DashboardUnlock" xml:space="preserve"><value>Desbloqueo desde el panel</value></data>
+  <data name="Activity.Option.LimitDisabled" xml:space="preserve"><value>Se desactivó el límite de tiempo en pantalla</value></data>
+  <data name="Activity.Option.LimitSet" xml:space="preserve"><value>Se configuró el límite de tiempo en pantalla</value></data>
+  <data name="Activity.Option.NoticeChanged" xml:space="preserve"><value>Se cambió el aviso de vista remota</value></data>
+  <data name="Activity.Option.PinBonus" xml:space="preserve"><value>Desbloqueo de padres: tiempo extra</value></data>
+  <data name="Activity.Option.PinUnlock" xml:space="preserve"><value>Desbloqueo de padres: desbloquear hasta el próximo bloqueo</value></data>
+  <data name="Activity.Option.ScheduleAdded" xml:space="preserve"><value>Se agregó un horario</value></data>
+  <data name="Activity.Option.ScheduleChanged" xml:space="preserve"><value>Se cambió un horario</value></data>
+  <data name="Activity.Option.ScheduleEnded" xml:space="preserve"><value>Terminó un horario</value></data>
+  <data name="Activity.Option.ScheduleRemoved" xml:space="preserve"><value>Se eliminó un horario</value></data>
+  <data name="Activity.Option.ScheduleStarted" xml:space="preserve"><value>Comenzó un horario</value></data>
+  <data name="Activity.Option.SiteBonus" xml:space="preserve"><value>Tiempo extra de sitio web</value></data>
+  <data name="Activity.PageTitle" xml:space="preserve"><value>Actividad · Parental OpControl</value></data>
+  <data name="Activity.SiteRuleAllowed" xml:space="preserve"><value>Regla de sitio web: permitido</value></data>
+  <data name="Activity.SiteRuleBlocked" xml:space="preserve"><value>Regla de sitio web: bloqueado</value></data>
+  <data name="Activity.SiteRuleRemoved" xml:space="preserve"><value>Regla de sitio web eliminada</value></data>
+  <data name="Activity.Subtitle" xml:space="preserve"><value>Bloqueos y desbloqueos, tiempo extra, desbloqueos con PIN de padres, horarios, intentos bloqueados, instalaciones nuevas y límites.</value></data>
+  <data name="Activity.Tamper.Clock" xml:space="preserve"><value>Se cambió el reloj del sistema</value></data>
+  <data name="Activity.Tamper.Dns" xml:space="preserve"><value>Se cambiaron y restauraron los ajustes de DNS</value></data>
+  <data name="Activity.Tamper.HelperAuth" xml:space="preserve"><value>Falló la autenticación del asistente</value></data>
+  <data name="Activity.Tamper.HelperKilled" xml:space="preserve"><value>El asistente se detuvo y se reinició</value></data>
+  <data name="Activity.Tamper.HelperKilledDetail" xml:space="preserve"><value>{0} veces en 10 minutos</value></data>
+  <data name="Activity.Tamper.Minutes" xml:space="preserve"><value>aproximadamente {0} minutos</value></data>
+  <data name="Activity.Tamper.ServiceStopped" xml:space="preserve"><value>El servicio del cliente se detuvo inesperadamente</value></data>
+  <data name="Activity.Tamper.Uninstall" xml:space="preserve"><value>Se intentó desinstalar</value></data>
+  <data name="Activity.Tamper.UsageSanity" xml:space="preserve"><value>Los datos de uso no pasaron las verificaciones</value></data>
+  <data name="Activity.Timeline" xml:space="preserve"><value>Línea de tiempo</value></data>
+  <data name="Activity.WebsiteBlocked" xml:space="preserve"><value>Sitio web bloqueado</value></data>
+  <data name="AddDevice.AddChildFirst" xml:space="preserve"><value>Primero agrega el perfil de un hijo.</value></data>
+  <data name="AddDevice.AndroidSoon" xml:space="preserve"><value>Android — próximamente</value></data>
+  <data name="AddDevice.AssignChild" xml:space="preserve"><value>Asignar al hijo</value></data>
+  <data name="AddDevice.ConnectedLabel" xml:space="preserve"><value>Conectado</value></data>
+  <data name="AddDevice.Copy" xml:space="preserve"><value>Copiar</value></data>
+  <data name="AddDevice.CreateButton" xml:space="preserve"><value>Crear enlace de instalación</value></data>
+  <data name="AddDevice.CreateLink" xml:space="preserve"><value>Crear un enlace de instalación</value></data>
+  <data name="AddDevice.CreateToSee" xml:space="preserve"><value>Crea un enlace para ver el código y el QR.</value></data>
+  <data name="AddDevice.CreatedExpires" xml:space="preserve"><value>Creado {0} · vence {1}</value></data>
+  <data name="AddDevice.DeviceFallback" xml:space="preserve"><value>dispositivo</value></data>
+  <data name="AddDevice.DeviceLabel" xml:space="preserve"><value>Dispositivo: {0}</value></data>
+  <data name="AddDevice.DeviceType" xml:space="preserve"><value>Tipo de dispositivo</value></data>
+  <data name="AddDevice.EmailIt" xml:space="preserve"><value>Enviarlo por correo</value></data>
+  <data name="AddDevice.Eyebrow" xml:space="preserve"><value>Registro</value></data>
+  <data name="AddDevice.InstallLink" xml:space="preserve"><value>Enlace de instalación</value></data>
+  <data name="AddDevice.Link" xml:space="preserve"><value>Enlace</value></data>
+  <data name="AddDevice.LinuxSoon" xml:space="preserve"><value>Linux — próximamente</value></data>
+  <data name="AddDevice.MailSubject" xml:space="preserve"><value>Instalar Parental OpControl</value></data>
+  <data name="AddDevice.NoLinks" xml:space="preserve"><value>Aún no hay enlaces de instalación.</value></data>
+  <data name="AddDevice.OneTimeCode" xml:space="preserve"><value>Código de un solo uso</value></data>
+  <data name="AddDevice.OpenLink" xml:space="preserve"><value>Abrir página del enlace</value></data>
+  <data name="AddDevice.QrAlt" xml:space="preserve"><value>Código QR del enlace de instalación</value></data>
+  <data name="AddDevice.Recent" xml:space="preserve"><value>Enlaces de instalación recientes</value></data>
+  <data name="AddDevice.ScanQr" xml:space="preserve"><value>Escanea este QR con la computadora del hijo o abre el enlace en esa PC.</value></data>
+  <data name="AddDevice.SingleUse" xml:space="preserve"><value>Un solo uso</value></data>
+  <data name="AddDevice.StateExpired" xml:space="preserve"><value>Vencido</value></data>
+  <data name="AddDevice.StateRevoked" xml:space="preserve"><value>Revocado</value></data>
+  <data name="AddDevice.StateWaiting" xml:space="preserve"><value>En espera</value></data>
+  <data name="AddDevice.Subtitle" xml:space="preserve"><value>Crea un enlace de instalación de un solo uso y ábrelo en la computadora del hijo con una cuenta de administrador. Los enlaces y códigos vencen y se usan una sola vez.</value></data>
+  <data name="AddDevice.Title" xml:space="preserve"><value>Agregar dispositivo</value></data>
+  <data name="AddDevice.WaitingDevice" xml:space="preserve"><value>Esperando al dispositivo…</value></data>
+  <data name="AddDevice.WindowsPc" xml:space="preserve"><value>PC con Windows</value></data>
+  <data name="Alert.AppLimit.Detail" xml:space="preserve"><value>{0} alcanzó su límite diario de {1} minutos.</value></data>
+  <data name="Alert.AppLimit.LegacyTitle" xml:space="preserve"><value>Se alcanzó un límite de aplicación</value></data>
+  <data name="Alert.AppLimit.Title" xml:space="preserve"><value>Se alcanzó el límite de la aplicación: {0}</value></data>
+  <data name="Alert.ClockChanged.Detail" xml:space="preserve"><value>El reloj de {0} difiere del servidor por {1} minutos.</value></data>
+  <data name="Alert.ClockChanged.Title" xml:space="preserve"><value>Se cambió el reloj del sistema</value></data>
+  <data name="Alert.DailyLimit.Detail" xml:space="preserve"><value>Se alcanzó el límite de {0} minutos para {1}.</value></data>
+  <data name="Alert.DailyLimit.Title" xml:space="preserve"><value>Llegaste al límite diario de tiempo en pantalla</value></data>
+  <data name="Alert.DeviceOffline.Detail" xml:space="preserve"><value>{0} no se ha conectado al servidor desde {1}.</value></data>
+  <data name="Alert.DeviceOffline.LegacyTitle" xml:space="preserve"><value>Dispositivo sin conexión</value></data>
+  <data name="Alert.DeviceOffline.Title" xml:space="preserve"><value>Dispositivo sin conexión: {0}</value></data>
+  <data name="Alert.NewApp.Detail" xml:space="preserve"><value>Se instaló {0} ({1}) en {2}.</value></data>
+  <data name="Alert.NewApp.LegacyTitle" xml:space="preserve"><value>Se instaló una aplicación nueva</value></data>
+  <data name="Alert.NewApp.Title" xml:space="preserve"><value>Se instaló una aplicación nueva: {0}</value></data>
+  <data name="Alert.PinOverride.BonusDetail" xml:space="preserve"><value>Se usó tiempo extra en {0} por {1} minutos.</value></data>
+  <data name="Alert.PinOverride.BonusTitle" xml:space="preserve"><value>Se usó el PIN de desbloqueo de padres</value></data>
+  <data name="Alert.PinOverride.UnlockDetail" xml:space="preserve"><value>Se usó «Desbloquear hasta el próximo bloqueo» en {0}.</value></data>
+  <data name="Alert.PinOverride.UnlockTitle" xml:space="preserve"><value>Se usó el PIN de desbloqueo de padres</value></data>
+  <data name="Alert.RepeatedBlocked.Detail" xml:space="preserve"><value>{1} intentos bloqueados hacia {0} en los últimos 10 minutos en {2}.</value></data>
+  <data name="Alert.RepeatedBlocked.LegacyTitle" xml:space="preserve"><value>Intentos bloqueados repetidos</value></data>
+  <data name="Alert.RepeatedBlocked.Title" xml:space="preserve"><value>Intentos bloqueados repetidos: {0}</value></data>
+  <data name="Alert.Tampering.Detail" xml:space="preserve"><value>Se reportó {0} en {1}.</value></data>
+  <data name="Alert.Tampering.DetailMore" xml:space="preserve"><value>Se reportó {0} en {1}: {2}</value></data>
+  <data name="Alert.Tampering.DeviceKind" xml:space="preserve"><value>{0}: {1}.</value></data>
+  <data name="Alert.Tampering.DeviceKindMore" xml:space="preserve"><value>{0}: {1} ({2}).</value></data>
+  <data name="Alert.Tampering.Title" xml:space="preserve"><value>Señal de manipulación del cliente</value></data>
+  <data name="Alert.Uninstall.Detail" xml:space="preserve"><value>Estaban a punto de quitar el cliente de Parental OpControl de {0}.</value></data>
+  <data name="Alert.Uninstall.DetailMore" xml:space="preserve"><value>Estaban a punto de quitar el cliente de Parental OpControl de {0}. {1}</value></data>
+  <data name="Alert.Uninstall.Title" xml:space="preserve"><value>Se intentó desinstalar</value></data>
+  <data name="Alert.Update.Detail" xml:space="preserve"><value>{0}: {1}</value></data>
+  <data name="Alert.Update.NoHealth" xml:space="preserve"><value>el cliente no reportó estar en buen estado</value></data>
+  <data name="Alert.UpdateFailed.Title" xml:space="preserve"><value>Falló la actualización del cliente</value></data>
+  <data name="Alert.UpdateRolledBack.Title" xml:space="preserve"><value>Se revirtió la actualización del cliente</value></data>
+  <data name="Alert.UsageSanity.Detail" xml:space="preserve"><value>{0}: se rechazaron o truncaron registros de uso ({1}).</value></data>
+  <data name="Alert.UsageSanity.Title" xml:space="preserve"><value>Los datos de uso no pasaron las verificaciones</value></data>
+  <data name="Alerts.All" xml:space="preserve"><value>Todas las alertas</value></data>
+  <data name="Alerts.EmailSettings" xml:space="preserve"><value>Configuración de correo</value></data>
+  <data name="Alerts.MarkAllRead" xml:space="preserve"><value>Marcar todas como leídas</value></data>
+  <data name="Alerts.MarkRead" xml:space="preserve"><value>Marcar como leída</value></data>
+  <data name="Alerts.NoAlertsFilter" xml:space="preserve"><value>No hay alertas para este filtro.</value></data>
+  <data name="Alerts.PageTitle" xml:space="preserve"><value>Alertas · Parental OpControl</value></data>
+  <data name="Alerts.Subtitle" xml:space="preserve"><value>Instalaciones nuevas, intentos bloqueados repetidos, desbloqueos con PIN de padres, límites alcanzados, dispositivos sin conexión y señales de manipulación.</value></data>
+  <data name="Alerts.UnreadFilter" xml:space="preserve"><value>Sin leer ({0})</value></data>
+  <data name="App.Name" xml:space="preserve"><value>Parental OpControl</value></data>
+  <data name="Apps.Add" xml:space="preserve"><value>Agregar</value></data>
+  <data name="Apps.AddByPath" xml:space="preserve"><value>Agregar por ruta, p. ej. C:\Program Files\App\app.exe</value></data>
+  <data name="Apps.AllowedReviewed" xml:space="preserve"><value>Permitidas siempre (revisadas)</value></data>
+  <data name="Apps.AlwaysAllowedNote" xml:space="preserve"><value>Siempre permitida: no cuenta para el límite diario</value></data>
+  <data name="Apps.DailyLimitNote" xml:space="preserve"><value>Límite diario {0} min</value></data>
+  <data name="Apps.DisplayNameOptional" xml:space="preserve"><value>Nombre visible (opcional)</value></data>
+  <data name="Apps.EnterFullPath" xml:space="preserve"><value>Escribe una ruta completa a un ejecutable.</value></data>
+  <data name="Apps.FilterStore" xml:space="preserve"><value>Aplicaciones de la Tienda</value></data>
+  <data name="Apps.FilterWin32" xml:space="preserve"><value>Win32</value></data>
+  <data name="Apps.FirstSeen" xml:space="preserve"><value>{0} · vista por primera vez {1}</value></data>
+  <data name="Apps.Installed" xml:space="preserve"><value>Aplicaciones instaladas</value></data>
+  <data name="Apps.InstalledCount" xml:space="preserve"><value>{0} en {1}</value></data>
+  <data name="Apps.Limited" xml:space="preserve"><value>Limitada a {0} min</value></data>
+  <data name="Apps.New" xml:space="preserve"><value>Nueva</value></data>
+  <data name="Apps.NewCount" xml:space="preserve"><value>{0} nuevas</value></data>
+  <data name="Apps.NewToReview" xml:space="preserve"><value>Aplicaciones nuevas por revisar</value></data>
+  <data name="Apps.NoAllowed" xml:space="preserve"><value>No hay reglas de aplicaciones permitidas.</value></data>
+  <data name="Apps.NoAlwaysBlocked" xml:space="preserve"><value>No hay aplicaciones bloqueadas siempre.</value></data>
+  <data name="Apps.NoHistory" xml:space="preserve"><value>Aún no hay cambios de reglas de aplicaciones.</value></data>
+  <data name="Apps.NoScheduled" xml:space="preserve"><value>No hay reglas de aplicaciones por horario.</value></data>
+  <data name="Apps.NothingNew" xml:space="preserve"><value>No hay nada nuevo desde la última revisión.</value></data>
+  <data name="Apps.PageTitle" xml:space="preserve"><value>Aplicaciones · Parental OpControl</value></data>
+  <data name="Apps.RemoveLimit" xml:space="preserve"><value>Quitar límite</value></data>
+  <data name="Apps.Rules" xml:space="preserve"><value>Reglas de aplicaciones</value></data>
+  <data name="Apps.Search" xml:space="preserve"><value>Buscar aplicaciones instaladas</value></data>
+  <data name="Apps.Subtitle" xml:space="preserve"><value>Aplicaciones instaladas, instalaciones nuevas por revisar y reglas de aplicaciones.</value></data>
+  <data name="Apps.UnknownPublisher" xml:space="preserve"><value>editor desconocido</value></data>
+  <data name="Category.Adult" xml:space="preserve"><value>Contenido para adultos</value></data>
+  <data name="Category.FakeNews" xml:space="preserve"><value>Noticias falsas</value></data>
+  <data name="Category.Gambling" xml:space="preserve"><value>Apuestas</value></data>
+  <data name="Category.Social" xml:space="preserve"><value>Redes sociales</value></data>
+  <data name="Common.AccountNotReported" xml:space="preserve"><value>cuenta no informada</value></data>
+  <data name="Common.AlertCount" xml:space="preserve"><value>{0} alerta</value></data>
+  <data name="Common.AlertCountPlural" xml:space="preserve"><value>{0} alertas</value></data>
+  <data name="Common.All" xml:space="preserve"><value>Todas</value></data>
+  <data name="Common.Allow" xml:space="preserve"><value>Permitir</value></data>
+  <data name="Common.Allowed" xml:space="preserve"><value>Permitido</value></data>
+  <data name="Common.AlwaysAllowed" xml:space="preserve"><value>Siempre permitido</value></data>
+  <data name="Common.AppCount" xml:space="preserve"><value>{0} aplicación</value></data>
+  <data name="Common.AppCountPlural" xml:space="preserve"><value>{0} aplicaciones</value></data>
+  <data name="Common.Back" xml:space="preserve"><value>Volver</value></data>
+  <data name="Common.Block" xml:space="preserve"><value>Bloquear</value></data>
+  <data name="Common.Blocked" xml:space="preserve"><value>Bloqueado</value></data>
+  <data name="Common.Cancel" xml:space="preserve"><value>Cancelar</value></data>
+  <data name="Common.CategoryCount" xml:space="preserve"><value>{0} categoría</value></data>
+  <data name="Common.CategoryCountPlural" xml:space="preserve"><value>{0} categorías</value></data>
+  <data name="Common.Close" xml:space="preserve"><value>Cerrar</value></data>
+  <data name="Common.Connected" xml:space="preserve"><value>Conectado</value></data>
+  <data name="Common.CreateChildFirst" xml:space="preserve"><value>Primero crea el perfil de un hijo.</value></data>
+  <data name="Common.DayCount" xml:space="preserve"><value>{0} día</value></data>
+  <data name="Common.DayCountPlural" xml:space="preserve"><value>{0} días</value></data>
+  <data name="Common.Delete" xml:space="preserve"><value>Eliminar</value></data>
+  <data name="Common.DeviceCount" xml:space="preserve"><value>{0} dispositivo</value></data>
+  <data name="Common.DeviceCountPlural" xml:space="preserve"><value>{0} dispositivos</value></data>
+  <data name="Common.Email" xml:space="preserve"><value>Correo</value></data>
+  <data name="Common.Error" xml:space="preserve"><value>Algo salió mal.</value></data>
+  <data name="Common.HourShort" xml:space="preserve"><value>{0} h {1} min</value></data>
+  <data name="Common.LimitMinutes" xml:space="preserve"><value>Límite {0} min</value></data>
+  <data name="Common.Locked" xml:space="preserve"><value>Bloqueado</value></data>
+  <data name="Common.MinuteShort" xml:space="preserve"><value>{0} min</value></data>
+  <data name="Common.Minutes" xml:space="preserve"><value>{0} min</value></data>
+  <data name="Common.Never" xml:space="preserve"><value>nunca</value></data>
+  <data name="Common.Next" xml:space="preserve"><value>Siguiente</value></data>
+  <data name="Common.No" xml:space="preserve"><value>No</value></data>
+  <data name="Common.NoChildYet" xml:space="preserve"><value>Aún no hay un perfil de hijo</value></data>
+  <data name="Common.None" xml:space="preserve"><value>Ninguno</value></data>
+  <data name="Common.Offline" xml:space="preserve"><value>Sin conexión</value></data>
+  <data name="Common.Online" xml:space="preserve"><value>En línea</value></data>
+  <data name="Common.Owner" xml:space="preserve"><value>Propietario</value></data>
+  <data name="Common.ParentFallback" xml:space="preserve"><value>Padre o madre</value></data>
+  <data name="Common.Password" xml:space="preserve"><value>Contraseña</value></data>
+  <data name="Common.Previous" xml:space="preserve"><value>Anterior</value></data>
+  <data name="Common.Read" xml:space="preserve"><value>Leído</value></data>
+  <data name="Common.ReadOnly" xml:space="preserve"><value>Solo lectura</value></data>
+  <data name="Common.Refresh" xml:space="preserve"><value>Actualizar</value></data>
+  <data name="Common.Remove" xml:space="preserve"><value>Quitar</value></data>
+  <data name="Common.Save" xml:space="preserve"><value>Guardar</value></data>
+  <data name="Common.SiteCount" xml:space="preserve"><value>{0} sitio</value></data>
+  <data name="Common.SiteCountPlural" xml:space="preserve"><value>{0} sitios</value></data>
+  <data name="Common.Today" xml:space="preserve"><value>Hoy</value></data>
+  <data name="Common.Unlock" xml:space="preserve"><value>Desbloquear</value></data>
+  <data name="Common.Unlocked" xml:space="preserve"><value>Desbloqueado</value></data>
+  <data name="Common.Unread" xml:space="preserve"><value>Sin leer</value></data>
+  <data name="Common.VersionUnknown" xml:space="preserve"><value>versión desconocida</value></data>
+  <data name="Common.VisitCount" xml:space="preserve"><value>{0} visita</value></data>
+  <data name="Common.VisitCountPlural" xml:space="preserve"><value>{0} visitas</value></data>
+  <data name="Common.Yes" xml:space="preserve"><value>Sí</value></data>
+  <data name="Consent.Text" xml:space="preserve"><value>RECONOCIMIENTO DE SUPERVISIÓN CON CÁMARA (v1)
+
+Confirmo que soy el padre, la madre o el tutor legal del hijo asociado a este dispositivo, o que cuento con el permiso expreso del propietario de la familia para ver esta cámara.
+
+Usaré esta vista de cámara solo para la supervisión parental lícita de ese hijo. No la usaré para vigilar a ninguna otra persona ni en lugares donde una persona tenga una expectativa razonable de privacidad, incluidos dormitorios, baños, vestidores o espacios privados similares. No grabaré, compartiré, publicaré ni usaré la transmisión para acoso, acecho, intimidación ni ningún fin ilícito.
+
+Entiendo que el acceso a la cámara queda registrado con mi cuenta, dispositivo y hora, y que el mal uso puede provocar la pérdida del acceso y acciones legales. Cumpliré todas las leyes de privacidad, consentimiento y monitoreo aplicables en mi jurisdicción. Este aviso no constituye asesoría legal; soy responsable de confirmar que mi uso sea lícito.
+
+Al seleccionar «Acepto», confirmo que he leído y acepto estas condiciones.</value></data>
+  <data name="Day.Fri" xml:space="preserve"><value>vie</value></data>
+  <data name="Day.Mon" xml:space="preserve"><value>lun</value></data>
+  <data name="Day.Sat" xml:space="preserve"><value>sáb</value></data>
+  <data name="Day.Sun" xml:space="preserve"><value>dom</value></data>
+  <data name="Day.Thu" xml:space="preserve"><value>jue</value></data>
+  <data name="Day.Tue" xml:space="preserve"><value>mar</value></data>
+  <data name="Day.Wed" xml:space="preserve"><value>mié</value></data>
+  <data name="Devices.CameraLight" xml:space="preserve"><value>Este dispositivo tiene una luz de cámara o una tapa física de privacidad</value></data>
+  <data name="Devices.ClientLanguage" xml:space="preserve"><value>Idioma del cliente</value></data>
+  <data name="Devices.FollowFamily" xml:space="preserve"><value>Seguir la familia ({0})</value></data>
+  <data name="Devices.Latest" xml:space="preserve"><value>más reciente {0}</value></data>
+  <data name="Devices.None" xml:space="preserve"><value>Aún no hay dispositivos registrados. Usa Agregar dispositivo para crear un código de registro de un solo uso.</value></data>
+  <data name="Devices.NoticeCamera" xml:space="preserve"><value>Mostrar el aviso en pantalla durante la vista de cámara</value></data>
+  <data name="Devices.NoticeScreen" xml:space="preserve"><value>Mostrar el aviso en pantalla durante la vista de pantalla</value></data>
+  <data name="Devices.PageTitle" xml:space="preserve"><value>Dispositivos · Parental OpControl</value></data>
+  <data name="Devices.Subtitle" xml:space="preserve"><value>Todos los dispositivos registrados, con su estado de conexión en vivo.</value></data>
+  <data name="Devices.TimeZone" xml:space="preserve"><value>Zona horaria</value></data>
+  <data name="Devices.UpdateAvailable" xml:space="preserve"><value>Actualización disponible</value></data>
+  <data name="Devices.UpdateNow" xml:space="preserve"><value>Actualizar ahora</value></data>
+  <data name="Devices.UpdateStatus" xml:space="preserve"><value>Actualización: {0}</value></data>
+  <data name="Downloads.DownloadMsi" xml:space="preserve"><value>Descargar MSI</value></data>
+  <data name="Downloads.DownloadSetup" xml:space="preserve"><value>Descargar instalador ({0})</value></data>
+  <data name="Downloads.Eyebrow" xml:space="preserve"><value>Instalador</value></data>
+  <data name="Downloads.InstallerHelp" xml:space="preserve"><value>El instalador configura el servicio y el asistente del usuario, conserva la credencial del dispositivo al actualizar y permite la instalación silenciosa.</value></data>
+  <data name="Downloads.NoRelease" xml:space="preserve"><value>Aún no hay una versión del cliente publicada en este servidor.</value></data>
+  <data name="Downloads.PageTitle" xml:space="preserve"><value>Descargas · Parental OpControl</value></data>
+  <data name="Downloads.Published" xml:space="preserve"><value>Publicado {0}.</value></data>
+  <data name="Downloads.Sha" xml:space="preserve"><value>SHA-256 (MSI): {0}</value></data>
+  <data name="Downloads.Silent" xml:space="preserve"><value>Instalación silenciosa</value></data>
+  <data name="Downloads.SilentHelp" xml:space="preserve"><value>Ejecuta desde un símbolo del sistema con permisos de administrador:</value></data>
+  <data name="Downloads.SilentNote" xml:space="preserve"><value>Las actualizaciones conservan la credencial existente y no requieren código. La desinstalación requiere permisos de administrador y se informa al panel antes de completarse.</value></data>
+  <data name="Downloads.Subtitle" xml:space="preserve"><value>Instala Parental OpControl manualmente en una PC con Windows. El instalador pide la URL del servidor, el código de un solo uso y la cuenta de Windows que se va a proteger.</value></data>
+  <data name="Downloads.WindowsInstaller" xml:space="preserve"><value>Instalador para Windows</value></data>
+  <data name="Email.DigestIntroMany" xml:space="preserve"><value>{0} alertas para tu familia:</value></data>
+  <data name="Email.DigestIntroOne" xml:space="preserve"><value>{0} alerta para tu familia:</value></data>
+  <data name="Email.DigestSubject" xml:space="preserve"><value>Resumen diario de Parental OpControl</value></data>
+  <data name="Email.InviteCoParentBody" xml:space="preserve"><value>Hola:
+
+Te invitaron a unirte a {0} como otro padre o madre en Parental OpControl.
+
+Abre este enlace de un solo uso dentro de las próximas 72 horas:
+{1}
+
+Si no esperabas este correo, ignóralo.</value></data>
+  <data name="Email.InviteCoParentSubject" xml:space="preserve"><value>Te invitaron como otro padre o madre en Parental OpControl</value></data>
+  <data name="Email.InviteNewFamilyBody" xml:space="preserve"><value>Hola:
+
+Te invitaron a crear una familia en Parental OpControl.
+
+Abre este enlace de un solo uso dentro de los próximos 7 días:
+{0}
+
+Si no esperabas este correo, ignóralo.</value></data>
+  <data name="Email.InviteNewFamilySubject" xml:space="preserve"><value>Invitación para crear tu familia en Parental OpControl</value></data>
+  <data name="Email.SmtpNotConfigured" xml:space="preserve"><value>El SMTP del servidor no está configurado.</value></data>
+  <data name="Error.AccountInactive" xml:space="preserve"><value>Esta cuenta ya no está activa. Vuelve a iniciar sesión.</value></data>
+  <data name="Error.AllowNoSchedule" xml:space="preserve"><value>Las reglas de siempre permitido no pueden vincularse a un horario.</value></data>
+  <data name="Error.Back" xml:space="preserve"><value>Volver al panel</value></data>
+  <data name="Error.Body" xml:space="preserve"><value>Inténtalo de nuevo. Si el problema continúa, revisa los registros del servidor.</value></data>
+  <data name="Error.CameraConsent" xml:space="preserve"><value>Acepta los términos de supervisión con cámara antes de iniciar una sesión de cámara.</value></data>
+  <data name="Error.CameraConsentNotAccepted" xml:space="preserve"><value>No se aceptaron los términos de supervisión con cámara.</value></data>
+  <data name="Error.CannotRemoveOwner" xml:space="preserve"><value>No se puede eliminar al propietario de la familia.</value></data>
+  <data name="Error.CannotRemoveSelf" xml:space="preserve"><value>No puedes eliminar tu propia cuenta.</value></data>
+  <data name="Error.CategoryNotFound" xml:space="preserve"><value>No se encontró la categoría.</value></data>
+  <data name="Error.ChildNotFound" xml:space="preserve"><value>No se encontró al hijo en esta familia.</value></data>
+  <data name="Error.ChildNotFoundShort" xml:space="preserve"><value>No se encontró al hijo.</value></data>
+  <data name="Error.ChooseApp" xml:space="preserve"><value>Elige una aplicación.</value></data>
+  <data name="Error.ConfirmFamilyName" xml:space="preserve"><value>Escribe exactamente el nombre de la familia para confirmar.</value></data>
+  <data name="Error.DeviceNameRequired" xml:space="preserve"><value>El nombre del dispositivo es obligatorio (máximo 120 caracteres).</value></data>
+  <data name="Error.DeviceNotFound" xml:space="preserve"><value>No se encontró el dispositivo.</value></data>
+  <data name="Error.DeviceNotFoundFamily" xml:space="preserve"><value>No se encontró el dispositivo en esta familia.</value></data>
+  <data name="Error.EnrollmentCodeInvalid" xml:space="preserve"><value>El código de registro no es válido o venció.</value></data>
+  <data name="Error.EnrollmentCodeRequired" xml:space="preserve"><value>Se requiere el código de registro.</value></data>
+  <data name="Error.EnterDomain" xml:space="preserve"><value>Escribe un dominio.</value></data>
+  <data name="Error.FamilyNotFound" xml:space="preserve"><value>No se encontró la familia.</value></data>
+  <data name="Error.FamilySuspended" xml:space="preserve"><value>Esta familia está suspendida. Contacta al administrador del servidor.</value></data>
+  <data name="Error.FamilySuspendedShort" xml:space="preserve"><value>Esta familia está suspendida.</value></data>
+  <data name="Error.InstallLinkUsed" xml:space="preserve"><value>Este enlace de instalación ya se usó.</value></data>
+  <data name="Error.InstallerNotPublished" xml:space="preserve"><value>El instalador aún no está publicado en este servidor.</value></data>
+  <data name="Error.InvalidDomain" xml:space="preserve"><value>Eso no parece un dominio válido.</value></data>
+  <data name="Error.InvitationNotFound" xml:space="preserve"><value>No se encontró la invitación.</value></data>
+  <data name="Error.MissingFamilyScope" xml:space="preserve"><value>Falta el contexto familiar.</value></data>
+  <data name="Error.MissingParent" xml:space="preserve"><value>Falta la identidad del padre o madre.</value></data>
+  <data name="Error.MobileInstallersSoon" xml:space="preserve"><value>Los instaladores para Linux y Android estarán disponibles próximamente.</value></data>
+  <data name="Error.NeedsPermission" xml:space="preserve"><value>Esta acción requiere el permiso «{0}».</value></data>
+  <data name="Error.NoInstaller" xml:space="preserve"><value>Aún no hay un instalador publicado.</value></data>
+  <data name="Error.NoMsi" xml:space="preserve"><value>Aún no hay un MSI publicado.</value></data>
+  <data name="Error.NoRelease" xml:space="preserve"><value>Aún no hay una versión del cliente publicada en el servidor.</value></data>
+  <data name="Error.OwnerAlertControls" xml:space="preserve"><value>Solo el propietario de la familia puede cambiar los controles de alertas.</value></data>
+  <data name="Error.OwnerAllPermissions" xml:space="preserve"><value>El propietario siempre tiene todos los permisos.</value></data>
+  <data name="Error.OwnerChangePermissions" xml:space="preserve"><value>Solo el propietario de la familia puede cambiar los permisos.</value></data>
+  <data name="Error.OwnerInviteParents" xml:space="preserve"><value>Solo el propietario de la familia puede invitar a padres o madres.</value></data>
+  <data name="Error.OwnerManageInvitations" xml:space="preserve"><value>Solo el propietario de la familia puede administrar las invitaciones.</value></data>
+  <data name="Error.OwnerManageParents" xml:space="preserve"><value>Solo el propietario de la familia puede administrar a los padres y madres.</value></data>
+  <data name="Error.OwnerNotice" xml:space="preserve"><value>Solo el propietario de la familia puede cambiar la configuración del aviso en pantalla.</value></data>
+  <data name="Error.OwnerRemoveParents" xml:space="preserve"><value>Solo el propietario de la familia puede eliminar a padres o madres.</value></data>
+  <data name="Error.ParentNotFoundFamily" xml:space="preserve"><value>No se encontró al padre o madre en esta familia.</value></data>
+  <data name="Error.PickSchedule" xml:space="preserve"><value>Elige un horario para una regla programada.</value></data>
+  <data name="Error.PinFormat" xml:space="preserve"><value>El PIN debe tener de 4 a 12 dígitos.</value></data>
+  <data name="Error.RemoteBusy" xml:space="preserve"><value>Ya hay una sesión remota activa para este dispositivo.</value></data>
+  <data name="Error.ScheduleNotFound" xml:space="preserve"><value>No se encontró el horario para este hijo.</value></data>
+  <data name="Error.ServerAdminOnly" xml:space="preserve"><value>Solo para el administrador del servidor.</value></data>
+  <data name="Error.SignInAgain" xml:space="preserve"><value>Vuelve a iniciar sesión.</value></data>
+  <data name="Error.Title" xml:space="preserve"><value>Algo salió mal</value></data>
+  <data name="Error.UnknownAction" xml:space="preserve"><value>Acción desconocida.</value></data>
+  <data name="Error.UnknownOverride" xml:space="preserve"><value>Opción de desbloqueo desconocida.</value></data>
+  <data name="Error.UnknownRuleType" xml:space="preserve"><value>Tipo de regla desconocido.</value></data>
+  <data name="Error.UnsupportedPlatform" xml:space="preserve"><value>Plataforma de dispositivo no compatible.</value></data>
+  <data name="Home.AParent" xml:space="preserve"><value>un padre o madre</value></data>
+  <data name="Home.ASchedule" xml:space="preserve"><value>un horario</value></data>
+  <data name="Home.AllSchedules" xml:space="preserve"><value>Todos los horarios</value></data>
+  <data name="Home.AlwaysBlocked" xml:space="preserve"><value>Siempre bloqueado</value></data>
+  <data name="Home.BlockedAttempts" xml:space="preserve"><value>Intentos bloqueados</value></data>
+  <data name="Home.Bonus15" xml:space="preserve"><value>+15 min</value></data>
+  <data name="Home.Bonus30" xml:space="preserve"><value>+30 min</value></data>
+  <data name="Home.BonusActive" xml:space="preserve"><value>Tiempo extra activo</value></data>
+  <data name="Home.ChangePin" xml:space="preserve"><value>Cambiar PIN</value></data>
+  <data name="Home.ChildSections" xml:space="preserve"><value>Secciones del hijo</value></data>
+  <data name="Home.ClientVersion" xml:space="preserve"><value>cliente {0}</value></data>
+  <data name="Home.DevicesOnline" xml:space="preserve"><value>Dispositivos en línea</value></data>
+  <data name="Home.DistinctSiteMany" xml:space="preserve"><value>Hoy · {0} sitios distintos</value></data>
+  <data name="Home.DistinctSiteOne" xml:space="preserve"><value>Hoy · {0} sitio distinto</value></data>
+  <data name="Home.GoodAfternoon" xml:space="preserve"><value>Buenas tardes</value></data>
+  <data name="Home.GoodEvening" xml:space="preserve"><value>Buenas noches</value></data>
+  <data name="Home.GoodMorning" xml:space="preserve"><value>Buenos días</value></data>
+  <data name="Home.LimitReachedUntilMidnight" xml:space="preserve"><value>Llegaste a tu límite diario: el dispositivo queda bloqueado hasta la medianoche.</value></data>
+  <data name="Home.LockNow" xml:space="preserve"><value>Bloquear ahora</value></data>
+  <data name="Home.MissingFamilyScope" xml:space="preserve"><value>Falta el contexto familiar en la sesión.</value></data>
+  <data name="Home.NextLock" xml:space="preserve"><value>Próximo bloqueo</value></data>
+  <data name="Home.NextSchedule" xml:space="preserve"><value>Próximo horario</value></data>
+  <data name="Home.NoAlertsToday" xml:space="preserve"><value>No hay alertas hoy.</value></data>
+  <data name="Home.NoChildBody" xml:space="preserve"><value>Crea el perfil de un hijo para empezar a administrar dispositivos.</value></data>
+  <data name="Home.NoDailyLimitSet" xml:space="preserve"><value>Sin límite diario</value></data>
+  <data name="Home.NoDevices" xml:space="preserve"><value>Sin dispositivos</value></data>
+  <data name="Home.NoDevicesEnrolled" xml:space="preserve"><value>Aún no hay dispositivos registrados.</value></data>
+  <data name="Home.NoLimit" xml:space="preserve"><value>sin límite</value></data>
+  <data name="Home.NoLockPermission" xml:space="preserve"><value>Puedes ver esta familia, pero no tienes permiso para bloquear ni dar tiempo extra.</value></data>
+  <data name="Home.NoScheduleSet" xml:space="preserve"><value>Sin horario configurado</value></data>
+  <data name="Home.NoUsageToday" xml:space="preserve"><value>No se registró uso hoy.</value></data>
+  <data name="Home.NoUsageYet" xml:space="preserve"><value>Aún no hay uso</value></data>
+  <data name="Home.OfLimit" xml:space="preserve"><value>de un límite de {0} min</value></data>
+  <data name="Home.OfflineCount" xml:space="preserve"><value>{0} sin conexión</value></data>
+  <data name="Home.OnlineOf" xml:space="preserve"><value>{0} de {1} en línea</value></data>
+  <data name="Home.OnlineOfShort" xml:space="preserve"><value>{0} de {1}</value></data>
+  <data name="Home.OpenProfile" xml:space="preserve"><value>Abrir perfil →</value></data>
+  <data name="Home.Overview" xml:space="preserve"><value>Resumen</value></data>
+  <data name="Home.PageTitle" xml:space="preserve"><value>Inicio · Parental OpControl</value></data>
+  <data name="Home.ParentFallback" xml:space="preserve"><value>padre o madre</value></data>
+  <data name="Home.PinIsSet" xml:space="preserve"><value>El PIN de desbloqueo está configurado (funciona sin conexión en la pantalla de bloqueo).</value></data>
+  <data name="Home.PinNotSet" xml:space="preserve"><value>El PIN de desbloqueo no está configurado.</value></data>
+  <data name="Home.ReasonBonus" xml:space="preserve"><value>El tiempo extra está activo.</value></data>
+  <data name="Home.ReasonDailyLimit" xml:space="preserve"><value>Llegaste a tu límite diario. Se reinicia a la medianoche local.</value></data>
+  <data name="Home.ReasonManual" xml:space="preserve"><value>Bloqueado por {0}.</value></data>
+  <data name="Home.ReasonNone" xml:space="preserve"><value>No hay ningún bloqueo activo.</value></data>
+  <data name="Home.ReasonOverride" xml:space="preserve"><value>Desbloqueado hasta el próximo bloqueo.</value></data>
+  <data name="Home.ReasonSchedule" xml:space="preserve"><value>Bloqueado por {0}.</value></data>
+  <data name="Home.Report" xml:space="preserve"><value>Informe</value></data>
+  <data name="Home.ScheduleUntil" xml:space="preserve"><value>{0} hasta</value></data>
+  <data name="Home.ScreenTimeToday" xml:space="preserve"><value>Tiempo en pantalla hoy</value></data>
+  <data name="Home.SetPin" xml:space="preserve"><value>Configurar PIN</value></data>
+  <data name="Home.StatusBonus" xml:space="preserve"><value>Tiempo extra</value></data>
+  <data name="Home.StatusDailyLimit" xml:space="preserve"><value>Llegaste a tu límite diario</value></data>
+  <data name="Home.StatusManual" xml:space="preserve"><value>Bloqueado manualmente</value></data>
+  <data name="Home.StatusOverride" xml:space="preserve"><value>Desbloqueado hasta el próximo bloqueo</value></data>
+  <data name="Home.StatusRules" xml:space="preserve"><value>Siguiendo las reglas</value></data>
+  <data name="Home.StatusSchedule" xml:space="preserve"><value>Horario: {0}</value></data>
+  <data name="Home.TimeLeftToday" xml:space="preserve"><value>Te quedan {0} hoy.</value></data>
+  <data name="Home.TodaysAlerts" xml:space="preserve"><value>Alertas de hoy</value></data>
+  <data name="Home.TodaysSchedule" xml:space="preserve"><value>Horario de hoy</value></data>
+  <data name="Home.TopAppToday" xml:space="preserve"><value>Aplicación más usada hoy</value></data>
+  <data name="Home.TopAppsToday" xml:space="preserve"><value>Aplicaciones más usadas hoy</value></data>
+  <data name="Home.ViewAll" xml:space="preserve"><value>Ver todas</value></data>
+  <data name="Identity.Default" xml:space="preserve"><value>No se pudo crear la cuenta. Revisa los datos e inténtalo de nuevo.</value></data>
+  <data name="Identity.DuplicateEmail" xml:space="preserve"><value>Ya existe una cuenta con ese correo.</value></data>
+  <data name="Identity.InvalidEmail" xml:space="preserve"><value>Escribe un correo electrónico válido.</value></data>
+  <data name="Identity.PasswordMismatch" xml:space="preserve"><value>Las contraseñas no coinciden.</value></data>
+  <data name="Identity.PasswordRequiresDigit" xml:space="preserve"><value>La contraseña debe incluir un número.</value></data>
+  <data name="Identity.PasswordRequiresLower" xml:space="preserve"><value>La contraseña debe incluir una letra minúscula.</value></data>
+  <data name="Identity.PasswordRequiresNonAlphanumeric" xml:space="preserve"><value>La contraseña debe incluir un símbolo.</value></data>
+  <data name="Identity.PasswordRequiresUpper" xml:space="preserve"><value>La contraseña debe incluir una letra mayúscula.</value></data>
+  <data name="Identity.PasswordTooShort" xml:space="preserve"><value>La contraseña es demasiado corta.</value></data>
+  <data name="Install.AdminHelp" xml:space="preserve"><value>¿Iniciaste sesión como administrador? El instalador preguntará qué cuenta de Windows proteger.</value></data>
+  <data name="Install.AndroidBody" xml:space="preserve"><value>Este enlace de instalación es para la computadora Windows de {0}. La aplicación para Android aún no está disponible.</value></data>
+  <data name="Install.AndroidHelp" xml:space="preserve"><value>Abre este enlace en la PC Windows del hijo con una cuenta de administrador.</value></data>
+  <data name="Install.AndroidSoon" xml:space="preserve"><value>Android próximamente</value></data>
+  <data name="Install.CodeHelp" xml:space="preserve"><value>¿El instalador no incluyó el código?</value></data>
+  <data name="Install.CodeHelpBody" xml:space="preserve"><value>Ejecuta el instalador y escribe el código de un solo uso que aparece en el panel de padres. También puedes descargar el instalador más reciente desde la página Descargas del panel.</value></data>
+  <data name="Install.Connected" xml:space="preserve"><value>Conectado</value></data>
+  <data name="Install.ConnectedBody" xml:space="preserve"><value>{0} ya está protegido por Parental OpControl.</value></data>
+  <data name="Install.ConnectedClose" xml:space="preserve"><value>Puedes cerrar esta página. El dispositivo aparecerá en el panel de inmediato.</value></data>
+  <data name="Install.Download" xml:space="preserve"><value>Descargar instalador</value></data>
+  <data name="Install.Expires" xml:space="preserve"><value>El enlace vence {0}. El enlace y el código funcionan una sola vez.</value></data>
+  <data name="Install.ForChild1" xml:space="preserve"><value>Esto instalará Parental OpControl en la computadora de</value></data>
+  <data name="Install.ForChild2" xml:space="preserve"><value>.</value></data>
+  <data name="Install.LinkExpired" xml:space="preserve"><value>El enlace venció</value></data>
+  <data name="Install.LinkHelp1" xml:space="preserve"><value>Abre el panel, elige</value></data>
+  <data name="Install.LinkHelp2" xml:space="preserve"><value>: y crea un enlace de instalación nuevo.</value></data>
+  <data name="Install.LinkInvalid" xml:space="preserve"><value>El enlace no es válido</value></data>
+  <data name="Install.LinkRevoked" xml:space="preserve"><value>El enlace fue revocado</value></data>
+  <data name="Install.NoInstaller" xml:space="preserve"><value>El instalador aún no está publicado en este servidor.</value></data>
+  <data name="Install.OnThisPc" xml:space="preserve"><value>Instalar en esta PC</value></data>
+  <data name="Install.Title" xml:space="preserve"><value>Instalar Parental OpControl</value></data>
+  <data name="InstallLink.Expired" xml:space="preserve"><value>Este enlace de instalación venció. Pide a un padre o madre que cree uno nuevo.</value></data>
+  <data name="InstallLink.Invalid" xml:space="preserve"><value>Este enlace de instalación no es válido.</value></data>
+  <data name="InstallLink.Revoked" xml:space="preserve"><value>Este enlace de instalación fue revocado. Pide a un padre o madre que cree uno nuevo.</value></data>
+  <data name="Invite.CannotResend" xml:space="preserve"><value>Esta invitación ya no se puede reenviar.</value></data>
+  <data name="Invite.CreateLogin" xml:space="preserve"><value>Crear inicio de sesión</value></data>
+  <data name="Invite.EmailExists" xml:space="preserve"><value>Ya existe una cuenta con ese correo en este servidor.</value></data>
+  <data name="Invite.EmailFailed" xml:space="preserve"><value>La invitación es válida, pero no se pudo enviar el correo.</value></data>
+  <data name="Invite.EnterChildName" xml:space="preserve"><value>Escribe el nombre del primer hijo.</value></data>
+  <data name="Invite.EnterEmail" xml:space="preserve"><value>Escribe tu correo electrónico.</value></data>
+  <data name="Invite.EnterFamilyName" xml:space="preserve"><value>Escribe el nombre de la familia.</value></data>
+  <data name="Invite.Expired" xml:space="preserve"><value>Esta invitación venció.</value></data>
+  <data name="Invite.FamilyNotFound" xml:space="preserve"><value>No se encontró la familia.</value></data>
+  <data name="Invite.FamilySuspended" xml:space="preserve"><value>Esta familia está suspendida.</value></data>
+  <data name="Invite.FirstChild" xml:space="preserve"><value>Nombre del primer hijo</value></data>
+  <data name="Invite.GoSignIn" xml:space="preserve"><value>Ir al inicio de sesión</value></data>
+  <data name="Invite.Invalid" xml:space="preserve"><value>Este enlace de invitación no es válido.</value></data>
+  <data name="Invite.JoinBody" xml:space="preserve"><value>Te invitaron como otro padre o madre. Crea tu propio inicio de sesión. Puedes agregar una aplicación de autenticación después, en Configuración.</value></data>
+  <data name="Invite.JoinHeading" xml:space="preserve"><value>Únete a {0}</value></data>
+  <data name="Invite.JoinTitle" xml:space="preserve"><value>Únete como otro padre o madre</value></data>
+  <data name="Invite.Missing" xml:space="preserve"><value>Falta el enlace de la invitación.</value></data>
+  <data name="Invite.NewBody" xml:space="preserve"><value>Te invitaron al servidor. Crea la cuenta del propietario de la familia y el primer hijo. Llegarás a tu propio panel vacío.</value></data>
+  <data name="Invite.NewTitle" xml:space="preserve"><value>Crea tu familia</value></data>
+  <data name="Invite.NoEmail" xml:space="preserve"><value>Esta invitación no tiene correo; mejor copia el enlace de nuevo.</value></data>
+  <data name="Invite.NotCoParent" xml:space="preserve"><value>Esta invitación no es para otro padre o madre.</value></data>
+  <data name="Invite.NotFound" xml:space="preserve"><value>No se encontró la invitación.</value></data>
+  <data name="Invite.NotNewFamily" xml:space="preserve"><value>Esta invitación no es para crear una familia.</value></data>
+  <data name="Invite.Revoked" xml:space="preserve"><value>Esta invitación fue revocada.</value></data>
+  <data name="Invite.Unavailable" xml:space="preserve"><value>Invitación no disponible</value></data>
+  <data name="Invite.UnavailableBody" xml:space="preserve"><value>Este enlace de invitación no es válido, venció, ya se usó o fue revocado. Pide un enlace nuevo a quien te invitó. Las familias nuevas solo pueden unirse por invitación.</value></data>
+  <data name="Invite.UseInvitedEmail" xml:space="preserve"><value>Usa el correo al que se envió esta invitación.</value></data>
+  <data name="Invite.Used" xml:space="preserve"><value>Esta invitación ya se usó.</value></data>
+  <data name="Js.CameraLive" xml:space="preserve"><value>Cámara en vivo</value></data>
+  <data name="Js.Connecting" xml:space="preserve"><value>Conectando…</value></data>
+  <data name="Js.ConnectionError" xml:space="preserve"><value>Error de conexión.</value></data>
+  <data name="Js.Live" xml:space="preserve"><value>En vivo</value></data>
+  <data name="Js.Requesting" xml:space="preserve"><value>Solicitando…</value></data>
+  <data name="Js.ScreenLive" xml:space="preserve"><value>Pantalla en vivo</value></data>
+  <data name="Js.SessionCreating" xml:space="preserve"><value>Creando sesión…</value></data>
+  <data name="Js.SessionEnded" xml:space="preserve"><value>La sesión terminó.</value></data>
+  <data name="Js.SessionStartFailed" xml:space="preserve"><value>No se pudo iniciar: </value></data>
+  <data name="Js.SessionWaiting" xml:space="preserve"><value>Esperando al dispositivo…</value></data>
+  <data name="Js.UpdateFailed" xml:space="preserve"><value>No se pudo solicitar la actualización: </value></data>
+  <data name="Js.UpdateRequested" xml:space="preserve"><value>Actualización solicitada</value></data>
+  <data name="Language.Auto" xml:space="preserve"><value>Automático (navegador)</value></data>
+  <data name="Language.English" xml:space="preserve"><value>English</value></data>
+  <data name="Language.Saved" xml:space="preserve"><value>Idioma guardado.</value></data>
+  <data name="Language.ServerDefault" xml:space="preserve"><value>Predeterminado de la familia</value></data>
+  <data name="Language.Spanish" xml:space="preserve"><value>Español</value></data>
+  <data name="Layout.CreatedBy" xml:space="preserve"><value>CREADO POR OpControl</value></data>
+  <data name="Layout.English" xml:space="preserve"><value>English</value></data>
+  <data name="Layout.FamilyDashboard" xml:space="preserve"><value>Panel familiar</value></data>
+  <data name="Layout.Language" xml:space="preserve"><value>Idioma</value></data>
+  <data name="Layout.SignOut" xml:space="preserve"><value>Cerrar sesión</value></data>
+  <data name="Layout.Spanish" xml:space="preserve"><value>Español</value></data>
+  <data name="Layout.ToggleTheme" xml:space="preserve"><value>Cambiar tema</value></data>
+  <data name="Layout.VersionDetails" xml:space="preserve"><value>Detalles de la versión</value></data>
+  <data name="Login.Google" xml:space="preserve"><value>Continuar con Google</value></data>
+  <data name="Login.Incorrect" xml:space="preserve"><value>El correo o la contraseña son incorrectos.</value></data>
+  <data name="Login.InviteNote" xml:space="preserve"><value>Las familias nuevas se unen por invitación del propietario del servidor.</value></data>
+  <data name="Login.LockedOut" xml:space="preserve"><value>Esta cuenta está bloqueada temporalmente.</value></data>
+  <data name="Login.Microsoft" xml:space="preserve"><value>Continuar con Microsoft</value></data>
+  <data name="Login.OAuthOff" xml:space="preserve"><value>OAuth está desactivado de forma predeterminada</value></data>
+  <data name="Login.Or" xml:space="preserve"><value>O</value></data>
+  <data name="Login.RememberMe" xml:space="preserve"><value>Mantener mi sesión iniciada</value></data>
+  <data name="Login.Subtitle" xml:space="preserve"><value>Administra los dispositivos de tu familia.</value></data>
+  <data name="Login.Suspended" xml:space="preserve"><value>Esta familia está suspendida. Contacta al administrador del servidor.</value></data>
+  <data name="Login.Title" xml:space="preserve"><value>Iniciar sesión</value></data>
+  <data name="Login.TooMany" xml:space="preserve"><value>Demasiados intentos de inicio de sesión. Inténtalo de nuevo en unos minutos.</value></data>
+  <data name="Nav.Activity" xml:space="preserve"><value>Actividad</value></data>
+  <data name="Nav.AddDevice" xml:space="preserve"><value>Agregar dispositivo</value></data>
+  <data name="Nav.Alerts" xml:space="preserve"><value>Alertas</value></data>
+  <data name="Nav.Apps" xml:space="preserve"><value>Aplicaciones</value></data>
+  <data name="Nav.Devices" xml:space="preserve"><value>Dispositivos</value></data>
+  <data name="Nav.Downloads" xml:space="preserve"><value>Descargas</value></data>
+  <data name="Nav.Home" xml:space="preserve"><value>Inicio</value></data>
+  <data name="Nav.Parents" xml:space="preserve"><value>Padres</value></data>
+  <data name="Nav.Remote" xml:space="preserve"><value>Remoto</value></data>
+  <data name="Nav.Schedules" xml:space="preserve"><value>Horarios</value></data>
+  <data name="Nav.ScreenTime" xml:space="preserve"><value>Tiempo en pantalla</value></data>
+  <data name="Nav.ServerAdmin" xml:space="preserve"><value>Administración del servidor</value></data>
+  <data name="Nav.Settings" xml:space="preserve"><value>Configuración</value></data>
+  <data name="Nav.Websites" xml:space="preserve"><value>Sitios web</value></data>
+  <data name="NotFound.Body" xml:space="preserve"><value>Esa página no existe.</value></data>
+  <data name="NotFound.Title" xml:space="preserve"><value>No encontrado</value></data>
+  <data name="Pin.Back" xml:space="preserve"><value>Volver a Configuración</value></data>
+  <data name="Pin.Clear" xml:space="preserve"><value>Borrar PIN</value></data>
+  <data name="Pin.Cleared" xml:space="preserve"><value>PIN borrado.</value></data>
+  <data name="Pin.Confirm" xml:space="preserve"><value>Confirmar PIN</value></data>
+  <data name="Pin.IsSet" xml:space="preserve"><value>Hay un PIN de desbloqueo configurado para este hijo.</value></data>
+  <data name="Pin.Mismatch" xml:space="preserve"><value>Los PIN no coinciden.</value></data>
+  <data name="Pin.New" xml:space="preserve"><value>PIN nuevo</value></data>
+  <data name="Pin.NotSet" xml:space="preserve"><value>No hay un PIN de desbloqueo configurado.</value></data>
+  <data name="Pin.Rule" xml:space="preserve"><value>De 4 a 12 dígitos. Cinco intentos incorrectos bloquean el desbloqueo durante 60 segundos.</value></data>
+  <data name="Pin.Save" xml:space="preserve"><value>Guardar PIN</value></data>
+  <data name="Pin.Saved" xml:space="preserve"><value>PIN guardado y sincronizado con los dispositivos del hijo.</value></data>
+  <data name="Pin.Status" xml:space="preserve"><value>Estado</value></data>
+  <data name="Pin.Subtitle" xml:space="preserve"><value>El PIN se verifica en el dispositivo. Solo se guarda un hash PBKDF2 y el asistente de la sesión del usuario nunca lo recibe.</value></data>
+  <data name="Pin.Title" xml:space="preserve"><value>PIN de desbloqueo de padres</value></data>
+  <data name="Remote.Camera" xml:space="preserve"><value>Cámara</value></data>
+  <data name="Remote.ConsentAccepted" xml:space="preserve"><value>✓ Términos de supervisión con cámara aceptados</value></data>
+  <data name="Remote.ConsentOneTime" xml:space="preserve"><value>Aceptación única</value></data>
+  <data name="Remote.ConsentSaveFailed" xml:space="preserve"><value>No se pudo guardar la aceptación. Inténtalo de nuevo.</value></data>
+  <data name="Remote.ConsentTitle" xml:space="preserve"><value>Términos de supervisión con cámara</value></data>
+  <data name="Remote.Fullscreen" xml:space="preserve"><value>Pantalla completa</value></data>
+  <data name="Remote.IAgree" xml:space="preserve"><value>Acepto</value></data>
+  <data name="Remote.NoDevices" xml:space="preserve"><value>Aún no hay dispositivos registrados.</value></data>
+  <data name="Remote.PageTitle" xml:space="preserve"><value>Remoto · Parental OpControl</value></data>
+  <data name="Remote.Screen" xml:space="preserve"><value>Pantalla</value></data>
+  <data name="Remote.SessionLimit" xml:space="preserve"><value>Iniciada por un padre o madre · máx. 10 min</value></data>
+  <data name="Remote.Stop" xml:space="preserve"><value>Detener</value></data>
+  <data name="Remote.Subtitle" xml:space="preserve"><value>Ve la pantalla o la cámara del dispositivo cuando lo necesites. La vista de pantalla es silenciosa; el acceso a la cámara se indica con la luz física del dispositivo.</value></data>
+  <data name="Remote.ViewCamera" xml:space="preserve"><value>Ver cámara</value></data>
+  <data name="Remote.ViewScreen" xml:space="preserve"><value>Ver pantalla</value></data>
+  <data name="Schedules.Add" xml:space="preserve"><value>Agregar horario</value></data>
+  <data name="Schedules.AddTitle" xml:space="preserve"><value>Agregar un horario</value></data>
+  <data name="Schedules.Days" xml:space="preserve"><value>Días</value></data>
+  <data name="Schedules.DeleteConfirm" xml:space="preserve"><value>¿Eliminar este horario?</value></data>
+  <data name="Schedules.Disabled" xml:space="preserve"><value>Desactivado</value></data>
+  <data name="Schedules.Enabled" xml:space="preserve"><value>Activado</value></data>
+  <data name="Schedules.End" xml:space="preserve"><value>Fin</value></data>
+  <data name="Schedules.EveryDay" xml:space="preserve"><value>Todos los días</value></data>
+  <data name="Schedules.Example" xml:space="preserve"><value>Ejemplo: de 21:00 a 07:00 es un periodo que cruza la medianoche.</value></data>
+  <data name="Schedules.InvalidTimes" xml:space="preserve"><value>La hora de inicio y la de fin deben ser válidas.</value></data>
+  <data name="Schedules.Name" xml:space="preserve"><value>Nombre</value></data>
+  <data name="Schedules.NamePlaceholder" xml:space="preserve"><value>Hora de dormir</value></data>
+  <data name="Schedules.NameRequired" xml:space="preserve"><value>El nombre del horario es obligatorio.</value></data>
+  <data name="Schedules.NoSchedule" xml:space="preserve"><value>Sin horario</value></data>
+  <data name="Schedules.None" xml:space="preserve"><value>Aún no hay horarios.</value></data>
+  <data name="Schedules.PickDay" xml:space="preserve"><value>Elige al menos un día.</value></data>
+  <data name="Schedules.SameTimes" xml:space="preserve"><value>La hora de inicio y la de fin no pueden ser iguales.</value></data>
+  <data name="Schedules.ScheduleFallback" xml:space="preserve"><value>Horario</value></data>
+  <data name="Schedules.Start" xml:space="preserve"><value>Inicio</value></data>
+  <data name="Schedules.Subtitle" xml:space="preserve"><value>Los horarios se aplican a todos los dispositivos de este hijo. Se admiten periodos que cruzan la medianoche.</value></data>
+  <data name="Schedules.Title" xml:space="preserve"><value>Horarios de bloqueo</value></data>
+  <data name="ScreenTime.ActiveUse" xml:space="preserve"><value>Uso activo</value></data>
+  <data name="ScreenTime.ApproximateTime" xml:space="preserve"><value>El tiempo es aproximado</value></data>
+  <data name="ScreenTime.AveragePerDay" xml:space="preserve"><value>Promedio de {0} al día</value></data>
+  <data name="ScreenTime.EnableLimit" xml:space="preserve"><value>Activar un límite diario de tiempo en pantalla</value></data>
+  <data name="ScreenTime.Idle" xml:space="preserve"><value>Inactivo</value></data>
+  <data name="ScreenTime.IdleNote" xml:space="preserve"><value>No cuenta para el tiempo en pantalla</value></data>
+  <data name="ScreenTime.Limit1h" xml:space="preserve"><value>Límite de 1 h</value></data>
+  <data name="ScreenTime.LimitReachedMidnight" xml:space="preserve"><value>Llegaste a tu límite diario. El dispositivo queda bloqueado hasta la medianoche local.</value></data>
+  <data name="ScreenTime.MostUsedApps" xml:space="preserve"><value>Aplicaciones más usadas</value></data>
+  <data name="ScreenTime.MostVisitedSites" xml:space="preserve"><value>Sitios más visitados</value></data>
+  <data name="ScreenTime.NoAppUsage" xml:space="preserve"><value>No se registró uso de aplicaciones en este periodo.</value></data>
+  <data name="ScreenTime.NoSiteUsage" xml:space="preserve"><value>No se registró uso de sitios web en este periodo.</value></data>
+  <data name="ScreenTime.PageTitle" xml:space="preserve"><value>Tiempo en pantalla · Parental OpControl</value></data>
+  <data name="ScreenTime.PeriodDay" xml:space="preserve"><value>Día</value></data>
+  <data name="ScreenTime.PeriodMonth" xml:space="preserve"><value>Mes</value></data>
+  <data name="ScreenTime.PeriodWeek" xml:space="preserve"><value>Semana</value></data>
+  <data name="ScreenTime.SaveLimits" xml:space="preserve"><value>Guardar límites</value></data>
+  <data name="ScreenTime.SharedAcross" xml:space="preserve"><value>Se comparte en todos los dispositivos de {0}. Se reinicia a la medianoche local.</value></data>
+  <data name="ScreenTime.SpokenWarnings" xml:space="preserve"><value>Avisos hablados antes del límite</value></data>
+  <data name="ScreenTime.Subtitle" xml:space="preserve"><value>Uso activo, límites de aplicaciones e informes de cada dispositivo de este hijo.</value></data>
+  <data name="ScreenTime.ThisMonth" xml:space="preserve"><value>Este mes</value></data>
+  <data name="ScreenTime.ThisWeek" xml:space="preserve"><value>Esta semana</value></data>
+  <data name="ScreenTime.TimeNote" xml:space="preserve"><value>El tiempo se guarda en UTC y se agrupa por la zona horaria del dispositivo (medianoche local). El tiempo de sitios web es aproximado: se calcula con el registro de visitas DNS y el tiempo en primer plano del navegador.</value></data>
+  <data name="ScreenTime.TodayVsAverage" xml:space="preserve"><value>Hoy vs. promedio</value></data>
+  <data name="ScreenTime.TodaysLimit" xml:space="preserve"><value>Límite de hoy</value></data>
+  <data name="ScreenTime.Unaccounted" xml:space="preserve"><value>Sin registrar</value></data>
+  <data name="ScreenTime.UnaccountedNote" xml:space="preserve"><value>El asistente no estaba en ejecución</value></data>
+  <data name="ScreenTime.Usage" xml:space="preserve"><value>Uso</value></data>
+  <data name="ScreenTime.UsedOfLimit" xml:space="preserve"><value>{0} usados de {1} min</value></data>
+  <data name="ScreenTime.UsedToday" xml:space="preserve"><value>{0} hoy</value></data>
+  <data name="ServerAdmin.Audit" xml:space="preserve"><value>Actividad de administración del servidor</value></data>
+  <data name="ServerAdmin.CopyLink" xml:space="preserve"><value>Copia este enlace y envíalo a la persona invitada.</value></data>
+  <data name="ServerAdmin.Created" xml:space="preserve"><value>creada {0}</value></data>
+  <data name="ServerAdmin.DeleteConfirm1" xml:space="preserve"><value>Eliminar</value></data>
+  <data name="ServerAdmin.DeleteConfirm2" xml:space="preserve"><value>y todos sus datos? Esta acción no se puede deshacer.</value></data>
+  <data name="ServerAdmin.DeleteFamily" xml:space="preserve"><value>Eliminar familia</value></data>
+  <data name="ServerAdmin.Deleted" xml:space="preserve"><value>Familia eliminada.</value></data>
+  <data name="ServerAdmin.EmailSent" xml:space="preserve"><value>Correo enviado a la persona invitada.</value></data>
+  <data name="ServerAdmin.Eyebrow" xml:space="preserve"><value>Servidor</value></data>
+  <data name="ServerAdmin.Families" xml:space="preserve"><value>Familias</value></data>
+  <data name="ServerAdmin.FamilyCounts" xml:space="preserve"><value>{0} hijos · {1} dispositivos</value></data>
+  <data name="ServerAdmin.FamilyHint" xml:space="preserve"><value>Sugerencia de nombre de familia (opcional)</value></data>
+  <data name="ServerAdmin.FamilyNameChosen" xml:space="preserve"><value>Nombre de familia elegido por la persona invitada</value></data>
+  <data name="ServerAdmin.FromName" xml:space="preserve"><value>Nombre del remitente</value></data>
+  <data name="ServerAdmin.InviteFamily" xml:space="preserve"><value>Invitar a una familia</value></data>
+  <data name="ServerAdmin.InviteHelp" xml:space="preserve"><value>Las familias nuevas solo pueden unirse por invitación. El enlace vence en 7 días y se puede usar una vez. No hay registro público.</value></data>
+  <data name="ServerAdmin.LastActivity" xml:space="preserve"><value>última actividad {0}</value></data>
+  <data name="ServerAdmin.NoAudit" xml:space="preserve"><value>Aún no hay acciones de administración.</value></data>
+  <data name="ServerAdmin.NoPending" xml:space="preserve"><value>No hay invitaciones pendientes.</value></data>
+  <data name="ServerAdmin.NotAllowed" xml:space="preserve"><value>Acceso no permitido</value></data>
+  <data name="ServerAdmin.NotAllowedBody" xml:space="preserve"><value>Esta página es para el administrador del servidor.</value></data>
+  <data name="ServerAdmin.OneTimeInviteLink" xml:space="preserve"><value>Enlace de invitación de un solo uso</value></data>
+  <data name="ServerAdmin.PageTitle" xml:space="preserve"><value>Administración del servidor · Parental OpControl</value></data>
+  <data name="ServerAdmin.PendingFamilies" xml:space="preserve"><value>Invitaciones de familias pendientes</value></data>
+  <data name="ServerAdmin.Port" xml:space="preserve"><value>Puerto</value></data>
+  <data name="ServerAdmin.Reactivate" xml:space="preserve"><value>Reactivar</value></data>
+  <data name="ServerAdmin.Reactivated" xml:space="preserve"><value>Familia reactivada.</value></data>
+  <data name="ServerAdmin.SaveSmtp" xml:space="preserve"><value>Guardar SMTP</value></data>
+  <data name="ServerAdmin.ServerSmtp" xml:space="preserve"><value>SMTP del servidor</value></data>
+  <data name="ServerAdmin.SmtpHelp" xml:space="preserve"><value>Se usa para invitaciones de familias y correos de alertas. La configuración SMTP de cada familia queda como respaldo.</value></data>
+  <data name="ServerAdmin.SmtpSaved" xml:space="preserve"><value>Configuración SMTP guardada.</value></data>
+  <data name="ServerAdmin.Subtitle" xml:space="preserve"><value>Invita familias, administra la configuración del servidor y consulta solo los datos generales de cada familia. Las reglas, los informes y la actividad de cada familia son privados, salvo que seas miembro de esa familia.</value></data>
+  <data name="ServerAdmin.Suspend" xml:space="preserve"><value>Suspender</value></data>
+  <data name="ServerAdmin.Suspended" xml:space="preserve"><value>· suspendida</value></data>
+  <data name="ServerAdmin.SuspendedNotice" xml:space="preserve"><value>Familia suspendida.</value></data>
+  <data name="ServerAdmin.TypeName" xml:space="preserve"><value>Escribe el nombre de la familia para confirmar</value></data>
+  <data name="ServerAdmin.Username" xml:space="preserve"><value>Usuario</value></data>
+  <data name="Settings.Accent" xml:space="preserve"><value>acento</value></data>
+  <data name="Settings.AlertControls" xml:space="preserve"><value>Controles de alertas</value></data>
+  <data name="Settings.AlertControlsFootnote" xml:space="preserve"><value>Los tipos silenciados siguen apareciendo en el panel; solo se silencia el envío por correo. Las horas de silencio retienen los correos hasta que termina el periodo. Los correos fallidos se reintentan con espera progresiva (hasta 6 intentos).</value></data>
+  <data name="Settings.AlertControlsHelp" xml:space="preserve"><value>Silencia un tipo de alerta, retrasa los correos durante las horas de silencio o envía un solo resumen diario en lugar de correos individuales.</value></data>
+  <data name="Settings.AlertEmails" xml:space="preserve"><value>Correos de alertas</value></data>
+  <data name="Settings.AlertEmailsHelp" xml:space="preserve"><value>Las notificaciones por correo están desactivadas de forma predeterminada. Cuando las activas, las alertas nuevas se envían a cada cuenta de padre o madre que tenga correo.</value></data>
+  <data name="Settings.Brand" xml:space="preserve"><value>Marca</value></data>
+  <data name="Settings.BrandHelp1" xml:space="preserve"><value>El nombre del producto, el logotipo y el color de acento vienen de una sola configuración del servidor (</value></data>
+  <data name="Settings.BrandHelp2" xml:space="preserve"><value>).</value></data>
+  <data name="Settings.BuildDetail" xml:space="preserve"><value>Versión {0} · commit {1} · compilada {2}</value></data>
+  <data name="Settings.BuildHelp" xml:space="preserve"><value>Esto viene de la imagen en ejecución, no de un valor escrito en la configuración.</value></data>
+  <data name="Settings.BuildVersion" xml:space="preserve"><value>Versión compilada</value></data>
+  <data name="Settings.ChangeOrClearPin" xml:space="preserve"><value>Cambiar o borrar el PIN</value></data>
+  <data name="Settings.Digest" xml:space="preserve"><value>Enviar un resumen diario en su lugar</value></data>
+  <data name="Settings.DigestHour" xml:space="preserve"><value>Hora del resumen (local, 0-23)</value></data>
+  <data name="Settings.FamilyEyebrow" xml:space="preserve"><value>Familia</value></data>
+  <data name="Settings.FamilyLanguage" xml:space="preserve"><value>Idioma predeterminado de la familia</value></data>
+  <data name="Settings.FamilyLanguageHelp" xml:space="preserve"><value>Cada dispositivo puede cambiar el idioma familiar en la página Dispositivos.</value></data>
+  <data name="Settings.FromAddress" xml:space="preserve"><value>Dirección de remitente</value></data>
+  <data name="Settings.Language" xml:space="preserve"><value>Idioma</value></data>
+  <data name="Settings.LanguageHelp" xml:space="preserve"><value>Elige el idioma de tu cuenta. El idioma predeterminado de la familia se usa para correos a personas sin cuenta y para los dispositivos que siguen el idioma familiar.</value></data>
+  <data name="Settings.LeaveBlankToKeep" xml:space="preserve"><value>Déjala en blanco para conservarla</value></data>
+  <data name="Settings.MuteLimit" xml:space="preserve"><value>Silenciar alertas de límites</value></data>
+  <data name="Settings.MuteNewApp" xml:space="preserve"><value>Silenciar alertas de aplicaciones nuevas</value></data>
+  <data name="Settings.MuteOffline" xml:space="preserve"><value>Silenciar alertas de dispositivos sin conexión</value></data>
+  <data name="Settings.MutePin" xml:space="preserve"><value>Silenciar alertas de desbloqueo con PIN</value></data>
+  <data name="Settings.MuteRepeated" xml:space="preserve"><value>Silenciar sitios bloqueados repetidos</value></data>
+  <data name="Settings.MuteTamper" xml:space="preserve"><value>Silenciar alertas de manipulación</value></data>
+  <data name="Settings.MyLanguage" xml:space="preserve"><value>Mi idioma</value></data>
+  <data name="Settings.Notice" xml:space="preserve"><value>Aviso en pantalla</value></data>
+  <data name="Settings.NoticeDefault" xml:space="preserve"><value>Tus papás están viendo</value></data>
+  <data name="Settings.NoticeHelp" xml:space="preserve"><value>Cuando el aviso del dispositivo está activado, un ojo transparente y este texto aparecen en la parte superior central de la pantalla mientras un padre o madre está viendo. Déjalo en blanco para usar el texto predeterminado.</value></data>
+  <data name="Settings.NoticeText" xml:space="preserve"><value>Texto del aviso</value></data>
+  <data name="Settings.OfflineAfter" xml:space="preserve"><value>Avisar de dispositivo sin conexión después de (minutos)</value></data>
+  <data name="Settings.OpenHealth" xml:space="preserve"><value>Abrir /health</value></data>
+  <data name="Settings.OpenVersion" xml:space="preserve"><value>Abrir /version</value></data>
+  <data name="Settings.OverridePin" xml:space="preserve"><value>PIN de desbloqueo de padres</value></data>
+  <data name="Settings.OwnerAccount" xml:space="preserve"><value>Cuenta del propietario</value></data>
+  <data name="Settings.OwnerHelp1" xml:space="preserve"><value>El propietario controla la configuración familiar, las invitaciones y la eliminación de padres o madres. Invita a otros padres o madres desde</value></data>
+  <data name="Settings.PageTitle" xml:space="preserve"><value>Configuración · Parental OpControl</value></data>
+  <data name="Settings.PinHelp" xml:space="preserve"><value>Se usa en la pantalla de bloqueo de {0} («Desbloqueo de padres») para desbloquear hasta el próximo bloqueo o dar tiempo extra. Funciona sin conexión. Cinco intentos incorrectos lo bloquean durante 60 segundos.</value></data>
+  <data name="Settings.PinNotSet" xml:space="preserve"><value>Sin configurar</value></data>
+  <data name="Settings.PinSet" xml:space="preserve"><value>Configurado</value></data>
+  <data name="Settings.QuietEnd" xml:space="preserve"><value>Fin de horas de silencio</value></data>
+  <data name="Settings.QuietStart" xml:space="preserve"><value>Inicio de horas de silencio</value></data>
+  <data name="Settings.SaveAlertControls" xml:space="preserve"><value>Guardar controles de alertas</value></data>
+  <data name="Settings.SaveEmail" xml:space="preserve"><value>Guardar configuración de correo</value></data>
+  <data name="Settings.SaveNotice" xml:space="preserve"><value>Guardar texto del aviso</value></data>
+  <data name="Settings.Saved" xml:space="preserve"><value>Configuración guardada.</value></data>
+  <data name="Settings.Security" xml:space="preserve"><value>Seguridad</value></data>
+  <data name="Settings.SecurityHelp" xml:space="preserve"><value>Protege el inicio de sesión de padres con una aplicación de autenticación (TOTP).</value></data>
+  <data name="Settings.SendAlertEmails" xml:space="preserve"><value>Enviar correos de alertas</value></data>
+  <data name="Settings.SmtpHost" xml:space="preserve"><value>Servidor SMTP</value></data>
+  <data name="Settings.SmtpPassword" xml:space="preserve"><value>Contraseña SMTP</value></data>
+  <data name="Settings.SmtpPort" xml:space="preserve"><value>Puerto SMTP</value></data>
+  <data name="Settings.SmtpUsername" xml:space="preserve"><value>Usuario SMTP</value></data>
+  <data name="Settings.Stamped" xml:space="preserve"><value>registrada al compilar</value></data>
+  <data name="Settings.Stored" xml:space="preserve"><value>(guardada)</value></data>
+  <data name="Settings.Subtitle" xml:space="preserve"><value>Configuración del propietario para alertas, envío de correo y la familia.</value></data>
+  <data name="Settings.TheChild" xml:space="preserve"><value>el hijo</value></data>
+  <data name="Settings.TwoFactor" xml:space="preserve"><value>Autenticación de dos factores</value></data>
+  <data name="Settings.UseSsl" xml:space="preserve"><value>Usar SSL/TLS</value></data>
+  <data name="Setup.ChildName" xml:space="preserve"><value>Nombre del hijo</value></data>
+  <data name="Setup.ChildPlaceholder" xml:space="preserve"><value>Nombre del hijo</value></data>
+  <data name="Setup.ConfirmPassword" xml:space="preserve"><value>Confirmar contraseña</value></data>
+  <data name="Setup.CreateFamily" xml:space="preserve"><value>Crear familia</value></data>
+  <data name="Setup.FamilyName" xml:space="preserve"><value>Nombre de la familia</value></data>
+  <data name="Setup.FamilyPlaceholder" xml:space="preserve"><value>Nuestra familia</value></data>
+  <data name="Setup.Note" xml:space="preserve"><value>La cuenta del propietario la crea el operador del servidor, no las pruebas automatizadas de este trabajo.</value></data>
+  <data name="Setup.ParentPlaceholder" xml:space="preserve"><value>Nombre del padre o madre</value></data>
+  <data name="Setup.PasswordRule" xml:space="preserve"><value>Al menos 8 caracteres con mayúscula, minúscula y un número.</value></data>
+  <data name="Setup.Subtitle" xml:space="preserve"><value>Crea la cuenta del propietario y el perfil del primer hijo. El registro se cierra después de este paso.</value></data>
+  <data name="Setup.Title" xml:space="preserve"><value>Configuración inicial</value></data>
+  <data name="Setup.YourName" xml:space="preserve"><value>Tu nombre</value></data>
+  <data name="Team.AllPermissions" xml:space="preserve"><value>Todos los permisos</value></data>
+  <data name="Team.CoParent" xml:space="preserve"><value>Otro padre o madre</value></data>
+  <data name="Team.CopyLink" xml:space="preserve"><value>Copia este enlace y envíalo al padre o madre.</value></data>
+  <data name="Team.CreateInvitation" xml:space="preserve"><value>Crear invitación</value></data>
+  <data name="Team.EmailOptional" xml:space="preserve"><value>Correo (opcional)</value></data>
+  <data name="Team.EmailSent" xml:space="preserve"><value>Correo enviado.</value></data>
+  <data name="Team.Expires" xml:space="preserve"><value>Vence {0}</value></data>
+  <data name="Team.Invite" xml:space="preserve"><value>Invitar a otro padre o madre</value></data>
+  <data name="Team.InviteHelp" xml:space="preserve"><value>Las invitaciones por correo vencen en 72 horas. También puedes crear una invitación solo con enlace; cópialo y envíalo tú. Cada enlace se usa una sola vez.</value></data>
+  <data name="Team.InviteResent" xml:space="preserve"><value>Se reenvió el correo de invitación.</value></data>
+  <data name="Team.InviteRevoked" xml:space="preserve"><value>Invitación revocada.</value></data>
+  <data name="Team.LinkOnly" xml:space="preserve"><value>Invitación solo con enlace</value></data>
+  <data name="Team.NoPending" xml:space="preserve"><value>No hay invitaciones pendientes para otros padres o madres.</value></data>
+  <data name="Team.OneTimeLink" xml:space="preserve"><value>Enlace de un solo uso</value></data>
+  <data name="Team.OwnerOnly" xml:space="preserve"><value>Solo el propietario de la familia puede administrar a los padres, madres e invitaciones.</value></data>
+  <data name="Team.PageTitle" xml:space="preserve"><value>Padres y madres · Parental OpControl</value></data>
+  <data name="Team.ParentNotFound" xml:space="preserve"><value>No se encontró al padre o madre.</value></data>
+  <data name="Team.ParentRemoved" xml:space="preserve"><value>Se eliminó al padre o madre y se cerró su sesión.</value></data>
+  <data name="Team.Pending" xml:space="preserve"><value>Invitaciones pendientes</value></data>
+  <data name="Team.Perm.App" xml:space="preserve"><value>Reglas de aplicaciones</value></data>
+  <data name="Team.Perm.Devices" xml:space="preserve"><value>Administrar dispositivos</value></data>
+  <data name="Team.Perm.Lock" xml:space="preserve"><value>Bloquear / desbloquear y tiempo extra</value></data>
+  <data name="Team.Perm.Pin" xml:space="preserve"><value>Administrar el PIN</value></data>
+  <data name="Team.Perm.Remote" xml:space="preserve"><value>Vista remota de pantalla y cámara</value></data>
+  <data name="Team.Perm.Reports" xml:space="preserve"><value>Ver informes y actividad</value></data>
+  <data name="Team.Perm.Schedules" xml:space="preserve"><value>Horarios y límites</value></data>
+  <data name="Team.Perm.Website" xml:space="preserve"><value>Reglas de sitios web</value></data>
+  <data name="Team.Permissions" xml:space="preserve"><value>Permisos</value></data>
+  <data name="Team.PermissionsFor" xml:space="preserve"><value>Permisos de {0}</value></data>
+  <data name="Team.PermissionsSaved" xml:space="preserve"><value>Permisos guardados. La siguiente solicitud del padre o madre usará el nuevo conjunto.</value></data>
+  <data name="Team.Resend" xml:space="preserve"><value>Reenviar</value></data>
+  <data name="Team.Revoke" xml:space="preserve"><value>Revocar</value></data>
+  <data name="Team.SavePermissions" xml:space="preserve"><value>Guardar permisos</value></data>
+  <data name="Team.ServerAdmin" xml:space="preserve"><value>· administrador del servidor</value></data>
+  <data name="Team.Subtitle" xml:space="preserve"><value>Invita a otro padre o madre y elige exactamente qué puede hacer. Cada acción queda registrada con su nombre.</value></data>
+  <data name="TwoFactor.Active" xml:space="preserve"><value>La autenticación de dos factores está activa en esta cuenta.</value></data>
+  <data name="TwoFactor.Back" xml:space="preserve"><value>Volver al inicio de sesión</value></data>
+  <data name="TwoFactor.Code" xml:space="preserve"><value>Código de autenticación</value></data>
+  <data name="TwoFactor.Code6" xml:space="preserve"><value>Código de 6 dígitos</value></data>
+  <data name="TwoFactor.Disable" xml:space="preserve"><value>Desactivar 2FA</value></data>
+  <data name="TwoFactor.DisableConfirm" xml:space="preserve"><value>¿Desactivar la autenticación de dos factores?</value></data>
+  <data name="TwoFactor.Disabled" xml:space="preserve"><value>Autenticación de dos factores desactivada.</value></data>
+  <data name="TwoFactor.Enable" xml:space="preserve"><value>Activar 2FA</value></data>
+  <data name="TwoFactor.EnableFirst" xml:space="preserve"><value>Primero activa la autenticación de dos factores.</value></data>
+  <data name="TwoFactor.Enabled" xml:space="preserve"><value>Autenticación de dos factores activada. Guarda tus códigos de recuperación ahora.</value></data>
+  <data name="TwoFactor.Eyebrow" xml:space="preserve"><value>Seguridad de la cuenta</value></data>
+  <data name="TwoFactor.InvalidCode" xml:space="preserve"><value>El código no es válido.</value></data>
+  <data name="TwoFactor.InvalidCodeClock" xml:space="preserve"><value>El código no es válido. Revisa el reloj del dispositivo e inténtalo de nuevo.</value></data>
+  <data name="TwoFactor.ManualKey" xml:space="preserve"><value>Clave manual</value></data>
+  <data name="TwoFactor.NewRecovery" xml:space="preserve"><value>Se generaron nuevos códigos de recuperación. Los anteriores ya no funcionan.</value></data>
+  <data name="TwoFactor.NotEnabled" xml:space="preserve"><value>No activada</value></data>
+  <data name="TwoFactor.QrAlt" xml:space="preserve"><value>Código QR TOTP</value></data>
+  <data name="TwoFactor.Recovery" xml:space="preserve"><value>Códigos de recuperación</value></data>
+  <data name="TwoFactor.RecoveryHelp" xml:space="preserve"><value>Los códigos de recuperación se generan al activar 2FA o al regenerarlos.</value></data>
+  <data name="TwoFactor.RecoveryNote" xml:space="preserve"><value>Guarda estos códigos en un lugar seguro. Solo se muestran una vez.</value></data>
+  <data name="TwoFactor.Regenerate" xml:space="preserve"><value>Generar nuevos códigos de recuperación</value></data>
+  <data name="TwoFactor.ScanHelp" xml:space="preserve"><value>Escanea el código QR con Google Authenticator, Microsoft Authenticator, 1Password u otra aplicación TOTP y luego escribe el código de 6 dígitos.</value></data>
+  <data name="TwoFactor.Subtitle" xml:space="preserve"><value>Escribe el código de 6 dígitos de tu aplicación de autenticación.</value></data>
+  <data name="TwoFactor.SubtitleLong" xml:space="preserve"><value>Usa una aplicación de autenticación (TOTP) para el inicio de sesión de padres.</value></data>
+  <data name="TwoFactor.Title" xml:space="preserve"><value>Inicio de sesión con dos factores</value></data>
+  <data name="TwoFactor.UseRecovery" xml:space="preserve"><value>Usar un código de recuperación</value></data>
+  <data name="TwoFactor.Verify" xml:space="preserve"><value>Verificar</value></data>
+  <data name="UpdateStatus.failed" xml:space="preserve"><value>fallida</value></data>
+  <data name="UpdateStatus.healthy" xml:space="preserve"><value>en buen estado</value></data>
+  <data name="UpdateStatus.installing" xml:space="preserve"><value>instalando</value></data>
+  <data name="UpdateStatus.rolledback" xml:space="preserve"><value>revertida</value></data>
+  <data name="UpdateStatus.updated" xml:space="preserve"><value>actualizado</value></data>
+  <data name="Validation.Required" xml:space="preserve"><value>Este campo es obligatorio.</value></data>
+  <data name="Websites.AllowAgain" xml:space="preserve"><value>Permitir de nuevo</value></data>
+  <data name="Websites.AllowedAlways" xml:space="preserve"><value>Permitidos siempre</value></data>
+  <data name="Websites.Always" xml:space="preserve"><value>Siempre</value></data>
+  <data name="Websites.BlockAgain" xml:space="preserve"><value>Bloquear de nuevo</value></data>
+  <data name="Websites.BlockPlaceholder" xml:space="preserve"><value>Bloquea un sitio web, p. ej. youtube.com</value></data>
+  <data name="Websites.BlockedAlways" xml:space="preserve"><value>Bloqueados siempre</value></data>
+  <data name="Websites.BlockedAttemptMany" xml:space="preserve"><value>{0} intentos bloqueados</value></data>
+  <data name="Websites.BlockedAttemptOne" xml:space="preserve"><value>{0} intento bloqueado</value></data>
+  <data name="Websites.BlockedDuringSchedule" xml:space="preserve"><value>Bloqueados durante el horario</value></data>
+  <data name="Websites.Categories" xml:space="preserve"><value>Categorías</value></data>
+  <data name="Websites.DuringSchedule" xml:space="preserve"><value>Durante el horario</value></data>
+  <data name="Websites.FilterAll" xml:space="preserve"><value>Todas las visitas</value></data>
+  <data name="Websites.FilterBlocked" xml:space="preserve"><value>Intentos bloqueados</value></data>
+  <data name="Websites.FilterNotBlocked" xml:space="preserve"><value>No bloqueados</value></data>
+  <data name="Websites.History" xml:space="preserve"><value>Antes bloqueados o permitidos</value></data>
+  <data name="Websites.LastVisit" xml:space="preserve"><value>última {0}</value></data>
+  <data name="Websites.LatestCount" xml:space="preserve"><value>Últimos {0}</value></data>
+  <data name="Websites.NewThisWeek" xml:space="preserve"><value>Nuevo esta semana</value></data>
+  <data name="Websites.NextDay" xml:space="preserve"><value>Día siguiente</value></data>
+  <data name="Websites.NoAlwaysAllowed" xml:space="preserve"><value>No hay sitios permitidos siempre.</value></data>
+  <data name="Websites.NoAlwaysBlocked" xml:space="preserve"><value>No hay sitios bloqueados siempre.</value></data>
+  <data name="Websites.NoHistory" xml:space="preserve"><value>Aún no hay cambios de reglas de sitios web.</value></data>
+  <data name="Websites.NoScheduledRules" xml:space="preserve"><value>No hay reglas de sitios por horario.</value></data>
+  <data name="Websites.NoVisitsDay" xml:space="preserve"><value>No se registraron visitas este día.</value></data>
+  <data name="Websites.Overrides" xml:space="preserve"><value>Tiene prioridad sobre categorías y horarios</value></data>
+  <data name="Websites.PageTitle" xml:space="preserve"><value>Sitios web · Parental OpControl</value></data>
+  <data name="Websites.PreviousDay" xml:space="preserve"><value>Día anterior</value></data>
+  <data name="Websites.RuleCounts" xml:space="preserve"><value>{0} bloqueados · {1} permitidos</value></data>
+  <data name="Websites.RuleRemoved" xml:space="preserve"><value>Regla eliminada</value></data>
+  <data name="Websites.Rules" xml:space="preserve"><value>Reglas de sitios web</value></data>
+  <data name="Websites.SchedulePlaceholder" xml:space="preserve"><value>Horario…</value></data>
+  <data name="Websites.Since" xml:space="preserve"><value>Desde {0}</value></data>
+  <data name="Websites.Subtitle" xml:space="preserve"><value>Sitios visitados, reglas de bloqueo y categorías seleccionadas. Solo dominio y hora.</value></data>
+  <data name="Websites.Unblock" xml:space="preserve"><value>Desbloquear</value></data>
+  <data name="Websites.VisitedSites" xml:space="preserve"><value>Sitios visitados</value></data>
+</root>

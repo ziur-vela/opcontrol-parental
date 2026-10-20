@@ -1,3 +1,4 @@
+@inject IStringLocalizer<OpControl.Parental.Server.Resources.AppStrings> L
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Routing
 @using OpControl.Parental.Server.Components.Layout
@@ -13,7 +14,7 @@
     </Found>
     <NotFound>
         <LayoutView Layout="typeof(MainLayout)">
-            <div class="card"><h1>Not found</h1><p class="muted">That page does not exist.</p></div>
+            <div class="card"><h1>@L["NotFound.Title"]</h1><p class="muted">@L["NotFound.Body"]</p></div>
         </LayoutView>
     </NotFound>
 </Router>

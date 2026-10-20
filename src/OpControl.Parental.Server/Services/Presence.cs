@@ -109,14 +109,14 @@ public sealed class DevicePresenceService
                 ChildId = device.ChildId,
                 DeviceId = device.Id,
                 Kind = "clock-changed",
-                Detail = $"Device clock differs from server by {(int)skew.TotalMinutes} minutes.",
+                Detail = ((int)Math.Abs(skew.TotalMinutes)).ToString(),
                 OccurredUtc = DateTime.UtcNow
             });
             await db.SaveChangesAsync();
             var alerts = scope.ServiceProvider.GetRequiredService<AlertService>();
             await alerts.AddAsync(device.FamilyId, device.ChildId, device.Id, "tampering",
-                "System clock changed",
-                $"{device.Name}'s clock differs from the server by {(int)Math.Abs(skew.TotalMinutes)} minutes.",
+                new AlertContent("Alert.ClockChanged.Title", "Alert.ClockChanged.Detail",
+                    device.Name, ((int)Math.Abs(skew.TotalMinutes)).ToString()),
                 TimeSpan.FromHours(1));
         }
     }

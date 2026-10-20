@@ -29,9 +29,9 @@ public sealed class TeamService
     public async Task SetPermissionsAsync(Guid familyId, Guid parentId, ParentPermissions permissions, CancellationToken ct = default)
     {
         var parent = await _db.Users.FirstOrDefaultAsync(u => u.Id == parentId && u.FamilyId == familyId, ct)
-            ?? throw new InvalidOperationException("Parent not found in this family.");
+            ?? throw new InvalidOperationException(AppText.Get("Error.ParentNotFoundFamily"));
         if (parent.RoleInFamily == FamilyRole.Owner)
-            throw new InvalidOperationException("The owner always has every permission.");
+            throw new InvalidOperationException(AppText.Get("Error.OwnerAllPermissions"));
         parent.Permissions = (permissions & ParentPermissions.All);
         parent.SecurityStamp = Guid.NewGuid().ToString();
         await _db.SaveChangesAsync(ct);
@@ -40,11 +40,11 @@ public sealed class TeamService
     public async Task RemoveAsync(Guid familyId, Guid parentId, Guid actorId, CancellationToken ct = default)
     {
         if (parentId == actorId)
-            throw new InvalidOperationException("You cannot remove your own account.");
+            throw new InvalidOperationException(AppText.Get("Error.CannotRemoveSelf"));
         var parent = await _db.Users.FirstOrDefaultAsync(u => u.Id == parentId && u.FamilyId == familyId, ct)
-            ?? throw new InvalidOperationException("Parent not found in this family.");
+            ?? throw new InvalidOperationException(AppText.Get("Error.ParentNotFoundFamily"));
         if (parent.RoleInFamily == FamilyRole.Owner)
-            throw new InvalidOperationException("The family owner cannot be removed.");
+            throw new InvalidOperationException(AppText.Get("Error.CannotRemoveOwner"));
 
         await _db.UserRoles.Where(x => x.UserId == parentId).ExecuteDeleteAsync(ct);
         await _db.UserClaims.Where(x => x.UserId == parentId).ExecuteDeleteAsync(ct);

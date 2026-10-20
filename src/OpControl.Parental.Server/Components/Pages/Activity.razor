@@ -8,8 +8,9 @@
 @using OpControl.Parental.Server.Services
 @inject AuthenticationStateProvider AuthState
 @inject IServiceScopeFactory Scopes
+@inject IStringLocalizer<AppStrings> L
 
-<PageTitle>Activity · Parental OpControl</PageTitle>
+<PageTitle>@L["Activity.PageTitle"]</PageTitle>
 
 @if (_loading)
 {
@@ -17,50 +18,50 @@
 }
 else if (_childId == Guid.Empty)
 {
-    <div class="card"><h1>No child yet</h1><p class="muted">Create a child profile first.</p></div>
+    <div class="card"><h1>@L["Common.NoChildYet"]</h1><p class="muted">@L["Common.CreateChildFirst"]</p></div>
 }
 else
 {
     <div class="page-head">
         <div>
             <div class="eyebrow">@_childName</div>
-            <h1>Activity</h1>
-            <p class="muted">Lock and unlock, bonus time, PIN overrides, schedules, blocked attempts, new installs and limits.</p>
+            <h1>@L["Nav.Activity"]</h1>
+            <p class="muted">@L["Activity.Subtitle"]</p>
         </div>
         <div class="button-row">
-            <a class="btn btn-ghost" href="/screen-time">Screen time</a>
-            <a class="btn btn-ghost" href="/alerts">Alerts</a>
+            <a class="btn btn-ghost" href="/screen-time">@L["Nav.ScreenTime"]</a>
+            <a class="btn btn-ghost" href="/alerts">@L["Nav.Alerts"]</a>
         </div>
     </div>
 
     <section class="stat-grid">
         <div class="card stat-card">
-            <div class="eyebrow">Active use today</div>
+            <div class="eyebrow">@L["Activity.ActiveToday"]</div>
             <div class="stat-value">@FormatDuration(_activeToday)</div>
         </div>
         <div class="card stat-card">
-            <div class="eyebrow">Idle today</div>
+            <div class="eyebrow">@L["Activity.IdleToday"]</div>
             <div class="stat-value">@FormatDuration(_idleToday)</div>
         </div>
         <div class="card stat-card">
-            <div class="eyebrow">Blocked attempts today</div>
+            <div class="eyebrow">@L["Activity.BlockedToday"]</div>
             <div class="stat-value">@_blockedToday</div>
         </div>
         <div class="card stat-card">
-            <div class="eyebrow">Events</div>
+            <div class="eyebrow">@L["Activity.Events"]</div>
             <div class="stat-value">@_events.Count</div>
-            <div class="muted tiny">Latest 200</div>
+            <div class="muted tiny">@L["Activity.Latest200"]</div>
         </div>
     </section>
 
     <section class="card">
         <div class="card-title-row">
-            <h2>Timeline</h2>
+            <h2>@L["Activity.Timeline"]</h2>
             <span class="pill-soft">@_timeZoneId</span>
         </div>
         @if (_events.Count == 0)
         {
-            <p class="muted">No activity recorded yet.</p>
+            <p class="muted">@L["Activity.NoActivity"]</p>
         }
         else
         {
@@ -135,48 +136,60 @@ else
             .Where(e => e.FamilyId == _familyId && e.ChildId == child.Id)
             .OrderByDescending(e => e.CreatedUtc).Take(120).ToListAsync();
         rows.AddRange(overrides.Select(e => new EventRow(e.CreatedUtc, OverrideIcon(e.Option), OverrideTone(e.Option),
-            OverrideTitle(e.Option) + (e.CreatedByParentId is { } changedBy && parentNames.TryGetValue(changedBy, out var byName) ? $" · by {byName}" : ""),
+            OverrideTitle(e.Option) + (e.CreatedByParentId is { } changedBy && parentNames.TryGetValue(changedBy, out var byName) ? L["Activity.By", byName] : ""),
             OverrideDetail(e))));
 
         var ruleHistory = await db.RuleHistory.AsNoTracking()
             .Where(h => h.FamilyId == _familyId && h.ChildId == child.Id)
             .OrderByDescending(h => h.ChangedUtc).Take(80).ToListAsync();
         rows.AddRange(ruleHistory.Select(h => new EventRow(h.ChangedUtc, "◎", "accent",
-            $"{(h.RuleType == "site" ? "Website" : "App")} rule {h.Action.ToString().ToLowerInvariant()}" +
-            (h.ChangedByParentId is { } changedBy && parentNames.TryGetValue(changedBy, out var byName) ? $" · by {byName}" : ""),
+            RuleActionTitle(h.RuleType, h.Action) +
+            (h.ChangedByParentId is { } changedBy && parentNames.TryGetValue(changedBy, out var byName) ? L["Activity.By", byName] : ""),
             h.DisplayName)));
 
         var blocks = await db.BlockEvents.AsNoTracking()
             .Where(b => b.FamilyId == _familyId && b.ChildId == child.Id)
             .OrderByDescending(b => b.OccurredUtc).Take(80).ToListAsync();
         rows.AddRange(blocks.Select(b => new EventRow(b.OccurredUtc, "⊘", "danger",
-            b.RuleType == "site" ? "Website blocked" : "App blocked", b.DisplayName)));
+            b.RuleType == "site" ? L["Activity.WebsiteBlocked"] : L["Activity.AppBlocked"], b.DisplayName)));
 
         var installs = await db.InstalledApps.AsNoTracking()
             .Where(a => a.FamilyId == _familyId && a.ChildId == child.Id && a.IsNew)
             .OrderByDescending(a => a.FirstSeenUtc).Take(40).ToListAsync();
-        rows.AddRange(installs.Select(a => new EventRow(a.FirstSeenUtc, "＋", "accent", "New app installed", a.DisplayName)));
+        rows.AddRange(installs.Select(a => new EventRow(a.FirstSeenUtc, "＋", "accent", L["Activity.NewAppInstalled"], a.DisplayName)));
 
         var alerts = await db.Alerts.AsNoTracking()
             .Where(a => a.FamilyId == _familyId && a.ChildId == child.Id)
             .OrderByDescending(a => a.CreatedUtc).Take(80).ToListAsync();
-        rows.AddRange(alerts.Select(a => new EventRow(a.CreatedUtc, AlertIcon(a.Type), AlertTone(a.Type), a.Title, a.Detail)));
+        rows.AddRange(alerts.Select(a =>
+        {
+            var (title, detail) = AlertText.Render(a);
+            return new EventRow(a.CreatedUtc, AlertIcon(a.Type), AlertTone(a.Type), title, detail);
+        }));
 
         var tamper = await db.ClientTamperEvents.AsNoTracking()
             .Where(t => t.FamilyId == _familyId && t.ChildId == child.Id)
             .OrderByDescending(t => t.OccurredUtc).Take(40).ToListAsync();
-        rows.AddRange(tamper.Select(t => new EventRow(t.OccurredUtc, "!", "warn", "Client tampering sign", $"{t.Kind}: {t.Detail}")));
+        rows.AddRange(tamper.Select(t =>
+        {
+            var (title, detail) = TamperText(t);
+            return new EventRow(t.OccurredUtc, "!", "warn", title, detail);
+        }));
 
         _events = rows.OrderByDescending(r => r.WhenUtc).Take(200).ToList();
     }
 
     private string FormatLocal(DateTime utc) =>
-        TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeZoneResolver.Resolve(_timeZoneId)).ToString("MMM d, HH:mm");
+        Formats.CompactDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeZoneResolver.Resolve(_timeZoneId)));
 
-    private static string FormatDuration(int seconds)
+    private static string FormatDuration(int seconds) => Formats.Duration(seconds);
+
+    private string RuleActionTitle(string ruleType, RuleAction action)
     {
-        var span = TimeSpan.FromSeconds(Math.Max(0, seconds));
-        return span.TotalHours >= 1 ? $"{(int)span.TotalHours}h {span.Minutes:00}m" : $"{span.Minutes}m";
+        var key = ruleType == "site"
+            ? action switch { RuleAction.Blocked => "Activity.SiteRuleBlocked", RuleAction.Allowed => "Activity.SiteRuleAllowed", _ => "Activity.SiteRuleRemoved" }
+            : action switch { RuleAction.Blocked => "Activity.AppRuleBlocked", RuleAction.Allowed => "Activity.AppRuleAllowed", _ => "Activity.AppRuleRemoved" };
+        return L[key];
     }
 
     private static string OverrideIcon(string option) => option switch
@@ -195,34 +208,87 @@ else
         _ => "accent"
     };
 
-    private static string OverrideTitle(string option) => option switch
+    private string OverrideTitle(string option) => option switch
     {
-        "dashboard-unlock" => "Dashboard unlock",
-        "dashboard-bonus" => "Bonus time given",
-        "pin-unlock-until-next" => "PIN override: unlock until next cycle",
-        "pin-bonus" => "PIN override: bonus time",
-        "schedule-start" => "Schedule started",
-        "schedule-end" => "Schedule ended",
-        "schedule-added" => "Schedule added",
-        "schedule-toggled" => "Schedule changed",
-        "schedule-removed" => "Schedule removed",
-        "screen-time-limit-set" => "Screen time limit set",
-        "screen-time-limit-disabled" => "Screen time limit disabled",
-        "category-toggled" => "Website category changed",
-        "app-limit-set" => "App limit set",
-        "app-limit-removed" => "App limit removed",
-        "app-always-allowed" => "App always allowed",
-        "remote-notice-changed" => "Remote-view notice changed",
-        "daily-limit-reached" => "Daily limit reached",
-        "item-bonus-site" => "Website bonus",
-        "item-bonus-app" => "App bonus",
+        "dashboard-lock" => L["Activity.Option.DashboardLock"],
+        "dashboard-unlock" => L["Activity.Option.DashboardUnlock"],
+        "dashboard-bonus" => L["Activity.Option.DashboardBonus"],
+        "pin-unlock-until-next" => L["Activity.Option.PinUnlock"],
+        "pin-bonus" => L["Activity.Option.PinBonus"],
+        "schedule-start" => L["Activity.Option.ScheduleStarted"],
+        "schedule-end" => L["Activity.Option.ScheduleEnded"],
+        "schedule-added" => L["Activity.Option.ScheduleAdded"],
+        "schedule-toggled" => L["Activity.Option.ScheduleChanged"],
+        "schedule-removed" => L["Activity.Option.ScheduleRemoved"],
+        "screen-time-limit-set" => L["Activity.Option.LimitSet"],
+        "screen-time-limit-disabled" => L["Activity.Option.LimitDisabled"],
+        "category-toggled" => L["Activity.Option.CategoryChanged"],
+        "app-limit-set" => L["Activity.Option.AppLimitSet"],
+        "app-limit-removed" => L["Activity.Option.AppLimitRemoved"],
+        "app-always-allowed" => L["Common.AlwaysAllowed"],
+        "remote-notice-changed" => L["Activity.Option.NoticeChanged"],
+        "daily-limit-reached" => L["Home.StatusDailyLimit"],
+        "item-bonus-site" => L["Activity.Option.SiteBonus"],
+        "item-bonus-app" => L["Activity.Option.AppBonus"],
         _ => option
     };
 
-    private static string OverrideDetail(OverrideEvent e) =>
-        e.Option.StartsWith("schedule", StringComparison.Ordinal) ? e.Detail ?? ""
-        : e.Minutes is { } minutes ? $"{minutes} min" + (e.Detail is null ? "" : $" · {e.Detail}")
-        : e.Detail ?? "";
+    private string OverrideDetail(OverrideEvent e)
+    {
+        if (e.Option == "remote-notice-changed" && e.Detail is { } notice)
+        {
+            var parts = notice.Split('|');
+            if (parts.Length == 4)
+                return L["Activity.NoticeDetail", parts[0], YesNo(parts[1]), YesNo(parts[2]), YesNo(parts[3])];
+        }
+        if (e.Option == "category-toggled" && e.Detail is { } category)
+        {
+            var parts = category.Split('|');
+            if (parts.Length == 2)
+            {
+                var name = CategoryText.Name(parts[0], parts[0]);
+                return L[parts[1] == "1" ? "Activity.CategoryBlocked" : "Activity.CategoryAllowed", name];
+            }
+        }
+        if (e.Option == "daily-limit-reached" && DateTime.TryParse(e.Detail, out var day))
+            return L["Activity.DailyLimitDetail", day.ToString("d MMM yyyy", System.Globalization.CultureInfo.CurrentCulture)];
+        if (e.Option.StartsWith("schedule", StringComparison.Ordinal)) return e.Detail ?? "";
+        if (e.Minutes is { } minutes) return L["Common.Minutes", minutes] + (e.Detail is null ? "" : $" · {e.Detail}");
+        return e.Detail ?? "";
+    }
+
+    private string YesNo(string value) => value == "1" ? L["Common.Yes"] : L["Common.No"];
+
+    private string LegacyHelperKilled(string detail)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(detail, @"killed (\d+) times");
+        return match.Success ? L["Activity.Tamper.HelperKilledDetail", match.Groups[1].Value] : "";
+    }
+
+    private string LegacyClock(string detail)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(detail, @"(\d+) minutes");
+        return match.Success ? L["Activity.Tamper.Minutes", match.Groups[1].Value] : "";
+    }
+
+    private (string Title, string Detail) TamperText(ClientTamperEvent item)
+    {
+        var detail = item.Detail ?? "";
+        return item.Kind switch
+        {
+            "service-stopped" => (L["Activity.Tamper.ServiceStopped"], ""),
+            "helper-killed" => (L["Activity.Tamper.HelperKilled"],
+                int.TryParse(detail, out var count) ? L["Activity.Tamper.HelperKilledDetail", count]
+                : LegacyHelperKilled(detail)),
+            "helper-auth-failed" => (L["Activity.Tamper.HelperAuth"], detail),
+            "dns-settings-changed" => (L["Activity.Tamper.Dns"], ""),
+            "clock-changed" => (L["Activity.Tamper.Clock"],
+                int.TryParse(detail, out var minutes) ? L["Activity.Tamper.Minutes", minutes] : LegacyClock(detail)),
+            "uninstall-attempted" => (L["Activity.Tamper.Uninstall"], detail),
+            "usage-sanity" => (L["Activity.Tamper.UsageSanity"], detail),
+            _ => (L["Activity.ClientTampering"], detail)
+        };
+    }
 
     private static string AlertIcon(string type) => type switch
     {

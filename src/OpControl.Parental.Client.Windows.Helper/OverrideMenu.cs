@@ -1,3 +1,4 @@
+using OpControl.Parental.Localization;
 namespace OpControl.Parental.Helper;
 
 public sealed class OverrideMenu : Form
@@ -5,7 +6,7 @@ public sealed class OverrideMenu : Form
     public OverrideMenu(Action<string, int?> onSelected, Action onCancel)
     {
         AutoScaleMode = AutoScaleMode.None;
-        Text = "Parent override";
+        Text = Loc.T("Client.Override.Title");
         FormBorderStyle = FormBorderStyle.FixedSingle;
         StartPosition = FormStartPosition.CenterScreen;
         ShowInTaskbar = false;
@@ -19,21 +20,21 @@ public sealed class OverrideMenu : Form
 
         var title = new Label
         {
-            Text = "Parent override",
+            Text = Loc.T("Client.Override.Title"),
             Font = Theme.Sans(18f, FontStyle.Bold),
             AutoSize = true,
             Location = new Point(24, 20)
         };
         var subtitle = new Label
         {
-            Text = "Choose what happens next.",
+            Text = Loc.T("Client.Override.Subtitle"),
             ForeColor = Theme.Muted,
             AutoSize = true,
             Location = new Point(24, 56)
         };
-        var unlock = MakeButton("Unlock until next lock cycle", 24, 92, 392);
-        var bonus = MakeButton("Give bonus time", 24, 142, 392);
-        var cancel = MakeButton("Cancel", 24, 202, 392);
+        var unlock = MakeButton(Loc.T("Client.Override.UnlockNext"), 24, 92, 392);
+        var bonus = MakeButton(Loc.T("Client.Override.Bonus"), 24, 142, 392);
+        var cancel = MakeButton(Loc.T("Client.Override.Cancel"), 24, 202, 392);
         unlock.Click += (_, _) => { onSelected("unlock-until-next", null); Close(); };
         bonus.Click += (_, _) =>
         {
@@ -71,7 +72,7 @@ public sealed class BonusDialog : Form
     public BonusDialog(Action<int> onSelected)
     {
         AutoScaleMode = AutoScaleMode.None;
-        Text = "Give bonus time";
+        Text = Loc.T("Client.Bonus.Title");
         FormBorderStyle = FormBorderStyle.FixedDialog;
         StartPosition = FormStartPosition.CenterParent;
         ShowInTaskbar = false;
@@ -85,7 +86,7 @@ public sealed class BonusDialog : Form
 
         var title = new Label
         {
-            Text = "Give bonus time",
+            Text = Loc.T("Client.Bonus.Title"),
             Font = Theme.Sans(16f, FontStyle.Bold),
             AutoSize = true,
             Location = new Point(22, 20)
@@ -106,11 +107,11 @@ public sealed class BonusDialog : Form
             quick.Controls.Add(button);
         }
 
-        var label = new Label { Text = "Custom minutes", AutoSize = true, Location = new Point(22, 130) };
-        _custom = new NumericUpDown { Minimum = 1, Maximum = 1440, Value = 20, Width = 120, Location = new Point(140, 126) };
+        var label = new Label { Text = Loc.T("Client.Bonus.Custom"), AutoSize = true, Location = new Point(22, 130) };
+        _custom = new NumericUpDown { Minimum = 1, Maximum = 1440, Value = 20, Width = 120, Location = new Point(230, 126) };
         var give = new Button
         {
-            Text = "Give bonus",
+            Text = Loc.T("Client.Bonus.Give"),
             Width = 140,
             Height = 40,
             Location = new Point(22, 175),
@@ -118,7 +119,7 @@ public sealed class BonusDialog : Form
             ForeColor = Theme.BrandDark,
             FlatStyle = FlatStyle.Flat
         };
-        var cancel = new Button { Text = "Cancel", Width = 110, Height = 40, Location = new Point(180, 175), FlatStyle = FlatStyle.Flat };
+        var cancel = new Button { Text = Loc.T("Client.Bonus.Cancel"), Width = 110, Height = 40, Location = new Point(180, 175), FlatStyle = FlatStyle.Flat };
         give.Click += (_, _) => { onSelected((int)_custom.Value); Close(); };
         cancel.Click += (_, _) => Close();
 

@@ -8,8 +8,9 @@
 @using OpControl.Parental.Server.Services
 @inject AuthenticationStateProvider AuthState
 @inject IServiceScopeFactory Scopes
+@inject IStringLocalizer<AppStrings> L
 
-<PageTitle>Screen time · Parental OpControl</PageTitle>
+<PageTitle>@L["ScreenTime.PageTitle"]</PageTitle>
 
 @if (_loading)
 {
@@ -17,20 +18,20 @@
 }
 else if (_childId == Guid.Empty)
 {
-    <div class="card"><h1>No child yet</h1><p class="muted">Create a child profile first.</p></div>
+    <div class="card"><h1>@L["Common.NoChildYet"]</h1><p class="muted">@L["Common.CreateChildFirst"]</p></div>
 }
 else
 {
     <div class="page-head">
         <div>
             <div class="eyebrow">@_childName</div>
-            <h1>Screen time</h1>
-            <p class="muted">Active use, app limits and reports for every device of this child.</p>
+            <h1>@L["Nav.ScreenTime"]</h1>
+            <p class="muted">@L["ScreenTime.Subtitle"]</p>
         </div>
         <div class="button-row">
-            <a class="btn btn-ghost" href="/activity">Activity</a>
-            <a class="btn btn-ghost" href="/websites">Websites</a>
-            <a class="btn btn-ghost" href="/apps">Apps</a>
+            <a class="btn btn-ghost" href="/activity">@L["Nav.Activity"]</a>
+            <a class="btn btn-ghost" href="/websites">@L["Nav.Websites"]</a>
+            <a class="btn btn-ghost" href="/apps">@L["Nav.Apps"]</a>
         </div>
     </div>
 
@@ -41,45 +42,45 @@ else
 
     <section class="stat-grid">
         <div class="card stat-card">
-            <div class="eyebrow">Active use</div>
+            <div class="eyebrow">@L["ScreenTime.ActiveUse"]</div>
             <div class="stat-value">@FormatDuration(_activeSeconds)</div>
             <div class="muted tiny">@PeriodLabel</div>
         </div>
         <div class="card stat-card">
-            <div class="eyebrow">Idle</div>
+            <div class="eyebrow">@L["ScreenTime.Idle"]</div>
             <div class="stat-value">@FormatDuration(_idleSeconds)</div>
-            <div class="muted tiny">Excluded from screen time</div>
+            <div class="muted tiny">@L["ScreenTime.IdleNote"]</div>
         </div>
         <div class="card stat-card">
-            <div class="eyebrow">Unaccounted</div>
+            <div class="eyebrow">@L["ScreenTime.Unaccounted"]</div>
             <div class="stat-value">@FormatDuration(_unaccountedSeconds)</div>
-            <div class="muted tiny">Helper was not running</div>
+            <div class="muted tiny">@L["ScreenTime.UnaccountedNote"]</div>
         </div>
         <div class="card stat-card">
-            <div class="eyebrow">Blocked attempts</div>
+            <div class="eyebrow">@L["Home.BlockedAttempts"]</div>
             <div class="stat-value">@_blockedAttempts</div>
             <div class="muted tiny">@PeriodLabel</div>
         </div>
         <div class="card stat-card">
-            <div class="eyebrow">Today vs average</div>
+            <div class="eyebrow">@L["ScreenTime.TodayVsAverage"]</div>
             <div class="stat-value">@FormatDuration(_todaySeconds)</div>
-            <div class="muted tiny">Average @FormatDuration(_averageSeconds) per day</div>
+            <div class="muted tiny">@L["ScreenTime.AveragePerDay", FormatDuration(_averageSeconds)]</div>
         </div>
     </section>
 
     <section class="card">
         <div class="card-title-row">
-            <h2>Usage</h2>
+            <h2>@L["ScreenTime.Usage"]</h2>
             <div class="date-nav">
                 <div class="chip-row">
                     @foreach (var item in Periods)
                     {
-                        <button class="chip @(_period == item.Key ? "active" : "")" @onclick="() => SetPeriod(item.Key)">@item.Label</button>
+                        <button class="chip @(_period == item.Key ? "active" : "")" @onclick="() => SetPeriod(item.Key)">@L[item.LabelKey]</button>
                     }
                 </div>
-                <button class="icon-btn" @onclick="() => ShiftPeriod(-1)" title="Previous">‹</button>
+                <button class="icon-btn" @onclick="() => ShiftPeriod(-1)" title="@L["Common.Previous"]">‹</button>
                 <span class="pill-soft">@PeriodLabel</span>
-                <button class="icon-btn" @onclick="() => ShiftPeriod(1)" title="Next">›</button>
+                <button class="icon-btn" @onclick="() => ShiftPeriod(1)" title="@L["Common.Next"]">›</button>
             </div>
         </div>
 
@@ -94,47 +95,47 @@ else
                 </div>
             }
         </div>
-        <div class="muted tiny">Time is stored in UTC and grouped by the device time zone (local midnight). Website time is approximate, derived from the DNS visit log and browser foreground time.</div>
+        <div class="muted tiny">@L["ScreenTime.TimeNote"]</div>
     </section>
 
     <div class="grid-2">
         <section class="card">
             <div class="card-title-row">
-                <h2>Today's limit</h2>
-                <span class="pill-soft">@FormatDuration(_usedTodaySeconds) used of @_todayLimitMinutes min</span>
+                <h2>@L["ScreenTime.TodaysLimit"]</h2>
+                <span class="pill-soft">@L["ScreenTime.UsedOfLimit", FormatDuration(_usedTodaySeconds), _todayLimitMinutes]</span>
             </div>
             <div class="progress-track">
                 <div class="progress-fill" style="width:@LimitPercent()%"></div>
             </div>
             <div class="muted small">@RemainingText</div>
             <form class="stack" @onsubmit="SaveLimitsAsync" @onsubmit:preventDefault>
-                <label class="check"><input type="checkbox" @bind="_limitEnabled" /> Enable a daily screen time limit</label>
-                <label class="check"><input type="checkbox" @bind="_spokenWarnings" /> Spoken warnings before the limit</label>
+                <label class="check"><input type="checkbox" @bind="_limitEnabled" /> @L["ScreenTime.EnableLimit"]</label>
+                <label class="check"><input type="checkbox" @bind="_spokenWarnings" /> @L["ScreenTime.SpokenWarnings"]</label>
                 <div class="weekday-grid">
                     @for (var i = 0; i < 7; i++)
                     {
                         var index = i;
                         <label class="field">
-                            <span>@Days[index].Label</span>
+                            <span>@DayLabel(Days[index])</span>
                             <input type="number" min="0" max="1440" @bind="_dayMinutes[index]" disabled="@(!_limitEnabled)" />
                         </label>
                     }
                 </div>
                 <div class="button-row">
-                    <button class="btn btn-primary" type="submit" disabled="@_busy">Save limits</button>
-                    <span class="muted tiny">Shared across all of @_childName's devices. Resets at local midnight.</span>
+                    <button class="btn btn-primary" type="submit" disabled="@_busy">@L["ScreenTime.SaveLimits"]</button>
+                    <span class="muted tiny">@L["ScreenTime.SharedAcross", _childName]</span>
                 </div>
             </form>
         </section>
 
         <section class="card">
             <div class="card-title-row">
-                <h2>Most used apps</h2>
+                <h2>@L["ScreenTime.MostUsedApps"]</h2>
                 <span class="pill-soft">@_periodLabelShort</span>
             </div>
             @if (_apps.Count == 0)
             {
-                <p class="muted">No app usage recorded for this period.</p>
+                <p class="muted">@L["ScreenTime.NoAppUsage"]</p>
             }
             else
             {
@@ -146,21 +147,21 @@ else
                                 <div class="usage-title">@app.DisplayName <span class="muted tiny">@FormatDuration(app.Seconds)</span></div>
                                 <div class="usage-track"><div class="usage-fill" style="width:@AppPercent(app.Seconds)%"></div></div>
                                 <div class="muted tiny">
-                                    @if (app.AlwaysAllowed) { <span>Always allowed · </span> }
-                                    @if (app.LimitMinutes is { } minutes) { <span>Limit @minutes min · </span> }
-                                    @if (app.UsedTodaySeconds > 0) { <span>@FormatDuration(app.UsedTodaySeconds) today</span> }
+                                    @if (app.AlwaysAllowed) { <span>@L["Common.AlwaysAllowed"] · </span> }
+                                    @if (app.LimitMinutes is { } minutes) { <span>@L["Common.LimitMinutes", minutes] · </span> }
+                                    @if (app.UsedTodaySeconds > 0) { <span>@L["ScreenTime.UsedToday", FormatDuration(app.UsedTodaySeconds)]</span> }
                                 </div>
                             </div>
                             <div class="rule-actions">
                                 @if (app.IsBlocked)
                                 {
-                                    <span class="state-pill blocked">Blocked</span>
-                                    <button class="ghost-btn" @onclick="() => AllowAppAsync(app.Identity, app.DisplayName)">Allow</button>
+                                    <span class="state-pill blocked">@L["Common.Blocked"]</span>
+                                    <button class="ghost-btn" @onclick="() => AllowAppAsync(app.Identity, app.DisplayName)">@L["Common.Allow"]</button>
                                 }
                                 else
                                 {
-                                    <button class="ghost-btn" @onclick="() => BlockAppAsync(app.Identity, app.DisplayName)">Block</button>
-                                    <button class="ghost-btn" @onclick="() => LimitAppAsync(app.Identity, app.DisplayName, 60)">Limit 1 h</button>
+                                    <button class="ghost-btn" @onclick="() => BlockAppAsync(app.Identity, app.DisplayName)">@L["Common.Block"]</button>
+                                    <button class="ghost-btn" @onclick="() => LimitAppAsync(app.Identity, app.DisplayName, 60)">@L["ScreenTime.Limit1h"]</button>
                                 }
                             </div>
                         </div>
@@ -172,12 +173,12 @@ else
 
     <section class="card">
         <div class="card-title-row">
-            <h2>Most visited sites</h2>
-            <span class="pill-soft">Time is approximate</span>
+            <h2>@L["ScreenTime.MostVisitedSites"]</h2>
+            <span class="pill-soft">@L["ScreenTime.ApproximateTime"]</span>
         </div>
         @if (_sites.Count == 0)
         {
-            <p class="muted">No website usage recorded for this period.</p>
+            <p class="muted">@L["ScreenTime.NoSiteUsage"]</p>
         }
         else
         {
@@ -187,18 +188,18 @@ else
                     <div class="rule-row">
                         <div class="rule-main">
                             <div class="rule-title">@site.Domain</div>
-                            <div class="muted tiny">@FormatDuration(site.Seconds) · @site.Visits visit@(site.Visits == 1 ? "" : "s")</div>
+                            <div class="muted tiny">@FormatDuration(site.Seconds) · @Visits(site.Visits)</div>
                         </div>
                         <div class="rule-actions">
                             @if (site.IsBlocked)
                             {
-                                <span class="state-pill blocked">Blocked</span>
-                                <button class="ghost-btn" @onclick="() => AllowSiteAsync(site.Domain)">Allow</button>
+                                <span class="state-pill blocked">@L["Common.Blocked"]</span>
+                                <button class="ghost-btn" @onclick="() => AllowSiteAsync(site.Domain)">@L["Common.Allow"]</button>
                             }
                             else
                             {
-                                <button class="ghost-btn" @onclick="() => BlockSiteAsync(site.Domain)">Block</button>
-                                <button class="ghost-btn" @onclick="() => AllowSiteAsync(site.Domain)">Always allow</button>
+                                <button class="ghost-btn" @onclick="() => BlockSiteAsync(site.Domain)">@L["Common.Block"]</button>
+                                <button class="ghost-btn" @onclick="() => AllowSiteAsync(site.Domain)">@L["Common.AlwaysAllowed"]</button>
                             }
                         </div>
                     </div>
@@ -209,19 +210,15 @@ else
 }
 
 @code {
-    private static readonly (string Key, string Label)[] Periods =
+    private static readonly (string Key, string LabelKey)[] Periods =
     [
-        ("day", "Day"),
-        ("week", "Week"),
-        ("month", "Month")
+        ("day", "ScreenTime.PeriodDay"),
+        ("week", "ScreenTime.PeriodWeek"),
+        ("month", "ScreenTime.PeriodMonth")
     ];
 
-    private static readonly (string Label, DayOfWeek Day)[] Days =
-    [
-        ("Mon", DayOfWeek.Monday), ("Tue", DayOfWeek.Tuesday), ("Wed", DayOfWeek.Wednesday),
-        ("Thu", DayOfWeek.Thursday), ("Fri", DayOfWeek.Friday), ("Sat", DayOfWeek.Saturday),
-        ("Sun", DayOfWeek.Sunday)
-    ];
+    private static readonly DayOfWeek[] Days =
+        [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday];
 
     private sealed class AppRow
     {
@@ -270,10 +267,25 @@ else
 
     private string PeriodLabel => _period switch
     {
-        "week" => $"{_rangeStart:MMM d} – {_rangeEnd.AddDays(-1):MMM d}",
-        "month" => _rangeStart.ToString("MMMM yyyy"),
-        _ => _rangeStart.ToString("ddd, MMM d")
+        "week" => $"{_rangeStart.ToString("d MMM", Culture)} – {_rangeEnd.AddDays(-1).ToString("d MMM", Culture)}",
+        "month" => _rangeStart.ToString("MMMM yyyy", Culture),
+        _ => _rangeStart.ToString("ddd, d MMM", Culture)
     };
+
+    private static System.Globalization.CultureInfo Culture => System.Globalization.CultureInfo.CurrentCulture;
+
+    private string DayLabel(DayOfWeek day) => L[day switch
+    {
+        DayOfWeek.Monday => "Day.Mon",
+        DayOfWeek.Tuesday => "Day.Tue",
+        DayOfWeek.Wednesday => "Day.Wed",
+        DayOfWeek.Thursday => "Day.Thu",
+        DayOfWeek.Friday => "Day.Fri",
+        DayOfWeek.Saturday => "Day.Sat",
+        _ => "Day.Sun"
+    }];
+
+    private string Visits(int count) => L[count == 1 ? "Common.VisitCount" : "Common.VisitCountPlural", count];
 
     private DateTime _rangeStart;
     private DateTime _rangeEnd;
@@ -284,7 +296,7 @@ else
         if (!Guid.TryParse(auth.User.FindFirst("family_id")?.Value, out _familyId))
         {
             _loading = false;
-            _error = "Family scope is missing from the session.";
+            _error = L["Home.MissingFamilyScope"];
             return;
         }
         _anchor = DateTime.Today;
@@ -402,7 +414,7 @@ else
         return totals.Select((value, index) =>
         {
             var date = _rangeStart.AddDays(index);
-            var label = _period == "week" ? date.ToString("ddd") : date.Day.ToString();
+            var label = _period == "week" ? date.ToString("ddd", Culture) : date.Day.ToString(Culture);
             return new Bucket(label, value);
         }).ToList();
     }
@@ -467,7 +479,12 @@ else
         });
     }
 
-    private string _periodLabelShort => _period switch { "week" => "This week", "month" => "This month", _ => "Today" };
+    private string _periodLabelShort => _period switch
+    {
+        "week" => L["ScreenTime.ThisWeek"],
+        "month" => L["ScreenTime.ThisMonth"],
+        _ => L["Common.Today"]
+    };
 
     private Task BlockAppAsync(string identity, string display) =>
         RunRuleAsync(async (rules, parentId) => await rules.UpsertAppRuleAsync(_familyId, _childId, parentId, identity, display, null, true, RuleMode.Always, null));
@@ -520,9 +537,9 @@ else
     {
         get
         {
-            if (!_limitEnabled) return "No daily limit is set.";
+            if (!_limitEnabled) return L["Home.NoDailyLimitSet"];
             var remaining = Math.Max(0, _todayLimitMinutes * 60 - _usedTodaySeconds);
-            return remaining == 0 ? "Daily limit reached. The device is locked until local midnight." : $"{FormatDuration(remaining)} left today.";
+            return remaining == 0 ? L["ScreenTime.LimitReachedMidnight"] : L["Home.TimeLeftToday", FormatDuration(remaining)];
         }
     }
 
@@ -533,9 +550,5 @@ else
     private static DateTime LocalToUtc(DateTime local, TimeZoneInfo tz) =>
         TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(local, DateTimeKind.Unspecified), tz);
 
-    private static string FormatDuration(int seconds)
-    {
-        var span = TimeSpan.FromSeconds(Math.Max(0, seconds));
-        return span.TotalHours >= 1 ? $"{(int)span.TotalHours}h {span.Minutes:00}m" : $"{span.Minutes}m";
-    }
+    private static string FormatDuration(int seconds) => Formats.Duration(seconds);
 }

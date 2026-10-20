@@ -3,19 +3,19 @@
 @using OpControl.Parental.Contracts
 @{
     Layout = "_AuthLayout";
-    ViewData["Title"] = Model.Kind == InvitationKind.NewFamily ? "Create your family" : "Join as a co-parent";
+    ViewData["Title"] = Model.Kind == InvitationKind.NewFamily ? L["Invite.NewTitle"] : L["Invite.JoinTitle"];
 }
 
 @if (Model.Invalid)
 {
-    <h1 class="auth-title">Invitation unavailable</h1>
-    <p class="muted auth-sub">This invitation link is invalid, expired, already used or revoked. Ask the person who invited you for a new link. New families can only join by invitation.</p>
-    <a class="btn btn-ghost btn-block" href="/login">Go to sign in</a>
+    <h1 class="auth-title">@L["Invite.Unavailable"]</h1>
+    <p class="muted auth-sub">@L["Invite.UnavailableBody"]</p>
+    <a class="btn btn-ghost btn-block" href="/login">@L["Invite.GoSignIn"]</a>
 }
 else if (Model.Kind == InvitationKind.NewFamily)
 {
-    <h1 class="auth-title">Create your family</h1>
-    <p class="muted auth-sub">You were invited to the server. Create the family owner account and the first child. You will land in your own empty dashboard.</p>
+    <h1 class="auth-title">@L["Invite.NewTitle"]</h1>
+    <p class="muted auth-sub">@L["Invite.NewBody"]</p>
 
     @if (!string.IsNullOrEmpty(Model.Error))
     {
@@ -23,22 +23,22 @@ else if (Model.Kind == InvitationKind.NewFamily)
     }
 
     <form method="post" class="stack">
-        <label class="field"><span>Family name</span><input asp-for="Input.FamilyName" placeholder="Our family" /></label>
-        <label class="field"><span>Your name</span><input asp-for="Input.DisplayName" placeholder="Parent name" /></label>
-        <label class="field"><span>First child's name</span><input asp-for="Input.ChildName" placeholder="Child name" /></label>
+        <label class="field"><span>@L["Setup.FamilyName"]</span><input asp-for="Input.FamilyName" placeholder="@L["Setup.FamilyPlaceholder"]" /></label>
+        <label class="field"><span>@L["Setup.YourName"]</span><input asp-for="Input.DisplayName" placeholder="@L["Setup.ParentPlaceholder"]" /></label>
+        <label class="field"><span>@L["Invite.FirstChild"]</span><input asp-for="Input.ChildName" placeholder="@L["Setup.ChildPlaceholder"]" /></label>
         <label class="field">
-            <span>Email</span>
+            <span>@L["Common.Email"]</span>
             <input asp-for="Input.Email" type="email" autocomplete="username" readonly="@(Model.InvitationEmail is not null)" />
         </label>
-        <label class="field"><span>Password</span><input asp-for="Input.Password" type="password" autocomplete="new-password" /><span class="muted tiny">At least 8 characters with upper, lower and a digit.</span></label>
-        <label class="field"><span>Confirm password</span><input asp-for="Input.ConfirmPassword" type="password" autocomplete="new-password" /></label>
-        <button type="submit" class="btn btn-primary btn-block">Create family</button>
+        <label class="field"><span>@L["Common.Password"]</span><input asp-for="Input.Password" type="password" autocomplete="new-password" /><span class="muted tiny">@L["Setup.PasswordRule"]</span></label>
+        <label class="field"><span>@L["Setup.ConfirmPassword"]</span><input asp-for="Input.ConfirmPassword" type="password" autocomplete="new-password" /></label>
+        <button type="submit" class="btn btn-primary btn-block">@L["Setup.CreateFamily"]</button>
     </form>
 }
 else
 {
-    <h1 class="auth-title">Join @Model.InvitationFamilyName</h1>
-    <p class="muted auth-sub">You were invited as a co-parent. Create your own login. An authenticator app can be added later in Settings.</p>
+    <h1 class="auth-title">@L["Invite.JoinHeading", Model.InvitationFamilyName ?? ""]</h1>
+    <p class="muted auth-sub">@L["Invite.JoinBody"]</p>
 
     @if (!string.IsNullOrEmpty(Model.Error))
     {
@@ -46,13 +46,13 @@ else
     }
 
     <form method="post" class="stack">
-        <label class="field"><span>Your name</span><input asp-for="Input.DisplayName" placeholder="Parent name" /></label>
+        <label class="field"><span>@L["Setup.YourName"]</span><input asp-for="Input.DisplayName" placeholder="@L["Setup.ParentPlaceholder"]" /></label>
         <label class="field">
-            <span>Email</span>
+            <span>@L["Common.Email"]</span>
             <input asp-for="Input.Email" type="email" autocomplete="username" readonly="@(Model.InvitationEmail is not null)" />
         </label>
-        <label class="field"><span>Password</span><input asp-for="Input.Password" type="password" autocomplete="new-password" /><span class="muted tiny">At least 8 characters with upper, lower and a digit.</span></label>
-        <label class="field"><span>Confirm password</span><input asp-for="Input.ConfirmPassword" type="password" autocomplete="new-password" /></label>
-        <button type="submit" class="btn btn-primary btn-block">Create login</button>
+        <label class="field"><span>@L["Common.Password"]</span><input asp-for="Input.Password" type="password" autocomplete="new-password" /><span class="muted tiny">@L["Setup.PasswordRule"]</span></label>
+        <label class="field"><span>@L["Setup.ConfirmPassword"]</span><input asp-for="Input.ConfirmPassword" type="password" autocomplete="new-password" /></label>
+        <button type="submit" class="btn btn-primary btn-block">@L["Invite.CreateLogin"]</button>
     </form>
 }

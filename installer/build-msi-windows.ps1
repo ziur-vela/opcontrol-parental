@@ -18,6 +18,7 @@ if (-not (Test-Path $WixTool)) {
 & $WixTool build (Join-Path $InstallerDir "Product.wxs") `
     -arch x64 `
     -ext WixToolset.Util.wixext `
+    -loc (Join-Path $InstallerDir "en-us.wxl") `
     -d "ProductVersion=$Version" `
     -d "ClientDir=$PublishRoot\client" `
     -d "HelperDir=$PublishRoot\helper" `

@@ -1,4 +1,5 @@
 using OpControl.Parental.Contracts;
+using OpControl.Parental.Localization;
 
 namespace OpControl.Parental.Helper;
 
@@ -45,6 +46,7 @@ public sealed class HelperContext : ApplicationContext
         UpdateRemoteNotice();
         CheckNotification();
         var state = HelperPaths.ReadState();
+        Loc.SetLanguage(state?.Language);
         _usage.Sample(state);
         if (state is null)
         {
@@ -87,21 +89,21 @@ public sealed class HelperContext : ApplicationContext
         {
             var remaining = bonus - now;
             var minutes = state.BonusMinutes ?? 0;
-            var text = $"Bonus +{minutes} min · {Format(remaining)} left";
+            var text = Loc.T("Client.Countdown.Bonus", minutes, Format(remaining));
             _countdown.UpdateText(text, remaining);
             SetVisible(true, false, state.Reason, text);
         }
         else if (state.NextLockUtc is { } next && next > now)
         {
             var remaining = next - now;
-            var text = $"Lock in {Format(remaining)}";
+            var text = Loc.T("Client.Countdown.LockIn", Format(remaining));
             _countdown.UpdateText(text, remaining);
             SetVisible(true, false, state.Reason, text);
         }
         else if (state.DailyLimitRemainingSeconds is { } dailyLeft && dailyLeft > 0)
         {
             var remaining = TimeSpan.FromSeconds(dailyLeft);
-            var text = $"{FormatShort(remaining)} left today";
+            var text = Loc.T("Client.Countdown.LeftToday", FormatShort(remaining));
             _countdown.UpdateText(text, remaining);
             SetVisible(true, false, state.Reason, text);
         }
@@ -150,8 +152,8 @@ public sealed class HelperContext : ApplicationContext
         {
             if (left > minutes * 60 || left <= (minutes - 1) * 60) continue;
             if (!_warnedThresholds.Add(minutes)) continue;
-            var message = $"{minutes} minute{(minutes == 1 ? "" : "s")} of screen time left today.";
-            ShowNotification("Screen time", message);
+            var message = Loc.T(minutes == 1 ? "Client.Notice.MinutesLeftOne" : "Client.Notice.MinutesLeftMany", minutes);
+            ShowNotification(Loc.T("Client.Notice.ScreenTime"), message);
             if (state.SpokenWarnings) Speak(message);
             HelperPaths.LogEvent($"daily-warning-{minutes}");
             break;
@@ -264,7 +266,7 @@ public sealed class HelperContext : ApplicationContext
         var response = await PinPipeClient.ApplyOverrideAsync(ticket, option, minutes, CancellationToken.None);
         if (!response.Ok)
         {
-            MessageBox.Show(response.Error ?? "The override could not be applied.", "Parent override",
+            MessageBox.Show(response.Error ?? Loc.T("Client.OverrideFailedBody"), Loc.T("Client.OverrideFailedTitle"),
                 MessageBoxButtons.OK, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button1,
                 MessageBoxOptions.DefaultDesktopOnly);
         }

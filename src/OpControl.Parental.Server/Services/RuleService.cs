@@ -23,13 +23,13 @@ public sealed class RuleService
     public async Task EnsureChildAsync(Guid familyId, Guid childId, CancellationToken ct = default)
     {
         if (!await _db.Children.AnyAsync(c => c.Id == childId && c.FamilyId == familyId, ct))
-            throw new InvalidOperationException("Child not found in this family.");
+            throw new InvalidOperationException(AppText.Get("Error.ChildNotFound"));
     }
 
     public static string NormalizeDomain(string input)
     {
         var value = (input ?? "").Trim().ToLowerInvariant();
-        if (value.Length == 0) throw new InvalidOperationException("Enter a domain.");
+        if (value.Length == 0) throw new InvalidOperationException(AppText.Get("Error.EnterDomain"));
         if (value.StartsWith("http://", StringComparison.Ordinal)) value = value[7..];
         if (value.StartsWith("https://", StringComparison.Ordinal)) value = value[8..];
         var slash = value.IndexOf('/');
@@ -41,14 +41,14 @@ public sealed class RuleService
         value = value.Trim('.');
         if (value.StartsWith("www.", StringComparison.Ordinal)) value = value[4..];
         if (!DomainPattern.IsMatch(value))
-            throw new InvalidOperationException("That does not look like a valid domain.");
+            throw new InvalidOperationException(AppText.Get("Error.InvalidDomain"));
         return value;
     }
 
     public static string NormalizeAppIdentity(string identity)
     {
         var value = (identity ?? "").Trim();
-        if (value.Length is < 2 or > 255) throw new InvalidOperationException("Choose an app.");
+        if (value.Length is < 2 or > 255) throw new InvalidOperationException(AppText.Get("Error.ChooseApp"));
         return value;
     }
 
@@ -88,13 +88,13 @@ public sealed class RuleService
     {
         domain = NormalizeDomain(domain);
         if (!blocked && mode != RuleMode.Always)
-            throw new InvalidOperationException("Always-allow rules cannot be tied to a schedule.");
+            throw new InvalidOperationException(AppText.Get("Error.AllowNoSchedule"));
         if (mode == RuleMode.Scheduled && scheduleId is null)
-            throw new InvalidOperationException("Pick a schedule for a scheduled rule.");
+            throw new InvalidOperationException(AppText.Get("Error.PickSchedule"));
         if (scheduleId is { } sid)
         {
             var ok = await _db.Schedules.AnyAsync(s => s.Id == sid && s.FamilyId == familyId && s.ChildId == childId, ct);
-            if (!ok) throw new InvalidOperationException("Schedule not found for this child.");
+            if (!ok) throw new InvalidOperationException(AppText.Get("Error.ScheduleNotFound"));
         }
 
         var rule = await _db.WebsiteRules.FirstOrDefaultAsync(r => r.FamilyId == familyId && r.ChildId == childId && r.Domain == domain, ct);
@@ -140,13 +140,13 @@ public sealed class RuleService
         identity = NormalizeAppIdentity(identity);
         displayName = string.IsNullOrWhiteSpace(displayName) ? identity : displayName.Trim();
         if (!blocked && mode != RuleMode.Always)
-            throw new InvalidOperationException("Always-allow rules cannot be tied to a schedule.");
+            throw new InvalidOperationException(AppText.Get("Error.AllowNoSchedule"));
         if (mode == RuleMode.Scheduled && scheduleId is null)
-            throw new InvalidOperationException("Pick a schedule for a scheduled rule.");
+            throw new InvalidOperationException(AppText.Get("Error.PickSchedule"));
         if (scheduleId is { } sid)
         {
             var ok = await _db.Schedules.AnyAsync(s => s.Id == sid && s.FamilyId == familyId && s.ChildId == childId, ct);
-            if (!ok) throw new InvalidOperationException("Schedule not found for this child.");
+            if (!ok) throw new InvalidOperationException(AppText.Get("Error.ScheduleNotFound"));
         }
 
         var rule = await _db.AppRules.FirstOrDefaultAsync(r => r.FamilyId == familyId && r.ChildId == childId && r.AppIdentity == identity, ct);
@@ -197,7 +197,7 @@ public sealed class RuleService
     public async Task AddItemBonusAsync(Guid familyId, Guid childId, Guid? parentId, string ruleType, string identity, int minutes, DateTime? appliedUtc = null, CancellationToken ct = default)
     {
         if (ruleType is not ("site" or "app"))
-            throw new InvalidOperationException("Unknown rule type.");
+            throw new InvalidOperationException(AppText.Get("Error.UnknownRuleType"));
         await EnsureChildAsync(familyId, childId, ct);
         identity = ruleType == "site" ? NormalizeDomain(identity) : NormalizeAppIdentity(identity);
         minutes = Math.Clamp(minutes, 1, 1440);
@@ -248,7 +248,7 @@ public sealed class RuleService
     {
         await EnsureChildAsync(familyId, childId, ct);
         var category = await _db.Categories.FirstOrDefaultAsync(c => c.Key == key, ct)
-            ?? throw new InvalidOperationException("Category not found.");
+            ?? throw new InvalidOperationException(AppText.Get("Error.CategoryNotFound"));
         var toggle = await _db.ChildCategories.FirstOrDefaultAsync(c => c.FamilyId == familyId && c.ChildId == childId && c.CategoryKey == key, ct);
         if (toggle is null)
         {
@@ -266,7 +266,7 @@ public sealed class RuleService
             ChildId = childId,
             CreatedByParentId = parentId,
             Option = "category-toggled",
-            Detail = $"{category.Name} {(enabled ? "blocked" : "allowed")}",
+            Detail = $"{category.Key}|{(enabled ? "1" : "0")}",
             CreatedUtc = DateTime.UtcNow
         });
         await _db.SaveChangesAsync(ct);
@@ -285,7 +285,7 @@ public sealed class RuleService
     public async Task<CategoryDeltaDto> GetCategoryDeltaAsync(string key, int sinceVersion, Guid familyId, Guid childId, CancellationToken ct = default)
     {
         var category = await _db.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Key == key, ct)
-            ?? throw new InvalidOperationException("Category not found.");
+            ?? throw new InvalidOperationException(AppText.Get("Error.CategoryNotFound"));
         var enabled = await _db.ChildCategories.AsNoTracking()
             .AnyAsync(c => c.FamilyId == familyId && c.ChildId == childId && c.CategoryKey == key && c.Enabled, ct);
         if (!enabled)
@@ -334,8 +334,8 @@ public sealed class RuleService
                 .CountAsync(v => v.FamilyId == device.FamilyId && v.ChildId == device.ChildId && v.Domain == domain && v.Blocked && v.VisitedUtc >= since, ct);
             if (attempts < 5) continue;
             await _alerts.AddAsync(device.FamilyId, device.ChildId, device.Id, "repeated-blocked-site",
-                $"Repeated blocked attempts: {domain}",
-                $"{attempts} blocked attempts to {domain} in the last 10 minutes on {device.Name}.",
+                new AlertContent("Alert.RepeatedBlocked.Title", "Alert.RepeatedBlocked.Detail",
+                    domain, attempts.ToString(), device.Name),
                 TimeSpan.FromHours(1), ct);
         }
     }
@@ -402,8 +402,8 @@ public sealed class RuleService
         foreach (var app in newApps)
         {
             await _alerts.AddAsync(device.FamilyId, device.ChildId, device.Id, "new-app",
-                $"New app installed: {app.DisplayName}",
-                $"{app.DisplayName} ({app.Identity}) was installed on {device.Name}.",
+                new AlertContent("Alert.NewApp.Title", "Alert.NewApp.Detail",
+                    app.DisplayName, app.Identity, device.Name),
                 TimeSpan.FromDays(1), ct);
         }
     }
@@ -537,8 +537,9 @@ public sealed class RuleService
         foreach (var item in events)
         {
             await _alerts.AddAsync(device.FamilyId, device.ChildId, device.Id, "tampering",
-                "Client tampering sign",
-                $"{item.Kind} was reported on {device.Name}" + (string.IsNullOrWhiteSpace(item.Detail) ? "." : $": {item.Detail}"),
+                string.IsNullOrWhiteSpace(item.Detail)
+                    ? new AlertContent("Alert.Tampering.Title", "Alert.Tampering.Detail", item.Kind, device.Name)
+                    : new AlertContent("Alert.Tampering.Title", "Alert.Tampering.DetailMore", item.Kind, device.Name, item.Detail),
                 TimeSpan.FromHours(1), ct);
         }
     }

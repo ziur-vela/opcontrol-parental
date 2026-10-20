@@ -9,6 +9,7 @@ public class Family
     public string Name { get; set; } = "";
     public FamilyStatus Status { get; set; } = FamilyStatus.Active;
     public DateTime? SuspendedUtc { get; set; }
+    public string DefaultLanguage { get; set; } = "en";
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public List<ParentUser> Parents { get; set; } = [];
     public List<Child> Children { get; set; } = [];
@@ -21,6 +22,7 @@ public class ParentUser : IdentityUser<Guid>
     public FamilyRole RoleInFamily { get; set; } = FamilyRole.Parent;
     public ParentPermissions Permissions { get; set; } = ParentPermissions.None;
     public bool IsServerAdmin { get; set; }
+    public string? PreferredLanguage { get; set; }
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public Family? Family { get; set; }
 }
@@ -59,6 +61,7 @@ public class Device
     public bool ScreenNoticeEnabled { get; set; }
     public bool CameraNoticeEnabled { get; set; } = true;
     public bool HasCameraLightOrShutter { get; set; }
+    public string? ClientLanguage { get; set; }
     public string? PreviousClientVersion { get; set; }
     public DateTime? UpdateRequestedUtc { get; set; }
     public string? UpdateTargetVersion { get; set; }
@@ -329,6 +332,9 @@ public class Alert
     public string Type { get; set; } = "";
     public string Title { get; set; } = "";
     public string Detail { get; set; } = "";
+    public string? TitleKey { get; set; }
+    public string? DetailKey { get; set; }
+    public string? ArgsJson { get; set; }
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public DateTime? ReadUtc { get; set; }
     public DateTime? EmailedUtc { get; set; }

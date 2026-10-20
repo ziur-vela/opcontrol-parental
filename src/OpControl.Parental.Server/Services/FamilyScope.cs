@@ -26,8 +26,22 @@ public sealed record FamilyAccess(
     public void Require(ParentPermissions permission)
     {
         if (!Has(permission))
-            throw new PermissionDeniedException($"This action needs the {permission} permission.");
+            throw new PermissionDeniedException(AppText.Get("Error.NeedsPermission", PermissionLabel(permission)));
     }
+
+    private static string PermissionLabel(ParentPermissions permission) => AppText.Get(permission switch
+    {
+        ParentPermissions.LockUnlockBonus => "Team.Perm.Lock",
+        ParentPermissions.WebsiteRules => "Team.Perm.Website",
+        ParentPermissions.AppRules => "Team.Perm.App",
+        ParentPermissions.SchedulesLimits => "Team.Perm.Schedules",
+        ParentPermissions.ViewReports => "Team.Perm.Reports",
+        ParentPermissions.ManageDevices => "Team.Perm.Devices",
+        ParentPermissions.ManagePin => "Team.Perm.Pin",
+        ParentPermissions.RemoteView => "Team.Perm.Remote",
+        _ => "Team.AllPermissions"
+    });
+
 }
 
 public sealed class FamilyScope
@@ -47,7 +61,7 @@ public sealed class FamilyScope
         get
         {
             var value = _accessor.HttpContext?.User.FindFirstValue(ParentalClaims.FamilyId);
-            return Guid.TryParse(value, out var id) ? id : throw new UnauthorizedAccessException("Missing family scope.");
+            return Guid.TryParse(value, out var id) ? id : throw new UnauthorizedAccessException(AppText.Get("Error.MissingFamilyScope"));
         }
     }
 
@@ -56,26 +70,27 @@ public sealed class FamilyScope
         get
         {
             var value = _accessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
-            return Guid.TryParse(value, out var id) ? id : throw new UnauthorizedAccessException("Missing parent identity.");
+            return Guid.TryParse(value, out var id) ? id : throw new UnauthorizedAccessException(AppText.Get("Error.MissingParent"));
         }
     }
 
-    public string DisplayName => _accessor.HttpContext?.User.FindFirstValue(ParentalClaims.DisplayName) ?? "Parent";
+    public string DisplayName => _accessor.HttpContext?.User.FindFirstValue(ParentalClaims.DisplayName) ?? AppText.Get("Common.ParentFallback");
+
 
     public async Task<FamilyAccess> AccessAsync(CancellationToken ct = default)
     {
         if (_access is not null) return _access;
         var value = _accessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(value, out var parentId))
-            throw new PermissionDeniedException("Sign in again.");
+            throw new PermissionDeniedException(AppText.Get("Error.SignInAgain"));
 
         var parent = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == parentId, ct);
         if (parent is null)
-            throw new PermissionDeniedException("This account is no longer active. Sign in again.");
+            throw new PermissionDeniedException(AppText.Get("Error.AccountInactive"));
 
         var family = await _db.Families.AsNoTracking().FirstOrDefaultAsync(f => f.Id == parent.FamilyId, ct);
         if (family is null || family.Status == FamilyStatus.Suspended)
-            throw new PermissionDeniedException("This family is suspended. Contact the server administrator.");
+            throw new PermissionDeniedException(AppText.Get("Error.FamilySuspended"));
 
         _access = new FamilyAccess(parent.Id, parent.FamilyId, parent.DisplayName, parent.RoleInFamily,
             parent.RoleInFamily == FamilyRole.Owner ? ParentPermissions.All : parent.Permissions,

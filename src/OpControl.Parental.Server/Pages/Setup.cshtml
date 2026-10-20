@@ -2,10 +2,10 @@
 @model SetupModel
 @{
     Layout = "_AuthLayout";
-    ViewData["Title"] = "First-run setup";
+    ViewData["Title"] = L["Setup.Title"];
 }
-<h1 class="auth-title">First-run setup</h1>
-<p class="muted auth-sub">Create the owner account and the first child profile. Signup closes after this step.</p>
+<h1 class="auth-title">@L["Setup.Title"]</h1>
+<p class="muted auth-sub">@L["Setup.Subtitle"]</p>
 
 @if (Model.Errors.Count > 0)
 {
@@ -19,30 +19,30 @@
 
 <form method="post" class="stack">
     <label class="field">
-        <span>Family name</span>
-        <input asp-for="Input.FamilyName" placeholder="Our family" />
+        <span>@L["Setup.FamilyName"]</span>
+        <input asp-for="Input.FamilyName" placeholder="@L["Setup.FamilyPlaceholder"]" />
     </label>
     <label class="field">
-        <span>Your name</span>
-        <input asp-for="Input.DisplayName" placeholder="Parent name" />
+        <span>@L["Setup.YourName"]</span>
+        <input asp-for="Input.DisplayName" placeholder="@L["Setup.ParentPlaceholder"]" />
     </label>
     <label class="field">
-        <span>Child’s name</span>
-        <input asp-for="Input.ChildName" placeholder="Child name" />
+        <span>@L["Setup.ChildName"]</span>
+        <input asp-for="Input.ChildName" placeholder="@L["Setup.ChildPlaceholder"]" />
     </label>
     <label class="field">
-        <span>Email</span>
+        <span>@L["Common.Email"]</span>
         <input asp-for="Input.Email" type="email" autocomplete="username" />
     </label>
     <label class="field">
-        <span>Password</span>
+        <span>@L["Common.Password"]</span>
         <input asp-for="Input.Password" type="password" autocomplete="new-password" />
-        <span class="muted tiny">At least 8 characters with upper, lower and a digit.</span>
+        <span class="muted tiny">@L["Setup.PasswordRule"]</span>
     </label>
     <label class="field">
-        <span>Confirm password</span>
+        <span>@L["Setup.ConfirmPassword"]</span>
         <input asp-for="Input.ConfirmPassword" type="password" autocomplete="new-password" />
     </label>
-    <button type="submit" class="btn btn-primary btn-block">Create family</button>
+    <button type="submit" class="btn btn-primary btn-block">@L["Setup.CreateFamily"]</button>
 </form>
-<p class="muted tiny auth-note">The owner account is created by the server operator, not by this job’s automated tests.</p>
+<p class="muted tiny auth-note">@L["Setup.Note"]</p>

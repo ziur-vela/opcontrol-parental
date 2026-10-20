@@ -49,7 +49,7 @@ public sealed class LockService
     public async Task<LockStateDto> GetStateAsync(Guid familyId, Guid childId, string? timeZoneId = null, CancellationToken ct = default)
     {
         var child = await _db.Children.AsNoTracking().FirstOrDefaultAsync(c => c.Id == childId && c.FamilyId == familyId, ct)
-            ?? throw new InvalidOperationException("Child not found in this family.");
+            ?? throw new InvalidOperationException(AppText.Get("Error.ChildNotFound"));
         var state = await EnsureLockStateAsync(familyId, childId, ct);
         var schedules = await LoadScheduleDtosAsync(familyId, childId, ct);
         var zone = ResolveTimeZone(timeZoneId ?? await FirstDeviceTimeZoneAsync(familyId, childId, ct));
@@ -58,10 +58,16 @@ public sealed class LockService
         return BuildDto(state, schedules, zone, now, daily);
     }
 
-    public async Task<DeviceStateDto> GetDeviceStateAsync(Guid familyId, Guid childId, CancellationToken ct = default)
+    public async Task<DeviceStateDto> GetDeviceStateAsync(Guid familyId, Guid childId, CancellationToken ct = default) =>
+        await GetDeviceStateAsync(familyId, childId, null, ct);
+
+    public async Task<DeviceStateDto> GetDeviceStateForDeviceAsync(Device device, CancellationToken ct = default) =>
+        await GetDeviceStateAsync(device.FamilyId, device.ChildId, device.ClientLanguage, ct);
+
+    public async Task<DeviceStateDto> GetDeviceStateAsync(Guid familyId, Guid childId, string? deviceLanguage, CancellationToken ct = default)
     {
         var child = await _db.Children.AsNoTracking().FirstOrDefaultAsync(c => c.Id == childId && c.FamilyId == familyId, ct)
-            ?? throw new InvalidOperationException("Child not found in this family.");
+            ?? throw new InvalidOperationException(AppText.Get("Error.ChildNotFound"));
         var state = await EnsureLockStateAsync(familyId, childId, ct);
         var schedules = await LoadScheduleDtosAsync(familyId, childId, ct);
         var parentName = await ParentDisplayNameAsync(familyId, ct);
@@ -71,17 +77,18 @@ public sealed class LockService
         var dailyLimit = await _usage.BuildDailyLimitAsync(familyId, childId, tz, now, ct);
         var appUsage = await _usage.AppUsageTodayAsync(familyId, childId, tz, now, ct);
         var limitSettings = await _usage.EnsureLimitAsync(familyId, childId, ct);
+        var language = AppCulture.Normalize(deviceLanguage ?? await FamilyLanguageAsync(familyId, ct));
         return new DeviceStateDto(
             childId, child.Name, parentName, state.ManualLock, state.UnlockUntilUtc, state.BonusUntilUtc,
             state.BonusMinutes, state.OverridePinHash, schedules, policy.Sites, policy.Apps, policy.Bonuses,
-            policy.Categories, now, appUsage, dailyLimit, limitSettings.SpokenWarnings);
+            policy.Categories, now, appUsage, dailyLimit, limitSettings.SpokenWarnings, language);
     }
 
     public async Task<LockStateDto> ApplyAsync(Guid familyId, Guid childId, Guid? parentId, LockAction action, int? minutes = null, CancellationToken ct = default)
     {
         var childExists = await _db.Children.AnyAsync(c => c.Id == childId && c.FamilyId == familyId, ct);
         if (!childExists)
-            throw new InvalidOperationException("Child not found in this family.");
+            throw new InvalidOperationException(AppText.Get("Error.ChildNotFound"));
 
         var state = await EnsureLockStateAsync(familyId, childId, ct);
         var now = DateTime.UtcNow;
@@ -164,7 +171,7 @@ public sealed class LockService
             "unlock-until-next" => "pin-unlock-until-next",
             "bonus" => "pin-bonus",
             _ => null
-        } ?? throw new InvalidOperationException("Unknown override option.");
+        } ?? throw new InvalidOperationException(AppText.Get("Error.UnknownOverride"));
 
         if (request.Option == "unlock-until-next")
         {
@@ -196,8 +203,10 @@ public sealed class LockService
         await _db.SaveChangesAsync(ct);
 
         await _alerts.AddAsync(device.FamilyId, device.ChildId, device.Id, "pin-override",
-            "Override PIN used",
-            $"{option} was used on {device.Name}" + (request.Minutes is { } m ? $" for {m} minutes." : "."),
+            option == "pin-bonus"
+                ? new AlertContent("Alert.PinOverride.BonusTitle", "Alert.PinOverride.BonusDetail",
+                    device.Name, (state.BonusMinutes ?? request.Minutes ?? 15).ToString())
+                : new AlertContent("Alert.PinOverride.UnlockTitle", "Alert.PinOverride.UnlockDetail", device.Name),
             TimeSpan.FromMinutes(1), ct);
 
         var dto = BuildDto(state, schedules, zone, now, await _usage.BuildDailyLimitAsync(device.FamilyId, device.ChildId, zone, now, ct));
@@ -211,7 +220,7 @@ public sealed class LockService
     {
         await EnsureChildAsync(familyId, childId, ct);
         if (pin.Length is < 4 or > 12 || !pin.All(char.IsDigit))
-            throw new InvalidOperationException("PIN must be 4 to 12 digits.");
+            throw new InvalidOperationException(AppText.Get("Error.PinFormat"));
         var state = await EnsureLockStateAsync(familyId, childId, ct);
         state.OverridePinHash = PinHasher.Hash(pin);
         state.UpdatedUtc = DateTime.UtcNow;
@@ -248,9 +257,24 @@ public sealed class LockService
 
     public async Task PublishDeviceStateAsync(Guid familyId, Guid childId, CancellationToken ct = default)
     {
-        var state = await GetDeviceStateAsync(familyId, childId, ct);
-        await _hub.Clients.Group(DeviceGroups.Child(childId)).SendAsync(DeviceHubMethods.DeviceStateChanged, state);
+        var devices = await _db.Devices.AsNoTracking()
+            .Where(d => d.FamilyId == familyId && d.ChildId == childId && !d.IsRevoked)
+            .ToListAsync(ct);
+        if (devices.Count == 0)
+        {
+            var state = await GetDeviceStateAsync(familyId, childId, ct);
+            await _hub.Clients.Group(DeviceGroups.Child(childId)).SendAsync(DeviceHubMethods.DeviceStateChanged, state);
+            return;
+        }
+        foreach (var device in devices)
+        {
+            var state = await GetDeviceStateForDeviceAsync(device, ct);
+            await _hub.Clients.Group(DeviceGroups.Device(device.Id)).SendAsync(DeviceHubMethods.DeviceStateChanged, state);
+        }
     }
+
+    public async Task<string> FamilyLanguageAsync(Guid familyId, CancellationToken ct = default) =>
+        AppCulture.Normalize(await _db.Families.AsNoTracking().Where(f => f.Id == familyId).Select(f => f.DefaultLanguage).FirstOrDefaultAsync(ct));
 
     public async Task<LockStateDto> PublishCurrentStateAsync(Guid familyId, Guid childId, CancellationToken ct = default)
     {
@@ -263,7 +287,7 @@ public sealed class LockService
     public async Task EnsureChildAsync(Guid familyId, Guid childId, CancellationToken ct = default)
     {
         if (!await _db.Children.AnyAsync(c => c.Id == childId && c.FamilyId == familyId, ct))
-            throw new InvalidOperationException("Child not found in this family.");
+            throw new InvalidOperationException(AppText.Get("Error.ChildNotFound"));
     }
 
     private async Task<List<ScheduleDto>> LoadScheduleDtosAsync(Guid familyId, Guid childId, CancellationToken ct)

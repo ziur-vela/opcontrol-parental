@@ -21,7 +21,7 @@ public sealed class EnrollmentService
     {
         var childExists = await _db.Children.AnyAsync(c => c.Id == childId && c.FamilyId == familyId, ct);
         if (!childExists)
-            throw new EnrollmentException("Child not found in this family.");
+            throw new EnrollmentException(AppText.Get("Error.ChildNotFound"));
 
         var code = SecretToken.NewCode();
         var now = DateTime.UtcNow;
@@ -41,11 +41,11 @@ public sealed class EnrollmentService
     public async Task<EnrollResponse> RedeemAsync(EnrollRequest request, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(request.Code))
-            throw new EnrollmentException("Enrollment code is required.");
+            throw new EnrollmentException(AppText.Get("Error.EnrollmentCodeRequired"));
         if (string.IsNullOrWhiteSpace(request.DeviceName) || request.DeviceName.Length > 120)
-            throw new EnrollmentException("Device name is required (max 120 characters).");
+            throw new EnrollmentException(AppText.Get("Error.DeviceNameRequired"));
         if (!Enum.IsDefined(request.Platform))
-            throw new EnrollmentException("Unsupported device platform.");
+            throw new EnrollmentException(AppText.Get("Error.UnsupportedPlatform"));
 
         var normalized = SecretToken.NormalizeCode(request.Code);
         var hash = SecretToken.Hash(normalized);
@@ -53,11 +53,11 @@ public sealed class EnrollmentService
 
         var code = await _db.EnrollmentCodes
             .FirstOrDefaultAsync(c => c.CodeHash == hash && c.UsedUtc == null && c.ExpiresUtc > now, ct)
-            ?? throw new EnrollmentException("Enrollment code is invalid or has expired.");
+            ?? throw new EnrollmentException(AppText.Get("Error.EnrollmentCodeInvalid"));
 
         var child = await _db.Children
             .FirstOrDefaultAsync(c => c.Id == code.ChildId && c.FamilyId == code.FamilyId, ct)
-            ?? throw new EnrollmentException("Child not found.");
+            ?? throw new EnrollmentException(AppText.Get("Error.ChildNotFoundShort"));
 
         var token = SecretToken.NewToken();
         var device = new Device

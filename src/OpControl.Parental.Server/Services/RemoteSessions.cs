@@ -11,6 +11,8 @@ namespace OpControl.Parental.Server.Services;
 
 public sealed class RemoteSessionService
 {
+    private const string LegacyNoticeDefault = "Parent's watching you";
+
     private readonly ParentalDbContext _db;
     private readonly IHubContext<ParentalHub> _hub;
     private readonly RemoteSessionRegistry _registry;
@@ -29,18 +31,23 @@ public sealed class RemoteSessionService
     public async Task<RemoteSessionCreatedDto> CreateAsync(Guid familyId, Guid parentId, Guid deviceId, RemoteSessionKind kind, CancellationToken ct = default)
     {
         var device = await _db.Devices.AsNoTracking().FirstOrDefaultAsync(d => d.Id == deviceId && d.FamilyId == familyId, ct)
-            ?? throw new InvalidOperationException("Device not found in this family.");
+            ?? throw new InvalidOperationException(AppText.Get("Error.DeviceNotFoundFamily"));
         if (kind == RemoteSessionKind.Camera && !await _consent.HasAcceptedAsync(parentId, ct))
-            throw new InvalidOperationException("Accept the camera supervision terms before starting a camera session.");
+            throw new InvalidOperationException(AppText.Get("Error.CameraConsent"));
         var now = DateTime.UtcNow;
         var busy = await _db.RemoteSessions.AsNoTracking().AnyAsync(s => s.DeviceId == deviceId
             && (s.Status == RemoteSessionStatus.Requested || s.Status == RemoteSessionStatus.Active)
             && s.CreatedUtc > now.AddMinutes(-11), ct);
-        if (busy) throw new InvalidOperationException("A remote session is already active for this device.");
+        if (busy) throw new InvalidOperationException(AppText.Get("Error.RemoteBusy"));
 
         var showNotice = kind == RemoteSessionKind.Screen ? device.ScreenNoticeEnabled : device.CameraNoticeEnabled;
         var familySettings = await _db.FamilySettings.AsNoTracking().FirstOrDefaultAsync(s => s.FamilyId == familyId, ct);
-        var noticeText = string.IsNullOrWhiteSpace(familySettings?.NoticeText) ? "Parent's watching you" : familySettings!.NoticeText.Trim();
+        var familyLanguage = await _db.Families.AsNoTracking().Where(f => f.Id == familyId).Select(f => f.DefaultLanguage).FirstOrDefaultAsync(ct);
+        var language = AppCulture.Normalize(device.ClientLanguage ?? familyLanguage);
+        var storedNotice = familySettings?.NoticeText?.Trim();
+        var noticeText = string.IsNullOrWhiteSpace(storedNotice) || storedNotice == LegacyNoticeDefault
+            ? AppText.Get("Settings.NoticeDefault", language)
+            : storedNotice;
         var session = new RemoteSession
         {
             FamilyId = familyId,

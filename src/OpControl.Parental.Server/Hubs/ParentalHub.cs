@@ -38,7 +38,7 @@ public sealed class ParentalHub : Hub
         await Groups.AddToGroupAsync(Context.ConnectionId, DeviceGroups.Child(device.ChildId));
         await _presence.ConnectedAsync(device);
 
-        var state = await _locks.GetDeviceStateAsync(device.FamilyId, device.ChildId);
+        var state = await _locks.GetDeviceStateForDeviceAsync(device);
         await Clients.Caller.SendAsync(DeviceHubMethods.DeviceStateChanged, state);
 
         _logger.LogInformation("Device {DeviceId} ({DeviceName}) connected on {ConnectionId}", device.Id, device.Name, Context.ConnectionId);

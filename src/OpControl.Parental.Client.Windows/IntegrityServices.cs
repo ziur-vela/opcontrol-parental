@@ -30,7 +30,7 @@ public sealed class ClockMonitor : BackgroundService
                 {
                     _lastReportUtc = DateTime.UtcNow;
                     _sync.QueueTamper(new TamperEventDto("clock-changed",
-                        $"System clock changed by about {(int)delta.TotalMinutes} minutes.", DateTime.UtcNow));
+                        ((int)delta.TotalMinutes).ToString(System.Globalization.CultureInfo.InvariantCulture), DateTime.UtcNow));
                     _logger.LogWarning("System clock jump detected: {Minutes} minutes", (int)delta.TotalMinutes);
                 }
             }

@@ -64,8 +64,8 @@ public sealed class UsageLimitService : BackgroundService
             {
                 var localDay = TimeZoneInfo.ConvertTimeFromUtc(now, tz).ToString("yyyy-MM-dd");
                 var added = await alerts.AddAsync(child.FamilyId, child.Id, null, "daily-limit",
-                    "Daily screen time limit reached",
-                    $"The {daily.TodayMinutes} minute limit for {localDay} has been reached.",
+                    new AlertContent("Alert.DailyLimit.Title", "Alert.DailyLimit.Detail",
+                        daily.TodayMinutes.ToString(), localDay),
                     TimeSpan.FromHours(12), ct);
                 if (added is not null)
                 {
@@ -89,8 +89,8 @@ public sealed class UsageLimitService : BackgroundService
             foreach (var app in appUsage.Where(a => a.LimitMinutes is > 0 && !a.AlwaysAllowed && a.UsedTodaySeconds >= a.LimitMinutes * 60))
             {
                 await alerts.AddAsync(child.FamilyId, child.Id, null, "app-limit",
-                    $"App limit reached: {app.Identity}",
-                    $"{app.Identity} reached its {app.LimitMinutes} minute daily limit.",
+                    new AlertContent("Alert.AppLimit.Title", "Alert.AppLimit.Detail",
+                        app.Identity, app.LimitMinutes?.ToString() ?? "0"),
                     TimeSpan.FromHours(12), ct);
             }
 
@@ -123,8 +123,8 @@ public sealed class UsageLimitService : BackgroundService
             if (device.LastSeenUtc is { } seen && now - seen > threshold)
             {
                 await alerts.AddAsync(familyId, childId, device.Id, "device-offline",
-                    $"Device offline: {device.Name}",
-                    $"{device.Name} has not contacted the server since {seen:u}.",
+                    new AlertContent("Alert.DeviceOffline.Title", "Alert.DeviceOffline.Detail",
+                        device.Name, seen.ToString("u")),
                     TimeSpan.FromHours(6), ct);
             }
         }

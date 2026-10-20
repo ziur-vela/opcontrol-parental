@@ -13,7 +13,7 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <AssemblyName>OpControl.Parental.Helper</AssemblyName>
     <RootNamespace>OpControl.Parental.Helper</RootNamespace>
-    <Version>0.9.3</Version>
+    <Version>0.10.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="OpenCvSharp4" Version="4.10.0.20241108" />
@@ -27,5 +27,10 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="fonts\*.ttf" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\OpControl.Parental.Localization\Loc.cs" Link="Localization\Loc.cs" />
+    <EmbeddedResource Include="..\OpControl.Parental.Localization\en.json" LogicalName="OpControl.Parental.Loc.en.json" />
+    <EmbeddedResource Include="..\OpControl.Parental.Localization\es-MX.json" LogicalName="OpControl.Parental.Loc.es-MX.json" />
   </ItemGroup>
 </Project>

@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using OpControl.Parental.Contracts;
 using OpControl.Parental.Server.Data;
 using OpControl.Parental.Server.Services;
+using Microsoft.Extensions.Localization;
+using OpControl.Parental.Server.Resources;
 
 namespace OpControl.Parental.Server.Pages;
 
@@ -13,12 +15,14 @@ public class InviteModel : PageModel
     private readonly InvitationService _invites;
     private readonly SignInManager<ParentUser> _signIn;
     private readonly LoginThrottle _throttle;
+    private readonly IStringLocalizer<AppStrings> _l;
 
-    public InviteModel(InvitationService invites, SignInManager<ParentUser> signIn, LoginThrottle throttle)
+    public InviteModel(InvitationService invites, SignInManager<ParentUser> signIn, LoginThrottle throttle, IStringLocalizer<AppStrings> localizer)
     {
         _invites = invites;
         _signIn = signIn;
         _throttle = throttle;
+        _l = localizer;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -81,7 +85,7 @@ public class InviteModel : PageModel
         if (_throttle.IsBlocked(key))
         {
             Response.StatusCode = 429;
-            Error = "Too many attempts. Try again in a few minutes.";
+            Error = _l["Login.TooMany"];
             return Page();
         }
 
@@ -93,11 +97,15 @@ public class InviteModel : PageModel
             ParentUser user;
             if (invitation.Kind == InvitationKind.NewFamily)
             {
-                (user, _) = await _invites.AcceptNewFamilyAsync(Token, Input.FamilyName, Input.DisplayName, Input.Email, Input.Password, Input.ChildName, ct);
+                (user, _) = await _invites.AcceptNewFamilyAsync(Token, Input.FamilyName, Input.DisplayName, Input.Email, Input.Password, Input.ChildName, AppCulture.FromAcceptLanguage(Request.Headers.AcceptLanguage), ct);
             }
             else
             {
                 (user, _) = await _invites.AcceptCoParentAsync(Token, Input.Email, Input.DisplayName, Input.Password, ct);
+            }
+            if (string.IsNullOrWhiteSpace(user.PreferredLanguage))
+            {
+                user.PreferredLanguage = AppCulture.FromAcceptLanguage(Request.Headers.AcceptLanguage);
             }
             _throttle.Reset(key);
             await _signIn.SignInAsync(user, isPersistent: false);

@@ -46,8 +46,8 @@ public sealed class UpdateService
     public async Task<DeviceUpdateEvent> RequestAsync(Guid familyId, Guid deviceId, Guid? parentId, CancellationToken ct = default)
     {
         var device = await _db.Devices.FirstOrDefaultAsync(d => d.Id == deviceId && d.FamilyId == familyId && !d.IsRevoked, ct)
-            ?? throw new InvalidOperationException("Device not found in this family.");
-        var current = _catalog.Current() ?? throw new InvalidOperationException("No client release is published on the server yet.");
+            ?? throw new InvalidOperationException(AppText.Get("Error.DeviceNotFoundFamily"));
+        var current = _catalog.Current() ?? throw new InvalidOperationException(AppText.Get("Error.NoRelease"));
         var now = DateTime.UtcNow;
         device.UpdateRequestedUtc = now;
         device.UpdateTargetVersion = current.Version;
@@ -122,8 +122,11 @@ public sealed class UpdateService
         if (status is "failed" or "rolledback")
         {
             await _alerts.AddAsync(device.FamilyId, device.ChildId, device.Id, "update-" + status,
-                status == "rolledback" ? "Client update rolled back" : "Client update failed",
-                $"{device.Name}: {(string.IsNullOrWhiteSpace(request.Detail) ? "the client did not report healthy" : request.Detail)}",
+                status == "rolledback"
+                    ? new AlertContent("Alert.UpdateRolledBack.Title", "Alert.Update.Detail", device.Name,
+                        string.IsNullOrWhiteSpace(request.Detail) ? AppText.Get("Alert.Update.NoHealth", AppCulture.English) : request.Detail!)
+                    : new AlertContent("Alert.UpdateFailed.Title", "Alert.Update.Detail", device.Name,
+                        string.IsNullOrWhiteSpace(request.Detail) ? AppText.Get("Alert.Update.NoHealth", AppCulture.English) : request.Detail!),
                 TimeSpan.FromHours(1), ct);
         }
         _events.PublishDeviceStatus(await StatusAsync(device.Id, false, ct));

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization Culture="es-MX" xmlns="http://wixtoolset.org/schemas/v4/wxl">
+  <String Id="SummaryDescription" Value="Servicio y asistente del dispositivo de Parental OpControl" />
+  <String Id="FeatureTitle" Value="Parental OpControl" />
+  <String Id="ServiceDisplayName" Value="OpControl Parental" />
+  <String Id="ServiceDescription" Value="Servicio del dispositivo de Parental OpControl" />
+</WixLocalization>

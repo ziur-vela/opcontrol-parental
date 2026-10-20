@@ -9,14 +9,17 @@
 @inject IServiceScopeFactory Scopes
 @inject BuildInfo Build
 @inject Microsoft.Extensions.Options.IOptions<OpControl.Parental.Server.Services.BrandOptions> BrandOptions
+@inject IStringLocalizer<AppStrings> L
+@inject IJSRuntime JS
+@inject NavigationManager Nav
 
-<PageTitle>Settings · Parental OpControl</PageTitle>
+<PageTitle>@L["Settings.PageTitle"]</PageTitle>
 
 <div class="page-head">
     <div>
-        <div class="eyebrow">Family</div>
-        <h1>Settings</h1>
-        <p class="muted">Owner settings for alerts, email delivery and the family.</p>
+        <div class="eyebrow">@L["Settings.FamilyEyebrow"]</div>
+        <h1>@L["Nav.Settings"]</h1>
+        <p class="muted">@L["Settings.Subtitle"]</p>
     </div>
 </div>
 
@@ -26,33 +29,58 @@
 }
 @if (_saved)
 {
-    <div class="alert ok">Settings saved.</div>
+    <div class="alert ok">@L["Settings.Saved"]</div>
 }
+
+<div class="card">
+    <div class="card-title-row">
+        <h2>@L["Settings.Language"]</h2>
+        <span class="pill-soft">@L["Settings.MyLanguage"]</span>
+    </div>
+    <p class="muted small">@L["Settings.LanguageHelp"]</p>
+    <div class="grid-2">
+        <label class="field">
+            <span>@L["Settings.MyLanguage"]</span>
+            <select value="@_myLanguage" @onchange="SetMyLanguageAsync">
+                <option value="en">@L["Language.English"]</option>
+                <option value="es-MX">@L["Language.Spanish"]</option>
+            </select>
+        </label>
+        <label class="field">
+            <span>@L["Settings.FamilyLanguage"]</span>
+            <select value="@_familyLanguage" disabled="@(!_isOwner)" @onchange="SetFamilyLanguageAsync">
+                <option value="en">@L["Language.English"]</option>
+                <option value="es-MX">@L["Language.Spanish"]</option>
+            </select>
+        </label>
+    </div>
+    <p class="muted tiny">@L["Settings.FamilyLanguageHelp"]</p>
+</div>
 
 <section class="card">
     <div class="card-title-row">
-        <h2>Alert emails</h2>
-        <span class="pill-soft">@(_isOwner ? "Owner" : "Read only")</span>
+        <h2>@L["Settings.AlertEmails"]</h2>
+        <span class="pill-soft">@(_isOwner ? L["Common.Owner"] : L["Common.ReadOnly"])</span>
     </div>
-    <p class="muted small">Email notifications are off by default. When enabled, new alerts are sent to every parent account with an email address.</p>
+    <p class="muted small">@L["Settings.AlertEmailsHelp"]</p>
     <div class="stack">
-        <label class="check"><input type="checkbox" @bind="_enabled" disabled="@(!_isOwner)" /> Send alert emails</label>
+        <label class="check"><input type="checkbox" @bind="_enabled" disabled="@(!_isOwner)" /> @L["Settings.SendAlertEmails"]</label>
         <div class="grid-2">
-            <label class="field"><span>SMTP host</span><input @bind="_host" disabled="@(!_isOwner)" placeholder="smtp.example.com" /></label>
-            <label class="field"><span>SMTP port</span><input type="number" min="1" max="65535" @bind="_port" disabled="@(!_isOwner)" /></label>
-            <label class="field"><span>SMTP username</span><input @bind="_username" disabled="@(!_isOwner)" /></label>
+            <label class="field"><span>@L["Settings.SmtpHost"]</span><input @bind="_host" disabled="@(!_isOwner)" placeholder="smtp.example.com" /></label>
+            <label class="field"><span>@L["Settings.SmtpPort"]</span><input type="number" min="1" max="65535" @bind="_port" disabled="@(!_isOwner)" /></label>
+            <label class="field"><span>@L["Settings.SmtpUsername"]</span><input @bind="_username" disabled="@(!_isOwner)" /></label>
             <label class="field">
-                <span>SMTP password @(_hasPassword ? "(stored)" : "")</span>
-                <input type="password" @bind="_password" disabled="@(!_isOwner)" placeholder="@(_hasPassword ? "Leave blank to keep" : "")" />
+                <span>@L["Settings.SmtpPassword"] @(_hasPassword ? L["Settings.Stored"] : "")</span>
+                <input type="password" @bind="_password" disabled="@(!_isOwner)" placeholder="@(_hasPassword ? L["Settings.LeaveBlankToKeep"] : "")" />
             </label>
-            <label class="field"><span>From address</span><input @bind="_from" disabled="@(!_isOwner)" placeholder="parental@example.com" /></label>
-            <label class="field"><span>Device offline alert after (minutes)</span><input type="number" min="5" max="1440" @bind="_offlineMinutes" disabled="@(!_isOwner)" /></label>
+            <label class="field"><span>@L["Settings.FromAddress"]</span><input @bind="_from" disabled="@(!_isOwner)" placeholder="parental@example.com" /></label>
+            <label class="field"><span>@L["Settings.OfflineAfter"]</span><input type="number" min="5" max="1440" @bind="_offlineMinutes" disabled="@(!_isOwner)" /></label>
         </div>
-        <label class="check"><input type="checkbox" @bind="_useSsl" disabled="@(!_isOwner)" /> Use SSL/TLS</label>
+        <label class="check"><input type="checkbox" @bind="_useSsl" disabled="@(!_isOwner)" /> @L["Settings.UseSsl"]</label>
         @if (_isOwner)
         {
             <div class="button-row">
-                <button class="btn btn-primary" disabled="@_busy" @onclick="SaveAsync">Save email settings</button>
+                <button class="btn btn-primary" disabled="@_busy" @onclick="SaveAsync">@L["Settings.SaveEmail"]</button>
             </div>
         }
     </div>
@@ -60,80 +88,80 @@
 
 <section class="card">
     <div class="card-title-row">
-        <h2>On-screen notice</h2>
-        <span class="pill-soft">@(_isOwner ? "Owner" : "Read only")</span>
+        <h2>@L["Settings.Notice"]</h2>
+        <span class="pill-soft">@(_isOwner ? L["Common.Owner"] : L["Common.ReadOnly"])</span>
     </div>
-    <p class="muted small">A transparent eye and this text appear at the top centre of the screen while a parent is viewing, when the device notice is enabled. Leave blank to use the default.</p>
-    <label class="field"><span>Notice text</span><input maxlength="80" @bind="_noticeText" disabled="@(!_isOwner)" placeholder="Parent's watching you" /></label>
+    <p class="muted small">@L["Settings.NoticeHelp"]</p>
+    <label class="field"><span>@L["Settings.NoticeText"]</span><input maxlength="80" @bind="_noticeText" disabled="@(!_isOwner)" placeholder="@L["Settings.NoticeDefault"]" /></label>
     @if (_isOwner)
     {
-        <div class="button-row"><button class="btn btn-primary" disabled="@_busy" @onclick="SaveNoticeTextAsync">Save notice text</button></div>
+        <div class="button-row"><button class="btn btn-primary" disabled="@_busy" @onclick="SaveNoticeTextAsync">@L["Settings.SaveNotice"]</button></div>
     }
 </section>
 
 <div class="card">
-    <h2>Owner account</h2>
-    <p class="muted">The owner controls family settings, invitations and removing parents. Invite co-parents from <a href="/team">Parents</a>.</p>
+    <h2>@L["Settings.OwnerAccount"]</h2>
+    <p class="muted">@L["Settings.OwnerHelp1"] <a href="/team">@L["Nav.Parents"]</a>.</p>
 </div>
 
 <div class="card">
     <div class="card-title-row">
-        <h2>Build version</h2>
-        <span class="pill-soft">stamped at build time</span>
+        <h2>@L["Settings.BuildVersion"]</h2>
+        <span class="pill-soft">@L["Settings.Stamped"]</span>
     </div>
-    <p class="muted small">This comes from the running image, not from a typed setting.</p>
+    <p class="muted small">@L["Settings.BuildHelp"]</p>
     <div class="version-line">@Build.DisplayVersion</div>
-    <div class="muted tiny">@($"Version {Build.Version} · commit {Build.Commit} · built {Build.BuildDate}")</div>
+    <div class="muted tiny">@L["Settings.BuildDetail", Build.Version, Build.Commit, Build.BuildDate]</div>
     <div class="button-row">
-        <a class="btn btn-ghost" href="/version" target="_blank">Open /version</a>
-        <a class="btn btn-ghost" href="/health" target="_blank">Open /health</a>
+        <a class="btn btn-ghost" href="/version" target="_blank">@L["Settings.OpenVersion"]</a>
+        <a class="btn btn-ghost" href="/health" target="_blank">@L["Settings.OpenHealth"]</a>
     </div>
 </div>
 
 <div class="card">
     <div class="card-title-row">
-        <h2>Parent override PIN</h2>
-        <span class="pill-soft">@(_hasPin ? "Set" : "Not set")</span>
+        <h2>@L["Settings.OverridePin"]</h2>
+        <span class="pill-soft">@(_hasPin ? L["Settings.PinSet"] : L["Settings.PinNotSet"])</span>
     </div>
-    <p class="muted">Used on @(_childName ?? "the child")'s lock screen ("Parent override") to unlock until the next lock cycle or give bonus time. Works offline. Five wrong attempts block it for 60 seconds.</p>
-    <a class="btn btn-primary" href="/pin">@(_hasPin ? "Change or clear PIN" : "Set PIN")</a>
+    <p class="muted">@L["Settings.PinHelp", _childName ?? L["Settings.TheChild"]]</p>
+    <a class="btn btn-primary" href="/pin">@(_hasPin ? L["Settings.ChangeOrClearPin"] : L["Home.SetPin"])</a>
 </div>
 
 <div class="card">
-    <h2>Security</h2>
-    <p class="muted">Protect parent sign-in with an authenticator app (TOTP).</p>
-    <a class="btn btn-primary" href="/account/2fa">Two-factor authentication</a>
+    <h2>@L["Settings.Security"]</h2>
+    <p class="muted">@L["Settings.SecurityHelp"]</p>
+    <a class="btn btn-primary" href="/account/2fa">@L["Settings.TwoFactor"]</a>
 </div>
 
 <div class="card">
-    <h2>Alert controls</h2>
-    <p class="muted small">Mute an alert type, delay emails during quiet hours, or send one daily digest instead of individual emails.</p>
+    <h2>@L["Settings.AlertControls"]</h2>
+    <p class="muted small">@L["Settings.AlertControlsHelp"]</p>
     <div class="grid-2">
-        <label class="check"><input type="checkbox" @bind="_muteNewApp" disabled="@(!_isOwner)" /> Mute new app alerts</label>
-        <label class="check"><input type="checkbox" @bind="_muteRepeated" disabled="@(!_isOwner)" /> Mute repeated blocked sites</label>
-        <label class="check"><input type="checkbox" @bind="_mutePin" disabled="@(!_isOwner)" /> Mute PIN override alerts</label>
-        <label class="check"><input type="checkbox" @bind="_muteLimit" disabled="@(!_isOwner)" /> Mute limit alerts</label>
-        <label class="check"><input type="checkbox" @bind="_muteOffline" disabled="@(!_isOwner)" /> Mute offline alerts</label>
-        <label class="check"><input type="checkbox" @bind="_muteTamper" disabled="@(!_isOwner)" /> Mute tampering alerts</label>
-        <label class="field"><span>Quiet hours start</span><input type="text" placeholder="22:00" @bind="_quietStart" disabled="@(!_isOwner)" /></label>
-        <label class="field"><span>Quiet hours end</span><input type="text" placeholder="07:00" @bind="_quietEnd" disabled="@(!_isOwner)" /></label>
-        <label class="check"><input type="checkbox" @bind="_digest" disabled="@(!_isOwner)" /> Send a daily digest instead</label>
-        <label class="field"><span>Digest hour (local, 0-23)</span><input type="number" min="0" max="23" @bind="_digestHour" disabled="@(!_isOwner)" /></label>
+        <label class="check"><input type="checkbox" @bind="_muteNewApp" disabled="@(!_isOwner)" /> @L["Settings.MuteNewApp"]</label>
+        <label class="check"><input type="checkbox" @bind="_muteRepeated" disabled="@(!_isOwner)" /> @L["Settings.MuteRepeated"]</label>
+        <label class="check"><input type="checkbox" @bind="_mutePin" disabled="@(!_isOwner)" /> @L["Settings.MutePin"]</label>
+        <label class="check"><input type="checkbox" @bind="_muteLimit" disabled="@(!_isOwner)" /> @L["Settings.MuteLimit"]</label>
+        <label class="check"><input type="checkbox" @bind="_muteOffline" disabled="@(!_isOwner)" /> @L["Settings.MuteOffline"]</label>
+        <label class="check"><input type="checkbox" @bind="_muteTamper" disabled="@(!_isOwner)" /> @L["Settings.MuteTamper"]</label>
+        <label class="field"><span>@L["Settings.QuietStart"]</span><input type="text" placeholder="22:00" @bind="_quietStart" disabled="@(!_isOwner)" /></label>
+        <label class="field"><span>@L["Settings.QuietEnd"]</span><input type="text" placeholder="07:00" @bind="_quietEnd" disabled="@(!_isOwner)" /></label>
+        <label class="check"><input type="checkbox" @bind="_digest" disabled="@(!_isOwner)" /> @L["Settings.Digest"]</label>
+        <label class="field"><span>@L["Settings.DigestHour"]</span><input type="number" min="0" max="23" @bind="_digestHour" disabled="@(!_isOwner)" /></label>
     </div>
-    <p class="muted tiny">Muted types still appear in the dashboard; only email delivery is muted. Quiet hours suppress email until the end of the window. Failed emails retry with backoff (up to 6 attempts).</p>
+    <p class="muted tiny">@L["Settings.AlertControlsFootnote"]</p>
     @if (_isOwner)
     {
-        <div class="button-row"><button class="btn btn-primary" disabled="@_busy" @onclick="SavePreferencesAsync">Save alert controls</button></div>
+        <div class="button-row"><button class="btn btn-primary" disabled="@_busy" @onclick="SavePreferencesAsync">@L["Settings.SaveAlertControls"]</button></div>
     }
 </div>
 
 <div class="card">
-    <h2>Brand</h2>
-    <p class="muted">The product name, logo and accent color come from one server configuration (<code>Branding</code>).</p>
+    <h2>@L["Settings.Brand"]</h2>
+    <p class="muted">@L["Settings.BrandHelp1"] <code>Branding</code>@L["Settings.BrandHelp2"]</p>
     <div class="brand-preview">
         <img src="@BrandOptions.Value.LogoLight" alt="@BrandOptions.Value.ProductName" />
     </div>
-    <div class="muted tiny">@BrandOptions.Value.ProductName · accent @BrandOptions.Value.AccentColor</div>
+    <div class="muted tiny">@BrandOptions.Value.ProductName · @L["Settings.Accent"] @BrandOptions.Value.AccentColor</div>
 </div>
 
 @code {
@@ -164,7 +192,10 @@
     private string _quietEnd = "07:00";
     private bool _digest;
     private int _digestHour = 18;
-    private string _noticeText = "Parent's watching you";
+    private string _noticeText = "";
+    private Guid _parentId;
+    private string _myLanguage = AppCulture.English;
+    private string _familyLanguage = AppCulture.English;
 
     protected override async Task OnInitializedAsync()
     {
@@ -172,7 +203,11 @@
         if (!Guid.TryParse(auth.User.FindFirst("family_id")?.Value, out _familyId))
             return;
         _isOwner = string.Equals(auth.User.FindFirst("family_role")?.Value, "Owner", StringComparison.OrdinalIgnoreCase);
+        Guid.TryParse(auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out _parentId);
         using var scope = Scopes.CreateScope();
+        var dbLanguages = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
+        _myLanguage = AppCulture.Normalize(await dbLanguages.Users.AsNoTracking().Where(u => u.Id == _parentId).Select(u => u.PreferredLanguage).FirstOrDefaultAsync());
+        _familyLanguage = AppCulture.Normalize(await dbLanguages.Families.AsNoTracking().Where(f => f.Id == _familyId).Select(f => f.DefaultLanguage).FirstOrDefaultAsync());
         var alerts = scope.ServiceProvider.GetRequiredService<AlertService>();
         var settings = await alerts.EnsureSettingsAsync(_familyId);
         _enabled = settings.AlertEmailsEnabled;
@@ -183,9 +218,9 @@
         _from = settings.FromAddress;
         _offlineMinutes = settings.OfflineAlertMinutes;
         _installLinkMinutes = settings.InstallLinkMinutes;
-        _noticeText = settings.NoticeText;
+        _noticeText = settings.NoticeText == "Parent's watching you" ? "" : settings.NoticeText;
         _hasPassword = !string.IsNullOrWhiteSpace(settings.SmtpPasswordProtected);
-        var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
+        var db = dbLanguages;
         var child = await db.Children.AsNoTracking()
             .Where(c => c.FamilyId == _familyId)
             .OrderBy(c => c.CreatedUtc)
@@ -219,11 +254,32 @@
             using var scope = Scopes.CreateScope();
             var alerts = scope.ServiceProvider.GetRequiredService<AlertService>();
             await alerts.SaveNoticeTextAsync(_familyId, _noticeText);
-            _noticeText = string.IsNullOrWhiteSpace(_noticeText) ? "Parent's watching you" : _noticeText.Trim();
+            _noticeText = string.IsNullOrWhiteSpace(_noticeText) ? L["Settings.NoticeDefault"].Value : _noticeText.Trim();
             _saved = true;
         }
         catch (Exception ex) { _error = ex.Message; }
         finally { _busy = false; }
+    }
+
+    private async Task SetMyLanguageAsync(ChangeEventArgs e)
+    {
+        var language = AppCulture.Normalize(e.Value?.ToString());
+        using var scope = Scopes.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<LanguageService>().SetParentLanguageAsync(_parentId, language);
+        _myLanguage = language;
+        await JS.InvokeVoidAsync("ocpSetLanguageCookie", language);
+        Nav.NavigateTo(Nav.Uri, forceLoad: true);
+    }
+
+    private async Task SetFamilyLanguageAsync(ChangeEventArgs e)
+    {
+        if (!_isOwner) return;
+        var language = AppCulture.Normalize(e.Value?.ToString());
+        using var scope = Scopes.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<LanguageService>().SetFamilyLanguageAsync(_familyId, language);
+        _familyLanguage = language;
+        await JS.InvokeVoidAsync("ocpSetLanguageCookie", language);
+        Nav.NavigateTo(Nav.Uri, forceLoad: true);
     }
 
     private static string FormatMinutes(int minutes) => $"{minutes / 60:00}:{minutes % 60:00}";

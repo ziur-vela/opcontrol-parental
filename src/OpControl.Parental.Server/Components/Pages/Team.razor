@@ -8,14 +8,15 @@
 @using OpControl.Parental.Server.Services
 @inject AuthenticationStateProvider AuthState
 @inject IServiceScopeFactory Scopes
+@inject IStringLocalizer<AppStrings> L
 
-<PageTitle>Parents · Parental OpControl</PageTitle>
+<PageTitle>@L["Team.PageTitle"]</PageTitle>
 
 <div class="page-head">
     <div>
-        <div class="eyebrow">Family</div>
-        <h1>Parents</h1>
-        <p class="muted">Invite a co-parent and choose exactly what they can do. Every action is recorded with their name.</p>
+        <div class="eyebrow">@L["Settings.FamilyEyebrow"]</div>
+        <h1>@L["Nav.Parents"]</h1>
+        <p class="muted">@L["Team.Subtitle"]</p>
     </div>
 </div>
 
@@ -24,26 +25,26 @@
 
 @if (!_isOwner)
 {
-    <div class="card"><p class="muted">Only the family owner can manage parents and invitations.</p></div>
+    <div class="card"><p class="muted">@L["Team.OwnerOnly"]</p></div>
 }
 else
 {
     <section class="card">
-        <h2>Parents</h2>
+        <h2>@L["Nav.Parents"]</h2>
         <div class="device-list">
             @foreach (var parent in _parents)
             {
                 <div class="device-row">
                     <div class="device-main">
-                        <div class="device-name">@parent.DisplayName @(parent.IsServerAdmin ? "· server admin" : "")</div>
-                        <div class="muted tiny">@parent.Email · @parent.Role</div>
+                        <div class="device-name">@parent.DisplayName @(parent.IsServerAdmin ? L["Team.ServerAdmin"] : "")</div>
+                        <div class="muted tiny">@parent.Email · @RoleLabel(parent.Role)</div>
                         <div class="muted tiny">@PermissionsText(parent.Permissions)</div>
                     </div>
                     <div class="device-meta">
                         @if (parent.Role != FamilyRole.Owner)
                         {
-                            <button class="ghost-btn" @onclick="() => EditAsync(parent)">Permissions</button>
-                            <button class="ghost-btn" @onclick="() => RemoveAsync(parent)">Remove</button>
+                            <button class="ghost-btn" @onclick="() => EditAsync(parent)">@L["Team.Permissions"]</button>
+                            <button class="ghost-btn" @onclick="() => RemoveAsync(parent)">@L["Common.Remove"]</button>
                         }
                     </div>
                 </div>
@@ -54,51 +55,51 @@ else
     @if (_editing is not null)
     {
         <section class="card">
-            <h2>Permissions for @_editing.DisplayName</h2>
+            <h2>@L["Team.PermissionsFor", _editing.DisplayName]</h2>
             <div class="grid-2">
                 @foreach (var permission in PermissionChoices)
                 {
                     <label class="check">
                         <input type="checkbox" checked="@Has(permission.Value)" @onchange="e => Set(permission.Value, (bool)(e.Value ?? false))" />
-                        @permission.Label
+                        @L[permission.LabelKey]
                     </label>
                 }
             </div>
             <div class="button-row">
-                <button class="btn btn-primary" @onclick="SavePermissionsAsync">Save permissions</button>
-                <button class="btn btn-ghost" @onclick="() => _editing = null">Cancel</button>
+                <button class="btn btn-primary" @onclick="SavePermissionsAsync">@L["Team.SavePermissions"]</button>
+                <button class="btn btn-ghost" @onclick="() => _editing = null">@L["Common.Cancel"]</button>
             </div>
         </section>
     }
 
     <section class="card">
-        <h2>Invite a co-parent</h2>
-        <p class="muted small">Email invitations expire in 72 hours. A link-only invitation is also possible; copy it and send it yourself. Each link is single-use.</p>
+        <h2>@L["Team.Invite"]</h2>
+        <p class="muted small">@L["Team.InviteHelp"]</p>
         <div class="nest">
-            <label class="field"><span>Email (optional)</span><input @bind="_inviteEmail" placeholder="parent@example.com" /></label>
+            <label class="field"><span>@L["Team.EmailOptional"]</span><input @bind="_inviteEmail" placeholder="parent@example.com" /></label>
             <div class="grid-2">
                 @foreach (var permission in PermissionChoices)
                 {
                     <label class="check">
                         <input type="checkbox" checked="@_invitePermissions.HasFlag(permission.Value)" @onchange="e => ToggleInvite(permission.Value, (bool)(e.Value ?? false))" />
-                        @permission.Label
+                        @L[permission.LabelKey]
                     </label>
                 }
             </div>
-            <button class="btn btn-primary" @onclick="InviteAsync">Create invitation</button>
+            <button class="btn btn-primary" @onclick="InviteAsync">@L["Team.CreateInvitation"]</button>
             @if (_createdLink is not null)
             {
-                <label class="field"><span>One-time link</span><input readonly value="@_createdLink" /></label>
-                <div class="muted tiny">@(_emailSent ? "Email sent." : "Copy this link and send it to the parent.")</div>
+                <label class="field"><span>@L["Team.OneTimeLink"]</span><input readonly value="@_createdLink" /></label>
+                <div class="muted tiny">@(_emailSent ? L["Team.EmailSent"] : L["Team.CopyLink"])</div>
             }
         </div>
     </section>
 
     <section class="card">
-        <h2>Pending invitations</h2>
+        <h2>@L["Team.Pending"]</h2>
         @if (_invitations.Count == 0)
         {
-            <p class="muted">No pending co-parent invitations.</p>
+            <p class="muted">@L["Team.NoPending"]</p>
         }
         else
         {
@@ -107,12 +108,12 @@ else
                 {
                     <div class="device-row">
                         <div class="device-main">
-                            <div class="device-name">@(invite.Email ?? "Link-only invitation")</div>
-                            <div class="muted tiny">Expires @invite.ExpiresUtc.ToLocalTime().ToString("MMM d, HH:mm") · @PermissionsText(invite.Permissions)</div>
+                            <div class="device-name">@(invite.Email ?? L["Team.LinkOnly"])</div>
+                            <div class="muted tiny">@L["Team.Expires", Formats.CompactDateTime(invite.ExpiresUtc.ToLocalTime())] · @PermissionsText(invite.Permissions)</div>
                         </div>
                         <div class="device-meta">
-                            <button class="ghost-btn" @onclick="() => ResendAsync(invite)">Resend</button>
-                            <button class="ghost-btn" @onclick="() => RevokeAsync(invite)">Revoke</button>
+                            <button class="ghost-btn" @onclick="() => ResendAsync(invite)">@L["Team.Resend"]</button>
+                            <button class="ghost-btn" @onclick="() => RevokeAsync(invite)">@L["Team.Revoke"]</button>
                         </div>
                     </div>
                 }
@@ -122,16 +123,16 @@ else
 }
 
 @code {
-    private static readonly (ParentPermissions Value, string Label)[] PermissionChoices =
+    private static readonly (ParentPermissions Value, string LabelKey)[] PermissionChoices =
     [
-        (ParentPermissions.LockUnlockBonus, "Lock / unlock and bonus time"),
-        (ParentPermissions.WebsiteRules, "Website rules"),
-        (ParentPermissions.AppRules, "App rules"),
-        (ParentPermissions.SchedulesLimits, "Schedules and limits"),
-        (ParentPermissions.ViewReports, "View reports and activity"),
-        (ParentPermissions.ManageDevices, "Manage devices"),
-        (ParentPermissions.ManagePin, "Manage PIN"),
-        (ParentPermissions.RemoteView, "Remote screen and camera view")
+        (ParentPermissions.LockUnlockBonus, "Team.Perm.Lock"),
+        (ParentPermissions.WebsiteRules, "Team.Perm.Website"),
+        (ParentPermissions.AppRules, "Team.Perm.App"),
+        (ParentPermissions.SchedulesLimits, "Team.Perm.Schedules"),
+        (ParentPermissions.ViewReports, "Team.Perm.Reports"),
+        (ParentPermissions.ManageDevices, "Team.Perm.Devices"),
+        (ParentPermissions.ManagePin, "Team.Perm.Pin"),
+        (ParentPermissions.RemoteView, "Team.Perm.Remote")
     ];
 
     private Guid _familyId;
@@ -185,11 +186,11 @@ else
         await RunAsync(async (db, team, invites) =>
         {
             var parent = await db.Users.FirstOrDefaultAsync(u => u.Id == _editing.Id && u.FamilyId == _familyId);
-            if (parent is null) throw new InvalidOperationException("Parent not found.");
+            if (parent is null) throw new InvalidOperationException(L["Team.ParentNotFound"]);
             parent.Permissions = _editPermissions;
             parent.SecurityStamp = Guid.NewGuid().ToString();
             await db.SaveChangesAsync();
-            _notice = "Permissions saved. The parent's next request uses the new set.";
+            _notice = L["Team.PermissionsSaved"];
             _editing = null;
         });
     }
@@ -199,7 +200,7 @@ else
         await RunAsync(async (db, team, invites) =>
         {
             await team.RemoveAsync(_familyId, parent.Id, _parents.First(p => p.Role == FamilyRole.Owner).Id);
-            _notice = "Parent removed and signed out.";
+            _notice = L["Team.ParentRemoved"];
         });
     }
 
@@ -230,7 +231,7 @@ else
             using var scope = Scopes.CreateScope();
             var invites = scope.ServiceProvider.GetRequiredService<InvitationService>();
             var result = await invites.ResendAsync(invite.Id, _familyId);
-            _notice = result.Ok ? (result.EmailSent ? "Invitation email sent again." : result.Error) : result.Error;
+            _notice = result.Ok ? (result.EmailSent ? L["Team.InviteResent"] : result.Error) : result.Error;
         }
         catch (Exception ex) { _error = ex.Message; }
     }
@@ -242,7 +243,7 @@ else
             using var scope = Scopes.CreateScope();
             var invites = scope.ServiceProvider.GetRequiredService<InvitationService>();
             await invites.RevokeAsync(invite.Id, _familyId);
-            _notice = "Invitation revoked.";
+            _notice = L["Team.InviteRevoked"];
             await RefreshAsync();
         }
         catch (Exception ex) { _error = ex.Message; }
@@ -263,7 +264,9 @@ else
         catch (Exception ex) { _error = ex.Message; }
     }
 
-    private static string PermissionsText(ParentPermissions permissions) =>
-        permissions == ParentPermissions.All ? "All permissions" : string.Join(", ",
-            PermissionChoices.Where(c => permissions.HasFlag(c.Value)).Select(c => c.Label));
+    private string PermissionsText(ParentPermissions permissions) =>
+        permissions == ParentPermissions.All ? L["Team.AllPermissions"] : string.Join(", ",
+            PermissionChoices.Where(c => permissions.HasFlag(c.Value)).Select(c => L[c.LabelKey].Value));
+
+    private string RoleLabel(FamilyRole role) => role == FamilyRole.Owner ? L["Common.Owner"] : L["Team.CoParent"];
 }

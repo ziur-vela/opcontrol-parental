@@ -1,8 +1,8 @@
 @page "/error"
 @{
     Layout = "_AuthLayout";
-    ViewData["Title"] = "Error";
+    ViewData["Title"] = L["Error.Title"];
 }
-<h1 class="auth-title">Something went wrong</h1>
-<p class="muted">Please try again. If the problem continues, check the server logs.</p>
-<a class="btn btn-primary btn-block" href="/">Back to dashboard</a>
+<h1 class="auth-title">@L["Error.Title"]</h1>
+<p class="muted">@L["Error.Body"]</p>
+<a class="btn btn-primary btn-block" href="/">@L["Error.Back"]</a>

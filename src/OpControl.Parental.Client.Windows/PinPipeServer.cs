@@ -4,6 +4,7 @@ using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text.Json;
 using OpControl.Parental.Contracts;
+using OpControl.Parental.Localization;
 
 namespace OpControl.Parental.Client;
 
@@ -89,7 +90,7 @@ public sealed class PinPipeServer : BackgroundService
                 _sync.QueueTamper(new TamperEventDto("helper-auth-failed",
                     $"Rejected pipe client pid {clientPid} session {clientSession} image {imagePath ?? "unknown"}.", DateTime.UtcNow));
                 _logger.LogWarning("Rejected helper pipe client pid={Pid} session={Session} image={Image}", clientPid, clientSession, imagePath);
-                await WriteAsync(pipe, new PinPipeResponse(false, "Not allowed from this process."), ct);
+                await WriteAsync(pipe, new PinPipeResponse(false, Loc.T("Client.Pipe.NotAllowed")), ct);
                 return;
             }
 
@@ -101,7 +102,7 @@ public sealed class PinPipeServer : BackgroundService
                 if (string.IsNullOrWhiteSpace(line)) return;
                 var request = JsonSerializer.Deserialize<PinPipeRequest>(line, JsonOptions);
                 var response = request is null
-                    ? new PinPipeResponse(false, "Invalid request.")
+                    ? new PinPipeResponse(false, Loc.T("Client.Pipe.InvalidRequest"))
                     : await DispatchAsync(request, ct);
                 await writer.WriteLineAsync(JsonSerializer.Serialize(response, JsonOptions));
             }
@@ -127,7 +128,7 @@ public sealed class PinPipeServer : BackgroundService
             case "state":
                 return new PinPipeResponse(true, State: _runtime.Current);
             default:
-                return new PinPipeResponse(false, "Unknown request.");
+                return new PinPipeResponse(false, Loc.T("Client.Pipe.UnknownRequest"));
         }
     }
 
@@ -135,18 +136,18 @@ public sealed class PinPipeServer : BackgroundService
     {
         var check = _lockout.Check();
         if (check.LockedOut)
-            return new PinPipeResponse(false, "Too many attempts.", true, check.RemainingSeconds, 0);
+            return new PinPipeResponse(false, Loc.T("Client.Pipe.TooMany"), true, check.RemainingSeconds, 0);
 
         var hash = _runtime.DeviceState?.OverridePinHash;
         if (string.IsNullOrWhiteSpace(hash))
-            return new PinPipeResponse(false, "No override PIN is set.");
+            return new PinPipeResponse(false, Loc.T("Client.Pipe.NoPin"));
 
         if (!PinHasher.Verify(hash, pin))
         {
             var failure = _lockout.RegisterFailure();
             return failure.LockedOut
-                ? new PinPipeResponse(false, "Too many attempts.", true, failure.RemainingSeconds, 0)
-                : new PinPipeResponse(false, "Incorrect PIN.", false, null, failure.AttemptsRemaining);
+                ? new PinPipeResponse(false, Loc.T("Client.Pipe.TooMany"), true, failure.RemainingSeconds, 0)
+                : new PinPipeResponse(false, Loc.T("Client.Pipe.Incorrect"), false, null, failure.AttemptsRemaining);
         }
 
         _lockout.Reset();
@@ -160,10 +161,10 @@ public sealed class PinPipeServer : BackgroundService
     private async Task<PinPipeResponse> ApplyOverrideAsync(PinPipeRequest request, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.Ticket) || !_tickets.TryRemove(request.Ticket, out var expires) || expires < DateTime.UtcNow)
-            return new PinPipeResponse(false, "PIN verification expired.");
+            return new PinPipeResponse(false, Loc.T("Client.Pipe.Expired"));
 
         if (request.Option is not ("unlock-until-next" or "bonus"))
-            return new PinPipeResponse(false, "Unknown override option.");
+            return new PinPipeResponse(false, Loc.T("Client.Pipe.UnknownOption"));
 
         await _overrides.ApplyAsync(request.Option, request.Minutes, _settings.Value, ct);
         return new PinPipeResponse(true, State: _runtime.Current);

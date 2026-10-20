@@ -38,9 +38,9 @@ public sealed class InstallService
     public async Task<InstallLinkCreatedDto> CreateAsync(Guid familyId, Guid childId, Guid parentId, DevicePlatform platform, CancellationToken ct = default)
     {
         if (platform != DevicePlatform.Windows)
-            throw new EnrollmentException("Linux and Android installers are coming soon.");
+            throw new EnrollmentException(AppText.Get("Error.MobileInstallersSoon"));
         var child = await _db.Children.AsNoTracking().FirstOrDefaultAsync(c => c.Id == childId && c.FamilyId == familyId, ct)
-            ?? throw new EnrollmentException("Child not found in this family.");
+            ?? throw new EnrollmentException(AppText.Get("Error.ChildNotFound"));
         var settings = await _db.FamilySettings.FirstOrDefaultAsync(s => s.FamilyId == familyId, ct);
         var minutes = Math.Clamp(settings?.InstallLinkMinutes ?? 1440, 5, 10080);
         var now = DateTime.UtcNow;
@@ -122,11 +122,11 @@ public sealed class InstallService
     {
         var link = await FindAsync(token, ct);
         if (link is null)
-            return new InstallLinkStatusDto("invalid", null, null, DateTime.MinValue, "This install link is not valid.");
+            return new InstallLinkStatusDto("invalid", null, null, DateTime.MinValue, AppText.Get("InstallLink.Invalid"));
         if (link.RevokedUtc is not null)
-            return new InstallLinkStatusDto("revoked", null, null, link.ExpiresUtc, "This install link was revoked. Ask the parent to create a new one.");
+            return new InstallLinkStatusDto("revoked", null, null, link.ExpiresUtc, AppText.Get("InstallLink.Revoked"));
         if (link.ExpiresUtc <= DateTime.UtcNow && link.UsedUtc is null)
-            return new InstallLinkStatusDto("expired", null, null, link.ExpiresUtc, "This install link has expired. Ask the parent to create a new one.");
+            return new InstallLinkStatusDto("expired", null, null, link.ExpiresUtc, AppText.Get("InstallLink.Expired"));
 
         var child = await _db.Children.AsNoTracking().FirstOrDefaultAsync(c => c.Id == link.ChildId, ct);
         if (link.UsedUtc is not null)

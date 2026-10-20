@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using OpControl.Parental.Server.Data;
 using OpControl.Parental.Server.Services;
+using Microsoft.Extensions.Localization;
+using OpControl.Parental.Server.Resources;
 
 namespace OpControl.Parental.Server.Pages;
 
@@ -10,11 +12,13 @@ public class LoginTwoFactorModel : PageModel
 {
     private readonly SignInManager<ParentUser> _signIn;
     private readonly LoginThrottle _throttle;
+    private readonly IStringLocalizer<AppStrings> _l;
 
-    public LoginTwoFactorModel(SignInManager<ParentUser> signIn, LoginThrottle throttle)
+    public LoginTwoFactorModel(SignInManager<ParentUser> signIn, LoginThrottle throttle, IStringLocalizer<AppStrings> localizer)
     {
         _signIn = signIn;
         _throttle = throttle;
+        _l = localizer;
     }
 
     [BindProperty] public string Code { get; set; } = "";
@@ -39,7 +43,7 @@ public class LoginTwoFactorModel : PageModel
         if (_throttle.IsBlocked(key))
         {
             Response.StatusCode = 429;
-            Error = "Too many attempts. Try again in a few minutes.";
+            Error = _l["Login.TooMany"];
             return Page();
         }
 
@@ -54,7 +58,7 @@ public class LoginTwoFactorModel : PageModel
         }
 
         _throttle.RecordFailure(key);
-        Error = result.IsLockedOut ? "This account is temporarily locked." : "The code is not valid.";
+        Error = result.IsLockedOut ? _l["Login.LockedOut"] : _l["TwoFactor.InvalidCode"];
         return Page();
     }
 }

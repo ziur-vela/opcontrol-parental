@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Management;
 using System.Text.Json;
 using OpControl.Parental.Contracts;
+using OpControl.Parental.Localization;
 
 namespace OpControl.Parental.Client;
 
@@ -151,7 +152,7 @@ public sealed class AppBlockService : BackgroundService
                 }
 
                 _sync.RecordBlockEvent("app", identity, name);
-                WriteNotification(reason == "daily-limit" ? "Daily limit reached for this app" : "This app is blocked", name);
+                WriteNotification(reason == "daily-limit" ? Loc.T("Client.AppBlock.DailyLimit") : Loc.T("Client.AppBlock.Blocked"), name);
                 _handled.Add(pid);
             }
         }

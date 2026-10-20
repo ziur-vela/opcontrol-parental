@@ -2,10 +2,10 @@
 @model LoginTwoFactorModel
 @{
     Layout = "_AuthLayout";
-    ViewData["Title"] = "Two-factor sign-in";
+    ViewData["Title"] = L["TwoFactor.Title"];
 }
-<h1 class="auth-title">Two-factor sign-in</h1>
-<p class="muted auth-sub">Enter the 6-digit code from your authenticator app.</p>
+<h1 class="auth-title">@L["TwoFactor.Title"]</h1>
+<p class="muted auth-sub">@L["TwoFactor.Subtitle"]</p>
 
 @if (Model.Error is not null)
 {
@@ -14,8 +14,8 @@
 
 <form method="post" class="stack">
     <input type="hidden" asp-for="RememberMe" />
-    <label class="field"><span>Authenticator code</span><input asp-for="Code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" /></label>
-    <label class="check"><input asp-for="UseRecoveryCode" /> Use a recovery code instead</label>
-    <button type="submit" class="btn btn-primary btn-block">Verify</button>
+    <label class="field"><span>@L["TwoFactor.Code"]</span><input asp-for="Code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" /></label>
+    <label class="check"><input asp-for="UseRecoveryCode" /> @L["TwoFactor.UseRecovery"]</label>
+    <button type="submit" class="btn btn-primary btn-block">@L["TwoFactor.Verify"]</button>
 </form>
-<p class="muted tiny auth-note"><a href="/login">Back to sign in</a></p>
+<p class="muted tiny auth-note"><a href="/login">@L["TwoFactor.Back"]</a></p>

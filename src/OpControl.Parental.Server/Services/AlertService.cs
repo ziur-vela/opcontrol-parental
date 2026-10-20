@@ -25,17 +25,21 @@ public sealed class AlertService
         _logger = logger;
     }
 
-    public async Task<Alert?> AddAsync(Guid familyId, Guid childId, Guid? deviceId, string type, string title, string detail, TimeSpan? dedupeWindow = null, CancellationToken ct = default)
+    public async Task<Alert?> AddAsync(Guid familyId, Guid childId, Guid? deviceId, string type, AlertContent content, TimeSpan? dedupeWindow = null, CancellationToken ct = default)
     {
         var now = DateTime.UtcNow;
+        var argsJson = AlertText.SerializeArgs(content.Args);
+        var title = AppText.Get(content.TitleKey, AppCulture.English, content.Args);
+        var detail = string.IsNullOrWhiteSpace(content.DetailKey) ? "" : AppText.Get(content.DetailKey, AppCulture.English, content.Args);
         if (dedupeWindow is { } window)
         {
             var since = now - window;
             var exists = await _db.Alerts.AsNoTracking()
-                .AnyAsync(a => a.FamilyId == familyId && a.ChildId == childId && a.Type == type && a.Detail == detail && a.CreatedUtc >= since, ct);
+                .AnyAsync(a => a.FamilyId == familyId && a.ChildId == childId && a.Type == type
+                    && ((a.ArgsJson != null && a.ArgsJson == argsJson) || (a.ArgsJson == null && a.Detail == detail))
+                    && a.CreatedUtc >= since, ct);
             if (exists) return null;
         }
-
         var alert = new Alert
         {
             FamilyId = familyId,
@@ -44,6 +48,9 @@ public sealed class AlertService
             Type = type,
             Title = title.Length > 200 ? title[..200] : title,
             Detail = detail.Length > 500 ? detail[..500] : detail,
+            TitleKey = content.TitleKey,
+            DetailKey = string.IsNullOrWhiteSpace(content.DetailKey) ? null : content.DetailKey,
+            ArgsJson = argsJson,
             CreatedUtc = now
         };
 
@@ -199,10 +206,11 @@ public sealed class AlertService
         if (due.Count == 0) return 0;
 
         var preferences = await EnsurePreferenceAsync(familyId, ct);
-        var recipients = await _db.Users.AsNoTracking()
+        var recipientRows = await _db.Users.AsNoTracking()
             .Where(u => u.FamilyId == familyId && u.Email != null && u.Email != "")
-            .Select(u => u.Email!)
+            .Select(u => new { u.Email, u.PreferredLanguage })
             .ToListAsync(ct);
+        var recipients = recipientRows.Select(r => r.Email!).ToList();
         if (recipients.Count == 0)
         {
             foreach (var alert in due) alert.EmailedUtc = now;
@@ -210,9 +218,14 @@ public sealed class AlertService
             return 0;
         }
 
+        var familyLanguage = await FamilyLanguageAsync(familyId, ct);
+        var languageFor = (string? email) => AppCulture.Normalize(
+            recipientRows.FirstOrDefault(r => string.Equals(r.Email, email, StringComparison.OrdinalIgnoreCase))?.PreferredLanguage
+            ?? familyLanguage);
+
         if (preferences.DailyDigest)
         {
-            var sentDigest = await SendDigestAsync(familyId, settings, due, recipients, ct);
+            var sentDigest = await SendDigestAsync(familyId, settings, due, recipients, languageFor, ct);
             await _db.SaveChangesAsync(ct);
             return sentDigest;
         }
@@ -220,7 +233,7 @@ public sealed class AlertService
         var sent = 0;
         foreach (var alert in due)
         {
-            var (ok, error) = await SendOneAsync(settings, alert, recipients, ct);
+            var (ok, error) = await SendOneAsync(settings, alert, recipients, languageFor, ct);
             if (ok)
             {
                 alert.EmailedUtc = DateTime.UtcNow;
@@ -236,17 +249,30 @@ public sealed class AlertService
         return sent;
     }
 
-    private async Task<int> SendDigestAsync(Guid familyId, FamilySettings settings, List<Alert> alerts, List<string> recipients, CancellationToken ct)
+    private async Task<int> SendDigestAsync(Guid familyId, FamilySettings settings, List<Alert> alerts, List<string> recipients,
+        Func<string?, string> languageFor, CancellationToken ct)
     {
-        var body = new System.Text.StringBuilder();
-        body.AppendLine($"{alerts.Count} alert{(alerts.Count == 1 ? "" : "s")} for your family:");
-        body.AppendLine();
-        foreach (var alert in alerts)
-            body.AppendLine($"• {alert.Title}\n  {alert.Detail}\n  {alert.CreatedUtc:u}");
-        var (ok, error) = await SendMessageAsync(settings, recipients, "Parental OpControl daily digest", body.ToString(), ct);
-        if (!ok)
+        string? lastError = null;
+        foreach (var recipient in recipients)
         {
-            foreach (var alert in alerts) ScheduleRetry(alert, error);
+            var language = languageFor(recipient);
+            using var scope = CultureScope.Use(language);
+            var body = new System.Text.StringBuilder();
+            var count = alerts.Count;
+            body.AppendLine(AppText.Get(count == 1 ? "Email.DigestIntroOne" : "Email.DigestIntroMany", language, count.ToString(AppCulture.Culture(language))));
+            body.AppendLine();
+            foreach (var alert in alerts)
+            {
+                var (title, detail) = AlertText.Render(alert, language);
+                body.AppendLine($"• {title}\n  {detail}\n  {alert.CreatedUtc.ToString("u", AppCulture.Culture(language))}");
+            }
+            var subject = AppText.Get("Email.DigestSubject", language);
+            var (ok, error) = await SendMessageAsync(settings, [recipient], subject, body.ToString(), ct);
+            if (!ok) lastError = error;
+        }
+        if (lastError is not null)
+        {
+            foreach (var alert in alerts) ScheduleRetry(alert, lastError);
             return 0;
         }
         var now = DateTime.UtcNow;
@@ -258,11 +284,25 @@ public sealed class AlertService
         return alerts.Count;
     }
 
-    private async Task<(bool Ok, string? Error)> SendOneAsync(FamilySettings settings, Alert alert, List<string> recipients, CancellationToken ct)
+    private async Task<(bool Ok, string? Error)> SendOneAsync(FamilySettings settings, Alert alert, List<string> recipients,
+        Func<string?, string> languageFor, CancellationToken ct)
     {
-        var body = $"{alert.Title}\n\n{alert.Detail}\n\n{alert.CreatedUtc:u}";
-        return await SendMessageAsync(settings, recipients, alert.Title, body, ct);
+        string? lastError = null;
+        var sentAny = false;
+        foreach (var recipient in recipients)
+        {
+            var language = languageFor(recipient);
+            using var scope = CultureScope.Use(language);
+            var (title, detail) = AlertText.Render(alert, language);
+            var body = $"{title}\n\n{detail}\n\n{alert.CreatedUtc.ToString("u", AppCulture.Culture(language))}";
+            var (ok, error) = await SendMessageAsync(settings, [recipient], title, body, ct);
+            if (ok) sentAny = true; else lastError = error;
+        }
+        return (sentAny || lastError is null, lastError);
     }
+
+    private async Task<string> FamilyLanguageAsync(Guid familyId, CancellationToken ct) =>
+        AppCulture.Normalize(await _db.Families.AsNoTracking().Where(f => f.Id == familyId).Select(f => f.DefaultLanguage).FirstOrDefaultAsync(ct));
 
     private async Task<(bool Ok, string? Error)> SendMessageAsync(FamilySettings settings, List<string> recipients, string subject, string body, CancellationToken ct)
     {

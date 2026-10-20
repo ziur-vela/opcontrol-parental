@@ -7,8 +7,9 @@
 @using OpControl.Parental.Server.Services
 @inject AuthenticationStateProvider AuthState
 @inject IServiceScopeFactory Scopes
+@inject IStringLocalizer<AppStrings> L
 
-<PageTitle>Alerts · Parental OpControl</PageTitle>
+<PageTitle>@L["Alerts.PageTitle"]</PageTitle>
 
 @if (_loading)
 {
@@ -16,19 +17,19 @@
 }
 else if (_childId == Guid.Empty)
 {
-    <div class="card"><h1>No child yet</h1><p class="muted">Create a child profile first.</p></div>
+    <div class="card"><h1>@L["Common.NoChildYet"]</h1><p class="muted">@L["Common.CreateChildFirst"]</p></div>
 }
 else
 {
     <div class="page-head">
         <div>
             <div class="eyebrow">@_childName</div>
-            <h1>Alerts</h1>
-            <p class="muted">New installs, repeated blocked attempts, PIN overrides, limits reached, offline devices and tampering signs.</p>
+            <h1>@L["Nav.Alerts"]</h1>
+            <p class="muted">@L["Alerts.Subtitle"]</p>
         </div>
         <div class="button-row">
-            <a class="btn btn-ghost" href="/settings">Email settings</a>
-            <button class="btn btn-primary" disabled="@(_unread == 0)" @onclick="MarkAllReadAsync">Mark all read</button>
+            <a class="btn btn-ghost" href="/settings">@L["Alerts.EmailSettings"]</a>
+            <button class="btn btn-primary" disabled="@(_unread == 0)" @onclick="MarkAllReadAsync">@L["Alerts.MarkAllRead"]</button>
         </div>
     </div>
 
@@ -39,16 +40,16 @@ else
 
     <section class="card">
         <div class="card-title-row">
-            <h2>All alerts</h2>
+            <h2>@L["Alerts.All"]</h2>
             <div class="chip-row">
-                <button class="chip @(_unreadOnly ? "" : "active")" @onclick="() => SetFilter(false)">All</button>
-                <button class="chip @(_unreadOnly ? "active" : "")" @onclick="() => SetFilter(true)">Unread (@_unread)</button>
+                <button class="chip @(_unreadOnly ? "" : "active")" @onclick="() => SetFilter(false)">@L["Common.All"]</button>
+                <button class="chip @(_unreadOnly ? "active" : "")" @onclick="() => SetFilter(true)">@L["Alerts.UnreadFilter", _unread]</button>
             </div>
         </div>
 
         @if (_alerts.Count == 0)
         {
-            <p class="muted">No alerts for this filter.</p>
+            <p class="muted">@L["Alerts.NoAlertsFilter"]</p>
         }
         else
         {
@@ -58,18 +59,18 @@ else
                     <div class="alert-row @(alert.ReadUtc is null ? "unread" : "")">
                         <div class="timeline-icon @Tone(alert.Type)">@Icon(alert.Type)</div>
                         <div class="timeline-main">
-                            <div class="timeline-title">@alert.Title</div>
-                            <div class="muted tiny">@alert.Detail</div>
+                            <div class="timeline-title">@AlertTitle(alert)</div>
+                            <div class="muted tiny">@AlertDetail(alert)</div>
                         </div>
                         <div class="alert-meta">
                             <div class="muted tiny">@FormatLocal(alert.CreatedUtc)</div>
                             @if (alert.ReadUtc is null)
                             {
-                                <button class="ghost-btn" @onclick="() => MarkReadAsync(alert.Id)">Mark read</button>
+                                <button class="ghost-btn" @onclick="() => MarkReadAsync(alert.Id)">@L["Alerts.MarkRead"]</button>
                             }
                             else
                             {
-                                <span class="pill-soft">Read</span>
+                                <span class="pill-soft">@L["Common.Read"]</span>
                             }
                         </div>
                     </div>
@@ -148,7 +149,10 @@ else
     }
 
     private string FormatLocal(DateTime utc) =>
-        TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeZoneResolver.Resolve(_timeZoneId)).ToString("MMM d, HH:mm");
+        Formats.CompactDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeZoneResolver.Resolve(_timeZoneId)));
+
+    private string AlertTitle(Alert alert) => AlertText.Render(alert).Title;
+    private string AlertDetail(Alert alert) => AlertText.Render(alert).Detail;
 
     private static string Icon(string type) => type switch
     {

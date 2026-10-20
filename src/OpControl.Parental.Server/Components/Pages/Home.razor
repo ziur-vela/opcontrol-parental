@@ -10,8 +10,9 @@
 @inject IServiceScopeFactory Scopes
 @inject DevicePresenceService Presence
 @inject DashboardEventBus Events
+@inject IStringLocalizer<AppStrings> L
 
-<PageTitle>Home · Parental OpControl</PageTitle>
+<PageTitle>@L["Home.PageTitle"]</PageTitle>
 
 @if (_loading)
 {
@@ -19,30 +20,30 @@
 }
 else if (_childId == Guid.Empty)
 {
-    <div class="card"><h1>No child yet</h1><p class="muted">Create a child profile to start managing devices.</p></div>
+    <div class="card"><h1>@L["Common.NoChildYet"]</h1><p class="muted">@L["Home.NoChildBody"]</p></div>
 }
 else
 {
     <div class="page-head">
         <div>
             <div class="eyebrow">@_familyName</div>
-            <h1>@Greeting, @(_parentName ?? "parent")</h1>
-            <p class="muted">@DateTime.Now.ToString("dddd, MMMM d") · @_devices.Count(d => d.Online) of @_devices.Count device@(_devices.Count == 1 ? "" : "s") online</p>
+            <h1>@L[Greeting], @(_parentName ?? L["Home.ParentFallback"])</h1>
+            <p class="muted">@DateTime.Now.ToString("dddd, d MMMM", System.Globalization.CultureInfo.CurrentCulture) · @OnlineSummary</p>
         </div>
         <div class="button-row">
-            <a class="btn btn-ghost" href="/screen-time">Screen time</a>
-            <a class="btn btn-ghost" href="/schedules">Schedules</a>
-            <a class="btn btn-ghost" href="/add-device">Add device</a>
+            <a class="btn btn-ghost" href="/screen-time">@L["Nav.ScreenTime"]</a>
+            <a class="btn btn-ghost" href="/schedules">@L["Nav.Schedules"]</a>
+            <a class="btn btn-ghost" href="/add-device">@L["Nav.AddDevice"]</a>
         </div>
     </div>
 
-    <nav class="child-tabs" aria-label="Child sections">
-        <a class="chip active" href="/">Overview</a>
-        <a class="chip" href="/screen-time">Screen time</a>
-        <a class="chip" href="/websites">Websites</a>
-        <a class="chip" href="/apps">Apps</a>
-        <a class="chip" href="/activity">Activity</a>
-        <a class="chip" href="/devices">Devices</a>
+    <nav class="child-tabs" aria-label="@L["Home.ChildSections"]">
+        <a class="chip active" href="/">@L["Home.Overview"]</a>
+        <a class="chip" href="/screen-time">@L["Nav.ScreenTime"]</a>
+        <a class="chip" href="/websites">@L["Nav.Websites"]</a>
+        <a class="chip" href="/apps">@L["Nav.Apps"]</a>
+        <a class="chip" href="/activity">@L["Nav.Activity"]</a>
+        <a class="chip" href="/devices">@L["Nav.Devices"]</a>
     </nav>
 
     @if (!string.IsNullOrEmpty(_error))
@@ -54,22 +55,22 @@ else
     {
     <section class="stat-grid">
         <a class="card stat-card" href="/screen-time">
-            <div class="eyebrow">Screen time today</div>
+            <div class="eyebrow">@L["Home.ScreenTimeToday"]</div>
             <div class="stat-value">@FormatDuration(_usedTodaySeconds)</div>
-            <div class="muted tiny">@(_limitMinutes > 0 ? $"of {_limitMinutes} min limit" : "No daily limit set")</div>
+            <div class="muted tiny">@(_limitMinutes > 0 ? L["Home.OfLimit", _limitMinutes] : L["Home.NoDailyLimitSet"])</div>
         </a>
         <a class="card stat-card" href="/devices">
-            <div class="eyebrow">Devices online</div>
-            <div class="stat-value">@_devices.Count(d => d.Online) of @_devices.Count</div>
-            <div class="muted tiny">@_devices.Count(d => !d.Online) offline</div>
+            <div class="eyebrow">@L["Home.DevicesOnline"]</div>
+            <div class="stat-value">@OnlineOfTotal</div>
+            <div class="muted tiny">@L["Home.OfflineCount", _devices.Count(d => !d.Online)]</div>
         </a>
         <a class="card stat-card" href="/websites">
-            <div class="eyebrow">Blocked attempts</div>
+            <div class="eyebrow">@L["Home.BlockedAttempts"]</div>
             <div class="stat-value">@_blockedAttempts</div>
-            <div class="muted tiny">Today · @_blockedDomains distinct site@(_blockedDomains == 1 ? "" : "s")</div>
+            <div class="muted tiny">@DistinctSites</div>
         </a>
         <a class="card stat-card" href="/schedules">
-            <div class="eyebrow">Next schedule</div>
+            <div class="eyebrow">@L["Home.NextSchedule"]</div>
             <div class="stat-value">@NextScheduleTime</div>
             <div class="muted tiny">@NextScheduleLabel</div>
         </a>
@@ -85,8 +86,8 @@ else
                     <div class="muted tiny">@DeviceSummary · @StatusText</div>
                 </div>
                 <div class="button-row">
-                    <span class="pill-soft @(_isOnline ? "online-pill" : "")">@(_isOnline ? "Online" : "Offline")</span>
-                    <span class="pill-soft">@(_state?.IsLocked == true ? "Locked" : "Unlocked")</span>
+                    <span class="pill-soft @(_isOnline ? "online-pill" : "")">@(_isOnline ? L["Common.Online"] : L["Common.Offline"])</span>
+                    <span class="pill-soft">@(_state?.IsLocked == true ? L["Common.Locked"] : L["Common.Unlocked"])</span>
                 </div>
             </div>
 
@@ -94,8 +95,8 @@ else
             {
             <div class="screen-time-block">
                 <div class="card-title-row">
-                    <div class="eyebrow">Screen time</div>
-                    <div class="muted small">@FormatDuration(_usedTodaySeconds) / @(_limitMinutes > 0 ? $"{_limitMinutes} min" : "no limit")</div>
+                    <div class="eyebrow">@L["Nav.ScreenTime"]</div>
+                    <div class="muted small">@FormatDuration(_usedTodaySeconds) / @(_limitMinutes > 0 ? L["Common.Minutes", _limitMinutes] : L["Home.NoLimit"])</div>
                 </div>
                 <div class="progress-track large">
                     <div class="progress-fill" style="width:@ScreenPercent()%"></div>
@@ -112,28 +113,28 @@ else
             @if (_canLock)
             {
                 <div class="button-row">
-                    <button class="btn btn-primary" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Lock)">Lock now</button>
-                    <button class="btn btn-accent" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Bonus, 15)">+15 min</button>
-                    <button class="btn btn-accent" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Bonus, 30)">+30 min</button>
-                    <button class="btn btn-ghost" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Unlock)">Unlock</button>
-                    <a class="btn btn-ghost" href="/screen-time">Open profile →</a>
+                    <button class="btn btn-primary" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Lock)">@L["Home.LockNow"]</button>
+                    <button class="btn btn-accent" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Bonus, 15)">@L["Home.Bonus15"]</button>
+                    <button class="btn btn-accent" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Bonus, 30)">@L["Home.Bonus30"]</button>
+                    <button class="btn btn-ghost" disabled="@_busy" @onclick="() => ApplyAsync(LockAction.Unlock)">@L["Common.Unlock"]</button>
+                    <a class="btn btn-ghost" href="/screen-time">@L["Home.OpenProfile"]</a>
                 </div>
-                <div class="muted tiny">Unlock PIN @(_hasPin ? "is set (works offline on the lock screen)" : "is not set"). <a href="/pin">@(_hasPin ? "Change PIN" : "Set PIN")</a></div>
+                <div class="muted tiny">@(_hasPin ? L["Home.PinIsSet"] : L["Home.PinNotSet"]) <a href="/pin">@(_hasPin ? L["Home.ChangePin"] : L["Home.SetPin"])</a></div>
             }
             else
             {
-                <div class="muted tiny">You can view this family but you do not have permission to lock or give bonus time.</div>
+                <div class="muted tiny">@L["Home.NoLockPermission"]</div>
             }
         </section>
 
         <section class="card">
             <div class="card-title-row">
-                <h2>Today's alerts</h2>
-                <a class="ghost-btn" href="/alerts">View all</a>
+                <h2>@L["Home.TodaysAlerts"]</h2>
+                <a class="ghost-btn" href="/alerts">@L["Home.ViewAll"]</a>
             </div>
             @if (_alerts.Count == 0)
             {
-                <p class="muted">No alerts today.</p>
+                <p class="muted">@L["Home.NoAlertsToday"]</p>
             }
             else
             {
@@ -143,8 +144,8 @@ else
                         <a class="alert-row" href="/alerts">
                             <div class="timeline-icon @Tone(alert.Type)">@Icon(alert.Type)</div>
                             <div class="timeline-main">
-                                <div class="timeline-title">@alert.Title</div>
-                                <div class="muted tiny">@alert.Detail</div>
+                                <div class="timeline-title">@AlertTitle(alert)</div>
+                                <div class="muted tiny">@AlertDetail(alert)</div>
                             </div>
                             <div class="muted tiny">@FormatLocal(alert.CreatedUtc)</div>
                         </a>
@@ -152,16 +153,16 @@ else
                 </div>
             }
             <div class="micro-stats">
-                <div><div class="eyebrow">Top app today</div><div class="small">@(_topApps.FirstOrDefault()?.DisplayName ?? "No usage yet")</div></div>
-                <div><div class="eyebrow">Always blocked</div><div class="small">@_sitesBlockedCount sites · @_appsBlockedCount apps · @_categoriesEnabled categories</div></div>
+                <div><div class="eyebrow">@L["Home.TopAppToday"]</div><div class="small">@(_topApps.FirstOrDefault()?.DisplayName ?? L["Home.NoUsageYet"])</div></div>
+                <div><div class="eyebrow">@L["Home.AlwaysBlocked"]</div><div class="small">@AlwaysBlockedCounts</div></div>
             </div>
         </section>
     </div>
 
     <section class="card">
         <div class="card-title-row">
-            <h2>Today's schedule</h2>
-            <a class="ghost-btn" href="/schedules">All schedules</a>
+            <h2>@L["Home.TodaysSchedule"]</h2>
+            <a class="ghost-btn" href="/schedules">@L["Home.AllSchedules"]</a>
         </div>
         <div class="schedule-bar">
             @foreach (var segment in _scheduleSegments)
@@ -171,19 +172,19 @@ else
             <div class="schedule-now" style="left:@NowPercent()%"></div>
         </div>
         <div class="schedule-ticks">
-            <span>12 AM</span><span>6 AM</span><span>12 PM</span><span>6 PM</span><span>12 AM</span>
+            <span>@TickLabel(0)</span><span>@TickLabel(6)</span><span>@TickLabel(12)</span><span>@TickLabel(18)</span><span>@TickLabel(0)</span>
         </div>
     </section>
 
     <div class="grid-2">
         <section class="card">
             <div class="card-title-row">
-                <h2>Devices</h2>
+                <h2>@L["Nav.Devices"]</h2>
                 <span class="pill-soft">@_devices.Count</span>
             </div>
             @if (_devices.Count == 0)
             {
-                <p class="muted">No devices enrolled yet.</p>
+                <p class="muted">@L["Home.NoDevicesEnrolled"]</p>
             }
             else
             {
@@ -194,10 +195,10 @@ else
                             <span class="status-dot @(device.Online ? "online" : "offline")"></span>
                             <div class="device-main">
                                 <div class="device-name">@device.Name</div>
-                                <div class="muted tiny">@device.Platform · @(device.OsAccountName ?? "account not reported") · @(string.IsNullOrWhiteSpace(device.ClientVersion) ? "version unknown" : "client " + device.ClientVersion)</div>
+                                <div class="muted tiny">@PlatformName(device.Platform) · @(device.OsAccountName ?? L["Common.AccountNotReported"]) · @(string.IsNullOrWhiteSpace(device.ClientVersion) ? L["Common.VersionUnknown"] : L["Home.ClientVersion", device.ClientVersion])</div>
                             </div>
                             <div class="device-meta">
-                                <div class="small">@(device.Online ? "Online" : "Offline")</div>
+                                <div class="small">@(device.Online ? L["Common.Online"] : L["Common.Offline"])</div>
                                 <div class="muted tiny">@LastSeen(device.LastSeenUtc)</div>
                             </div>
                         </div>
@@ -208,12 +209,12 @@ else
 
         <section class="card">
             <div class="card-title-row">
-                <h2>Top apps today</h2>
-                <a class="ghost-btn" href="/screen-time">Report</a>
+                <h2>@L["Home.TopAppsToday"]</h2>
+                <a class="ghost-btn" href="/screen-time">@L["Home.Report"]</a>
             </div>
             @if (_topApps.Count == 0)
             {
-                <p class="muted">No usage recorded today.</p>
+                <p class="muted">@L["Home.NoUsageToday"]</p>
             }
             else
             {
@@ -273,7 +274,7 @@ else
         if (!Guid.TryParse(auth.User.FindFirst("family_id")?.Value, out _familyId))
         {
             _loading = false;
-            _error = "Family scope is missing from the session.";
+            _error = L["Home.MissingFamilyScope"];
             return;
         }
         var isOwner = string.Equals(auth.User.FindFirst("family_role")?.Value, "Owner", StringComparison.OrdinalIgnoreCase);
@@ -439,49 +440,49 @@ else
 
     private string Greeting => DateTime.Now.Hour switch
     {
-        < 12 => "Good morning",
-        < 18 => "Good afternoon",
-        _ => "Good evening"
+        < 12 => "Home.GoodMorning",
+        < 18 => "Home.GoodAfternoon",
+        _ => "Home.GoodEvening"
     };
 
     private string DeviceSummary => _devices.Count switch
     {
-        0 => "No devices",
+        0 => L["Home.NoDevices"],
         1 => _devices[0].Name,
-        _ => $"{_devices.Count} devices"
+        _ => L["Common.DeviceCountPlural", _devices.Count]
     };
 
     private string StatusText => _state?.Reason switch
     {
-        "schedule" => $"Schedule: {_state.ScheduleName}",
-        "daily-limit" => "Daily limit reached",
-        "manual" => "Manually locked",
-        "bonus" => "Bonus time",
-        "override" => "Unlocked until next cycle",
-        _ => "Following rules"
+        "schedule" => L["Home.StatusSchedule", _state.ScheduleName ?? ""],
+        "daily-limit" => L["Home.StatusDailyLimit"],
+        "manual" => L["Home.StatusManual"],
+        "bonus" => L["Home.StatusBonus"],
+        "override" => L["Home.StatusOverride"],
+        _ => L["Home.StatusRules"]
     };
 
     private string StateHeadline => _state?.IsLocked == true
-        ? "Locked"
-        : _state?.Reason == "bonus" ? "Bonus time active" : "Unlocked";
+        ? L["Common.Locked"]
+        : _state?.Reason == "bonus" ? L["Home.BonusActive"] : L["Common.Unlocked"];
 
     private string ReasonText => _state?.Reason switch
     {
-        "bonus" => "Bonus time is active.",
-        "override" => "Unlocked until the next lock cycle.",
-        "manual" => $"Locked by {_parentName ?? "a parent"}.",
-        "schedule" => $"Locked by {(string.IsNullOrWhiteSpace(_state.ScheduleName) ? "a schedule" : _state.ScheduleName)}.",
-        "daily-limit" => "Daily limit reached. Resets at local midnight.",
-        _ => "No lock is active."
+        "bonus" => L["Home.ReasonBonus"],
+        "override" => L["Home.ReasonOverride"],
+        "manual" => L["Home.ReasonManual", _parentName ?? L["Home.AParent"]],
+        "schedule" => L["Home.ReasonSchedule", string.IsNullOrWhiteSpace(_state.ScheduleName) ? L["Home.ASchedule"] : _state.ScheduleName],
+        "daily-limit" => L["Home.ReasonDailyLimit"],
+        _ => L["Home.ReasonNone"]
     };
 
     private string RemainingText
     {
         get
         {
-            if (_limitMinutes <= 0) return "No daily limit is set.";
+            if (_limitMinutes <= 0) return L["Home.NoDailyLimitSet"];
             var remaining = Math.Max(0, _limitMinutes * 60 - _usedTodaySeconds);
-            return remaining == 0 ? "Daily limit reached — device locked until midnight." : $"{FormatDuration(remaining)} left today.";
+            return remaining == 0 ? L["Home.LimitReachedUntilMidnight"] : L["Home.TimeLeftToday", FormatDuration(remaining)];
         }
     }
 
@@ -492,7 +493,7 @@ else
             var active = LockRules.ActiveSchedule(_schedules, TimeZoneResolver.Resolve(_timeZoneId), DateTime.UtcNow);
             var next = LockRules.NextScheduleStart(_schedules, TimeZoneResolver.Resolve(_timeZoneId), DateTime.UtcNow);
             if (active is not null) return FormatTimeLocal(LockRules.CurrentScheduleEnd(active, TimeZoneResolver.Resolve(_timeZoneId), DateTime.UtcNow));
-            return next is { } value ? FormatTimeLocal(value) : "None";
+            return next is { } value ? FormatTimeLocal(value) : L["Common.None"];
         }
     }
 
@@ -501,9 +502,9 @@ else
         get
         {
             var active = LockRules.ActiveSchedule(_schedules, TimeZoneResolver.Resolve(_timeZoneId), DateTime.UtcNow);
-            if (active is not null) return $"{active.Name} until";
+            if (active is not null) return L["Home.ScheduleUntil", active.Name];
             var next = LockRules.NextScheduleStart(_schedules, TimeZoneResolver.Resolve(_timeZoneId), DateTime.UtcNow);
-            return next is null ? "No schedule set" : "Next lock";
+            return next is null ? L["Home.NoScheduleSet"] : L["Home.NextLock"];
         }
     }
 
@@ -513,18 +514,40 @@ else
     private static string Initials(string name) => name.Length == 0 ? "?" : name[..1].ToUpperInvariant();
 
     private string FormatLocal(DateTime utc) =>
-        TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeZoneResolver.Resolve(_timeZoneId)).ToString("h:mm tt");
+        TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeZoneResolver.Resolve(_timeZoneId)).ToString("t", System.Globalization.CultureInfo.CurrentCulture);
 
     private string FormatTimeLocal(DateTime? utc) =>
-        utc is { } value ? TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(value, DateTimeKind.Utc), TimeZoneResolver.Resolve(_timeZoneId)).ToString("h:mm tt") : "—";
+        utc is { } value ? TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(value, DateTimeKind.Utc), TimeZoneResolver.Resolve(_timeZoneId)).ToString("t", System.Globalization.CultureInfo.CurrentCulture) : "—";
 
-    private static string FormatDuration(int seconds)
+    private static string FormatDuration(int seconds) => Formats.Duration(seconds);
+
+    private string LastSeen(DateTime? utc) => utc is null ? L["Common.Never"] : Formats.CompactDateTime(utc.Value.ToLocalTime());
+
+    private string TickLabel(int hour) => DateTime.Today.AddHours(hour).ToString("h tt", System.Globalization.CultureInfo.CurrentCulture);
+
+    private string OnlineOfTotal => L["Home.OnlineOfShort", _devices.Count(d => d.Online), _devices.Count];
+
+    private string OnlineSummary =>
+        L["Home.OnlineOf", _devices.Count(d => d.Online), L[_devices.Count == 1 ? "Common.DeviceCount" : "Common.DeviceCountPlural", _devices.Count]];
+
+    private string DistinctSites =>
+        L[_blockedDomains == 1 ? "Home.DistinctSiteOne" : "Home.DistinctSiteMany", _blockedDomains];
+
+    private string AlwaysBlockedCounts =>
+        $"{L[_sitesBlockedCount == 1 ? "Common.SiteCount" : "Common.SiteCountPlural", _sitesBlockedCount]} · " +
+        $"{L[_appsBlockedCount == 1 ? "Common.AppCount" : "Common.AppCountPlural", _appsBlockedCount]} · " +
+        $"{L[_categoriesEnabled == 1 ? "Common.CategoryCount" : "Common.CategoryCountPlural", _categoriesEnabled]}";
+
+    private static string PlatformName(DevicePlatform platform) => platform switch
     {
-        var span = TimeSpan.FromSeconds(Math.Max(0, seconds));
-        return span.TotalHours >= 1 ? $"{(int)span.TotalHours}h {span.Minutes:00}m" : $"{span.Minutes}m";
-    }
+        DevicePlatform.Windows => "Windows",
+        DevicePlatform.Linux => "Linux",
+        DevicePlatform.Android => "Android",
+        _ => platform.ToString()
+    };
 
-    private static string LastSeen(DateTime? utc) => utc is null ? "never" : utc.Value.ToLocalTime().ToString("MMM d, HH:mm");
+    private string AlertTitle(Alert alert) => AlertText.Render(alert).Title;
+    private string AlertDetail(Alert alert) => AlertText.Render(alert).Detail;
 
     private static string Icon(string type) => type switch
     {

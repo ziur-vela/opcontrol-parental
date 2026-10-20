@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using OpControl.Parental.Server.Data;
 using OpControl.Parental.Server.Services;
+using Microsoft.Extensions.Localization;
+using OpControl.Parental.Server.Resources;
 
 namespace OpControl.Parental.Server.Pages;
 
@@ -14,12 +16,14 @@ public class PinModel : PageModel
     private readonly ParentalDbContext _db;
     private readonly FamilyScope _family;
     private readonly LockService _locks;
+    private readonly IStringLocalizer<AppStrings> _l;
 
-    public PinModel(ParentalDbContext db, FamilyScope family, LockService locks)
+    public PinModel(ParentalDbContext db, FamilyScope family, LockService locks, IStringLocalizer<AppStrings> localizer)
     {
         _db = db;
         _family = family;
         _locks = locks;
+        _l = localizer;
     }
 
     public Guid ChildId { get; set; }
@@ -43,11 +47,11 @@ public class PinModel : PageModel
         await LoadAsync();
         if (ChildId == Guid.Empty) return RedirectToPage("/Login");
         if (NewPin != ConfirmPin)
-            return Fail("The PINs do not match.");
+            return Fail(_l["Pin.Mismatch"]);
         try
         {
             await _locks.SetPinAsync(_family.FamilyId, ChildId, NewPin);
-            Message = "PIN saved and synced to the child's devices.";
+            Message = _l["Pin.Saved"];
             HasPin = true;
         }
         catch (InvalidOperationException ex)
@@ -62,7 +66,7 @@ public class PinModel : PageModel
         await LoadAsync();
         if (ChildId == Guid.Empty) return RedirectToPage("/Login");
         await _locks.ClearPinAsync(_family.FamilyId, ChildId);
-        Message = "PIN cleared.";
+        Message = _l["Pin.Cleared"];
         HasPin = false;
         return Page();
     }
