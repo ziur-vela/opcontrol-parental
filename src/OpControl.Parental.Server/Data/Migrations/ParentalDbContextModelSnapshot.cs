@@ -846,6 +846,13 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.Property<int>("InstallLinkMinutes")
                         .HasColumnType("integer");
 
+                    b.Property<string>("NoticeText")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasDefaultValue("Parent's watching you");
+
                     b.Property<int>("OfflineAlertMinutes")
                         .HasColumnType("integer");
 

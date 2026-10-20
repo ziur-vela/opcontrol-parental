@@ -121,6 +121,15 @@ public sealed class AlertService
         await _db.SaveChangesAsync(ct);
     }
 
+    public async Task SaveNoticeTextAsync(Guid familyId, string? text, CancellationToken ct = default)
+    {
+        var settings = await EnsureSettingsAsync(familyId, ct);
+        var value = string.IsNullOrWhiteSpace(text) ? "Parent's watching you" : text.Trim();
+        settings.NoticeText = value.Length > 80 ? value[..80] : value;
+        settings.UpdatedUtc = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+    }
+
     public string? UnprotectPassword(FamilySettings settings)
     {
         if (string.IsNullOrWhiteSpace(settings.SmtpPasswordProtected)) return null;

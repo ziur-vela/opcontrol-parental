@@ -349,6 +349,7 @@ public class FamilySettings
     public string? FromAddress { get; set; }
     public int OfflineAlertMinutes { get; set; } = 120;
     public int InstallLinkMinutes { get; set; } = 1440;
+    public string NoticeText { get; set; } = "Parent's watching you";
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
 }
 

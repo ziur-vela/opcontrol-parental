@@ -453,7 +453,8 @@ public sealed record RemoteSessionRequest(
     Guid DeviceId,
     Guid ChildId,
     RemoteSessionKind Kind,
-    bool ShowNotice = false);
+    bool ShowNotice = false,
+    string? NoticeText = null);
 
 public sealed record RemoteSessionCreatedDto(
     Guid Id,

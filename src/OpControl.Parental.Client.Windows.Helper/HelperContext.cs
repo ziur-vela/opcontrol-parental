@@ -11,6 +11,7 @@ public sealed class HelperContext : ApplicationContext
     private readonly UsageSampler _usage = new();
     private readonly System.Windows.Forms.Timer _timer;
     private readonly RemoteCaptureHost _remote;
+    private readonly Control _marshal = new();
     private RemoteNoticeForm? _notice;
     private PinDialog? _pinDialog;
     private NotificationForm? _notification;
@@ -28,7 +29,9 @@ public sealed class HelperContext : ApplicationContext
         _overlays = new LockOverlayManager();
         _overlays.OverrideClicked += ShowPinDialog;
         _countdown = new CountdownForm();
+        _ = _marshal.Handle;
         _remote = new RemoteCaptureHost(monitored);
+        _remote.NoticeChanged += OnRemoteNoticeChanged;
         _remote.Start();
         _timer = new System.Windows.Forms.Timer { Interval = 500 };
         _timer.Tick += (_, _) => Tick();
@@ -107,6 +110,15 @@ public sealed class HelperContext : ApplicationContext
             _countdown.HideBanner();
             SetVisible(false, false, state.Reason);
         }
+    }
+
+    private void OnRemoteNoticeChanged()
+    {
+        try
+        {
+            if (!_marshal.IsDisposed && _marshal.IsHandleCreated) _marshal.BeginInvoke((Action)UpdateRemoteNotice);
+        }
+        catch (ObjectDisposedException) { }
     }
 
     private void UpdateRemoteNotice()
@@ -269,6 +281,7 @@ public sealed class HelperContext : ApplicationContext
             _timer.Dispose();
             _remote.Dispose();
             _notice?.Dispose();
+            _marshal.Dispose();
             _hook.Dispose();
             _overlays.Dispose();
             _countdown.Dispose();

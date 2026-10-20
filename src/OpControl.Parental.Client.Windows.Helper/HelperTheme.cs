@@ -56,6 +56,9 @@ internal static class Theme
     public static Font Sans(float size, FontStyle style = FontStyle.Regular) =>
         Make(style.HasFlag(FontStyle.Bold) ? SansBold : SansRegular, "Segoe UI", size);
 
+    public static Font SansSemi(float size) =>
+        Make(SansSemiBold, "Segoe UI Semibold", size);
+
     public static Font Mono(float size, FontStyle style = FontStyle.Regular) =>
         Make(style.HasFlag(FontStyle.Bold) ? MonoSemiBold : MonoRegular, "Consolas", size);
 

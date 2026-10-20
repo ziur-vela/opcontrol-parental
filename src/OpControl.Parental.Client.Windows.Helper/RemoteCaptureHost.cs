@@ -33,6 +33,9 @@ internal sealed class RemoteCaptureHost : IDisposable
     public bool NoticeActive => _noticeActive;
     public string? NoticeText => _noticeText;
 
+    /// <summary>Raised on the capture thread when a session starts or ends.</summary>
+    public event Action? NoticeChanged;
+
     public void Start() => _loop ??= Task.Run(() => AcceptLoopAsync(_cts.Token));
 
     private async Task AcceptLoopAsync(CancellationToken ct)
@@ -81,8 +84,10 @@ internal sealed class RemoteCaptureHost : IDisposable
         var command = JsonSerializer.Deserialize<RemoteCommand>(line, JsonOptions);
         kind = command?.Kind ?? "";
         var showNotice = command?.ShowNotice == true;
-        _noticeText = kind == "camera" ? "Camera in use" : "A parent is viewing this screen";
+        var noticeText = command?.NoticeText;
+        _noticeText = string.IsNullOrWhiteSpace(noticeText) ? "Parent's watching you" : noticeText.Trim();
         _noticeActive = showNotice;
+        NoticeChanged?.Invoke();
         try
         {
         if (kind == "camera")
@@ -102,6 +107,7 @@ internal sealed class RemoteCaptureHost : IDisposable
         {
             _noticeActive = false;
             _noticeText = null;
+            NoticeChanged?.Invoke();
         }
     }
 
@@ -238,5 +244,5 @@ internal sealed class RemoteCaptureHost : IDisposable
         _cts.Dispose();
     }
 
-    private sealed record RemoteCommand(string Kind, bool ShowNotice = false);
+    private sealed record RemoteCommand(string Kind, bool ShowNotice = false, string? NoticeText = null);
 }

@@ -295,6 +295,7 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
             e.Property(x => x.SmtpUsername).HasMaxLength(255);
             e.Property(x => x.SmtpPasswordProtected).HasMaxLength(1024);
             e.Property(x => x.FromAddress).HasMaxLength(255);
+            e.Property(x => x.NoticeText).HasMaxLength(80).IsRequired().HasDefaultValue("Parent's watching you");
         });
 
         builder.Entity<ClientTamperEvent>(e =>

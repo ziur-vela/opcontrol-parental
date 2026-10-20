@@ -39,6 +39,8 @@ public sealed class RemoteSessionService
         if (busy) throw new InvalidOperationException("A remote session is already active for this device.");
 
         var showNotice = kind == RemoteSessionKind.Screen ? device.ScreenNoticeEnabled : device.CameraNoticeEnabled;
+        var familySettings = await _db.FamilySettings.AsNoTracking().FirstOrDefaultAsync(s => s.FamilyId == familyId, ct);
+        var noticeText = string.IsNullOrWhiteSpace(familySettings?.NoticeText) ? "Parent's watching you" : familySettings!.NoticeText.Trim();
         var session = new RemoteSession
         {
             FamilyId = familyId,
@@ -55,7 +57,7 @@ public sealed class RemoteSessionService
         _registry.Ensure(session.Id, now.AddMinutes(10));
 
         await _hub.Clients.Group(DeviceGroups.Device(deviceId)).SendAsync(DeviceHubMethods.RemoteSessionRequested,
-            new RemoteSessionRequest(session.Id, deviceId, device.ChildId, kind, showNotice), ct);
+            new RemoteSessionRequest(session.Id, deviceId, device.ChildId, kind, showNotice, noticeText), ct);
         _logger.LogInformation("Remote {Kind} session {SessionId} requested for device {DeviceId} by parent {ParentId}", kind, session.Id, deviceId, parentId);
         return new RemoteSessionCreatedDto(session.Id, deviceId, device.ChildId, kind, session.CreatedUtc, now.AddMinutes(10));
     }

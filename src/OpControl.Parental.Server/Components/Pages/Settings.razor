@@ -58,6 +58,19 @@
     </div>
 </section>
 
+<section class="card">
+    <div class="card-title-row">
+        <h2>On-screen notice</h2>
+        <span class="pill-soft">@(_isOwner ? "Owner" : "Read only")</span>
+    </div>
+    <p class="muted small">A transparent eye and this text appear at the top centre of the screen while a parent is viewing, when the device notice is enabled. Leave blank to use the default.</p>
+    <label class="field"><span>Notice text</span><input maxlength="80" @bind="_noticeText" disabled="@(!_isOwner)" placeholder="Parent's watching you" /></label>
+    @if (_isOwner)
+    {
+        <div class="button-row"><button class="btn btn-primary" disabled="@_busy" @onclick="SaveNoticeTextAsync">Save notice text</button></div>
+    }
+</section>
+
 <div class="card">
     <h2>Owner account</h2>
     <p class="muted">The owner controls family settings, invitations and removing parents. Invite co-parents from <a href="/team">Parents</a>.</p>
@@ -151,6 +164,7 @@
     private string _quietEnd = "07:00";
     private bool _digest;
     private int _digestHour = 18;
+    private string _noticeText = "Parent's watching you";
 
     protected override async Task OnInitializedAsync()
     {
@@ -169,6 +183,7 @@
         _from = settings.FromAddress;
         _offlineMinutes = settings.OfflineAlertMinutes;
         _installLinkMinutes = settings.InstallLinkMinutes;
+        _noticeText = settings.NoticeText;
         _hasPassword = !string.IsNullOrWhiteSpace(settings.SmtpPasswordProtected);
         var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
         var child = await db.Children.AsNoTracking()
@@ -191,6 +206,24 @@
         _quietEnd = FormatMinutes(preference.QuietEndMinutes);
         _digest = preference.DailyDigest;
         _digestHour = preference.DigestHour;
+    }
+
+    private async Task SaveNoticeTextAsync()
+    {
+        if (!_isOwner) return;
+        _busy = true;
+        _error = null;
+        _saved = false;
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var alerts = scope.ServiceProvider.GetRequiredService<AlertService>();
+            await alerts.SaveNoticeTextAsync(_familyId, _noticeText);
+            _noticeText = string.IsNullOrWhiteSpace(_noticeText) ? "Parent's watching you" : _noticeText.Trim();
+            _saved = true;
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _busy = false; }
     }
 
     private static string FormatMinutes(int minutes) => $"{minutes / 60:00}:{minutes % 60:00}";

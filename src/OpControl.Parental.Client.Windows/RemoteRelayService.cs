@@ -87,7 +87,7 @@ public sealed class RemoteRelayService
         }
 
         using var writer = new StreamWriter(pipe, Encoding.UTF8, 1024, leaveOpen: true) { AutoFlush = true };
-        await writer.WriteLineAsync(JsonSerializer.Serialize(new { kind = request.Kind == RemoteSessionKind.Camera ? "camera" : "screen", showNotice = request.ShowNotice }));
+        await writer.WriteLineAsync(JsonSerializer.Serialize(new { kind = request.Kind == RemoteSessionKind.Camera ? "camera" : "screen", showNotice = request.ShowNotice, noticeText = request.NoticeText }));
 
         var header = new byte[5];
         var buffer = new byte[1024 * 1024];
