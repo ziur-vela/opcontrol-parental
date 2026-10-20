@@ -510,6 +510,23 @@ public class Job5BMultiTenantTests
     }
 
     [Fact]
+    public async Task Camera_consent_is_one_time_and_versioned()
+    {
+        await using var db = NewDb();
+        var family = new Family { Name = "F" };
+        var parent = new ParentUser { FamilyId = family.Id, DisplayName = "P" };
+        db.Families.Add(family);
+        db.Users.Add(parent);
+        await db.SaveChangesAsync();
+        var service = new CameraConsentService(db);
+        Assert.False(await service.HasAcceptedAsync(parent.Id));
+        await service.AcceptAsync(family.Id, parent.Id, "127.0.0.1", "test");
+        Assert.True(await service.HasAcceptedAsync(parent.Id));
+        await service.AcceptAsync(family.Id, parent.Id, "127.0.0.1", "test");
+        Assert.Equal(1, await db.CameraConsents.CountAsync());
+    }
+
+    [Fact]
     public void Build_info_is_visible_and_versioned()
     {
         var info = new BuildInfo();

@@ -13,7 +13,9 @@ SHA-256 verification and rollback, helper authentication, usage sanity checks, u
 helper-down time and additional tamper alerts. Job 5B adds co-parent roles and permissions,
 multi-family tenancy with invite-only registration, server administrator tools, per-device time
 zones, alert controls (mute/quiet hours/digest/retry), swappable branding and build-version
-stamping.
+stamping. Job 7 adds parent-initiated remote screen and camera viewing over the existing
+WebSocket relay, with a per-parent one-time camera supervision acknowledgement and the
+`RemoteView` permission.
 
 ## Solution
 
@@ -59,6 +61,15 @@ shows a `git describe` value such as `v0.6.0-3-g1a2b3c4`, so it is never mistake
 
 Fonts (IBM Plex Mono and Manrope) are self-hosted in `wwwroot/fonts` and embedded in the
 Windows helper/setup; no Google Fonts runtime dependency. Licences are next to the fonts.
+
+## Remote screen and camera
+
+Parents with the **RemoteView** permission (owner by default) get a **Remote** page. Screen
+view is silent on the child device; camera access is indicated by the device's hardware
+camera light. Camera viewing requires a one-time camera supervision acknowledgement per
+parent; acceptance is stored in `CameraConsents` with version, time, IP and user agent, and
+a checkmark appears on the Remote page after acceptance. Sessions are parent-initiated,
+last at most 10 minutes and can be stopped from the dashboard. No audio and no recording.
 
 Server administrator and SMTP (no dashboard login needed):
 
