@@ -1,6 +1,6 @@
-# OpControl Parental
+# Parental OpControl
 
-Ground-up rebuild of the ArktinMonitor parental control system. Job 1 established the
+Self-hosted parental control for families: a web dashboard, a Windows client and installer, built as a ground-up rebuild of the ArktinMonitor parental control system. Job 1 established the
 foundation (identity, family/child/device model, enrollment, SignalR, dashboard, Windows service
 and user-session helper). Job 2 added the lock overlay, schedules, PIN overrides, bonus time and
 2FA. Job 3 adds website filtering through a local DNS resolver, visited-site history, curated
