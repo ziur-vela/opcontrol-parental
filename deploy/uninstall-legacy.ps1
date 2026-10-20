@@ -14,7 +14,7 @@ try {
     $svc = New-Object -ComObject Schedule.Service
     $svc.Connect()
     $rootFolder = $svc.GetFolder("\")
-    foreach ($name in @("OpControl Parental Helper ZIUR-X1-LAPTOP", "OpControl Parental Helper")) {
+    foreach ($name in @("OpControl Parental Helper $env:COMPUTERNAME", "OpControl Parental Helper")) {
         try { $rootFolder.DeleteFolder($name, $null) } catch { }
     }
 } catch { }

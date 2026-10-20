@@ -32,7 +32,8 @@ internal static class Program
             if (silent)
             {
                 if (string.IsNullOrWhiteSpace(code)) return 2;
-                return RunMsi(msi, server, code, account ?? "Emma", null);
+                if (string.IsNullOrWhiteSpace(account)) return 2;
+                return RunMsi(msi, server, code, account, null);
             }
 
             using var form = new InstallForm(msi, server, code, account);
@@ -203,16 +204,24 @@ internal sealed class InstallForm : Form
         _account.DropDownStyle = ComboBoxStyle.DropDownList;
 
         var accounts = Program.LocalAccounts(out _admins);
-        foreach (var name in accounts)
+        var ordered = accounts
+            .OrderBy(a => _admins.Any(x => x.Equals(a, StringComparison.OrdinalIgnoreCase)) ? 1 : 0)
+            .ThenBy(a => a, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        foreach (var name in ordered)
         {
             var isAdmin = _admins.Any(a => a.Equals(name, StringComparison.OrdinalIgnoreCase));
             _account.Items.Add(isAdmin ? $"{name} (administrator — not recommended)" : name);
         }
-        var preferred = accounts.FirstOrDefault(a => string.Equals(a.Split('\\').Last(), "Emma", StringComparison.OrdinalIgnoreCase))
-            ?? accounts.FirstOrDefault(a => !_admins.Any(x => x.Equals(a, StringComparison.OrdinalIgnoreCase)))
-            ?? accounts.FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(account) && accounts.Contains(account)) preferred = account;
-        if (preferred is not null) _account.SelectedIndex = accounts.IndexOf(preferred);
+        if (!string.IsNullOrWhiteSpace(account))
+        {
+            var index = ordered.FindIndex(a => string.Equals(a, account, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(a.Split('\\').Last(), account, StringComparison.OrdinalIgnoreCase));
+            if (index >= 0) _account.SelectedIndex = index;
+        }
+
+        _install.Enabled = _account.SelectedIndex >= 0;
+        _account.SelectedIndexChanged += (_, _) => _install.Enabled = _account.SelectedIndex >= 0;
 
         _status.Location = new Point(24, 274);
         _status.Size = new Size(510, 24);

@@ -2,7 +2,7 @@ param(
     [string]$ServerUrl = "https://parental.opcontrol.net",
     [Parameter(Mandatory = $true)][string]$EnrollmentCode,
     [string]$DeviceName = $env:COMPUTERNAME,
-    [string]$MonitoredAccount = "Emma"
+    [Parameter(Mandatory = $true)][string]$MonitoredAccount
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,7 +22,7 @@ Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -li
 New-Item -ItemType Directory -Force -Path "$root\Client", "$root\Helper", $data, "$data\private", "$data\public", "$data\user", "$data\install" | Out-Null
 Copy-Item "$stage\client\*" "$root\Client" -Recurse -Force
 Copy-Item "$stage\helper\*" "$root\Helper" -Recurse -Force
-Copy-Item "$stage\install-x1.ps1", "$stage\uninstall-x1.ps1" "$data\install" -Force
+Copy-Item "$stage\install-legacy.ps1", "$stage\uninstall-legacy.ps1" "$data\install" -Force
 
 $config = [ordered]@{
     ServerUrl        = $ServerUrl
@@ -48,4 +48,4 @@ Start-Sleep -Seconds 3
 Write-Host "Installed for monitored account $MonitoredAccount against $ServerUrl"
 sc.exe query OpControlParental
 Write-Host "Data directory: $data"
-Write-Host "Uninstall: run uninstall-x1.ps1 as administrator"
+Write-Host "Uninstall: run uninstall-legacy.ps1 as administrator"

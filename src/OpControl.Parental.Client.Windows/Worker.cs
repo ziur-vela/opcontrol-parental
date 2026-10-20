@@ -57,6 +57,11 @@ public sealed class Worker : BackgroundService
         _options = ClientOptions.Load();
         MsiConfig.Apply(_options);
         _settings.Value = _options;
+        if (string.IsNullOrWhiteSpace(_options.MonitoredAccount))
+        {
+            _logger.LogError("No monitored Windows account is configured. Reinstall and choose the account to protect.");
+            return;
+        }
         _logger.LogInformation("OpControl Parental client starting; server {Server}, monitored account {Account}", _options.ServerUrl, _options.MonitoredAccount);
 
         var cached = _deviceStates.Load();

@@ -55,6 +55,19 @@ cd /opt/stacks/opcontrol-parental
 docker compose up -d
 ```
 
+### Staging stack
+
+`deploy/docker-compose.staging.yml` binds the web port to `${STAGING_BIND_IP:-127.0.0.1}` and
+uses the same value for `PublicBaseUrl`, so the default is loopback-only. To expose staging on
+the host's Tailscale address, set it in the staging `.env` (not committed):
+
+```bash
+# /opt/stacks/opcontrol-parental-staging/.env
+STAGING_BIND_IP=100.x.y.z
+```
+
+Then `cd /opt/stacks/opcontrol-parental-staging && sudo docker compose up -d`.
+
 The image tag is `<version>-<YYYYMMDD>`. `GET /version` and `GET /health` return the same stamped
 version string; the dashboard sidebar and Settings show it too. A build from an untagged commit
 shows a `git describe` value such as `v0.6.0-3-g1a2b3c4`, so it is never mistaken for a release.
@@ -145,7 +158,9 @@ msiexec /i OpControlParental.msi /qn SERVER=https://parental.opcontrol.net CODE=
 OpControlParental-Setup-0.5.0.exe /S SERVER=https://parental.opcontrol.net CODE=XXXXXXXXXX ACCOUNT=<child-windows-account>
 ```
 
-The pre-configured download names the setup `OpControlParental-<CODE>.exe`; the bootstrapper reads
+There is no default Windows account. Interactive setup lists non-administrator accounts first
+and requires the parent to pick one; silent installs must pass `ACCOUNT=`. The pre-configured
+download names the setup `OpControlParental-<CODE>.exe`; the bootstrapper reads
 the one-time code from its own file name and pre-fills the dialog. The MSI writes `SERVER`, `CODE`
 and `ACCOUNT` to `HKLM\Software\OpControl\Parental` on first install; the service consumes and
 deletes those values on first start. Upgrades keep `C:\ProgramData\OpControlParental` (device
@@ -179,8 +194,8 @@ setup dialog and in the Downloads page instructions.
 
 ### Manual scripted install (legacy)
 
-`deploy/install-x1.ps1` and `deploy/uninstall-x1.ps1` remain for reference, but new devices should
-use the MSI/setup.
+`deploy/install-legacy.ps1` and `deploy/uninstall-legacy.ps1` remain for reference, but new devices should
+use the MSI/setup. The legacy installer now requires `-MonitoredAccount`; there is no default account.
 
 The service stores the device credential in `C:\ProgramData\OpControlParental\private\device.json`
 with an ACL that grants access to SYSTEM and Administrators only. The user-session helper reads

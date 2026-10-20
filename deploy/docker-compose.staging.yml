@@ -32,11 +32,11 @@ services:
       ConnectionStrings__Default: Host=db;Database=parental;Username=parental;Password=${POSTGRES_PASSWORD}
       DataProtection__Path: /var/lib/opcontrol-parental/keys
       Database__Migrate: "true"
-      PublicBaseUrl: "http://100.116.211.100:8097"
+      PublicBaseUrl: "http://${STAGING_BIND_IP:-127.0.0.1}:8097"
       Releases__Path: /var/lib/opcontrol-parental/releases
       TZ: UTC
     ports:
-      - "100.116.211.100:8097:8080"
+      - "${STAGING_BIND_IP:-127.0.0.1}:8097:8080"
     volumes:
       - ./data/keys:/var/lib/opcontrol-parental/keys
       - ./data/releases:/var/lib/opcontrol-parental/releases:ro

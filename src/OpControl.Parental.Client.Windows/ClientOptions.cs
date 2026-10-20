@@ -9,7 +9,7 @@ public sealed class ClientOptions
     public string? EnrollmentCode { get; set; }
     public string? DeviceName { get; set; }
     public string? OsAccountName { get; set; }
-    public string MonitoredAccount { get; set; } = "Emma";
+    public string MonitoredAccount { get; set; } = "";
     public string? HelperPath { get; set; }
     public int IdleThresholdSeconds { get; set; } = 180;
 

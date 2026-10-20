@@ -111,7 +111,7 @@ public class FoundationTests
 
         var service = new EnrollmentService(db, NullLogger<EnrollmentService>.Instance);
         var (code, _) = await service.CreateCodeAsync(family.Id, child.Id, Guid.NewGuid());
-        var response = await service.RedeemAsync(new EnrollRequest(code, "Test device", DevicePlatform.Windows, "10", "UTC", "Emma"));
+        var response = await service.RedeemAsync(new EnrollRequest(code, "Test device", DevicePlatform.Windows, "10", "UTC", "Alex"));
 
         Assert.Equal(family.Id, (await db.Devices.SingleAsync()).FamilyId);
         Assert.Equal(child.Id, response.ChildId);
@@ -171,7 +171,7 @@ public class Job3PolicyTests
         IReadOnlyList<ScheduleDto>? schedules = null,
         IReadOnlyList<AppDailyUsageDto>? usage = null,
         DailyLimitDto? daily = null) =>
-        new(Guid.NewGuid(), "Emma", "Hendry", false, null, null, null, null,
+        new(Guid.NewGuid(), "Alex", "Parent One", false, null, null, null, null,
             schedules ?? [], sites ?? [], apps ?? [], bonuses ?? [], [], DateTime.UtcNow,
             usage ?? [], daily, false);
 
@@ -251,7 +251,7 @@ public class Job4UsageTests
         IReadOnlyList<AppRuleDto>? apps = null,
         IReadOnlyList<AppDailyUsageDto>? usage = null,
         DailyLimitDto? daily = null) =>
-        new(Guid.NewGuid(), "Emma", "Hendry", false, null, null, null, null,
+        new(Guid.NewGuid(), "Alex", "Parent One", false, null, null, null, null,
             [], [], apps ?? [], [], [], DateTime.UtcNow, usage ?? [], daily, false);
 
     private static AppRuleDto App(string identity, bool blocked, int? limit = null, bool alwaysAllowed = false) =>

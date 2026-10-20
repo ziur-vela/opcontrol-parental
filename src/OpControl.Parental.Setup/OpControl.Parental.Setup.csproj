@@ -14,7 +14,7 @@
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <AssemblyName>OpControl.Parental.Setup</AssemblyName>
     <RootNamespace>OpControl.Parental.Setup</RootNamespace>
-    <Version>0.9.2</Version>
+    <Version>0.9.3</Version>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.Management" Version="10.0.0" />

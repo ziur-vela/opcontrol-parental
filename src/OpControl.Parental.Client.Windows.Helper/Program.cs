@@ -5,7 +5,12 @@ internal static class Program
     [STAThread]
     private static void Main(string[] args)
     {
-        var monitored = GetArgument(args, "--monitored") ?? "Emma";
+        var monitored = GetArgument(args, "--monitored");
+        if (string.IsNullOrWhiteSpace(monitored))
+        {
+            HelperPaths.LogEvent("helper-missing-monitored-account");
+            return;
+        }
         if (monitored.Contains('\\')) monitored = monitored[(monitored.LastIndexOf('\\') + 1)..];
         if (!string.Equals(Environment.UserName, monitored, StringComparison.OrdinalIgnoreCase))
             return;
