@@ -278,8 +278,7 @@
         using var scope = Scopes.CreateScope();
         await scope.ServiceProvider.GetRequiredService<LanguageService>().SetFamilyLanguageAsync(_familyId, language);
         _familyLanguage = language;
-        await JS.InvokeVoidAsync("ocpSetLanguageCookie", language);
-        Nav.NavigateTo(Nav.Uri, forceLoad: true);
+        // Family default is for invitations and children's devices; it does not change this parent's own dashboard language.
     }
 
     private static string FormatMinutes(int minutes) => $"{minutes / 60:00}:{minutes % 60:00}";

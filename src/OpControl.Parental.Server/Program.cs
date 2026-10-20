@@ -285,9 +285,13 @@ app.Use(async (context, next) =>
 app.UseRateLimiter();
 app.UseAntiforgery();
 
-app.MapGet("/language/{lang}", (string lang, HttpContext context, string? returnUrl) =>
+app.MapGet("/language/{lang}", async (string lang, HttpContext context, LanguageService languages, string? returnUrl) =>
 {
     var language = AppCulture.Normalize(lang);
+    // The header switch is the parent's own language: save it to the profile, not just this browser.
+    if (context.User.Identity?.IsAuthenticated == true
+        && Guid.TryParse(context.User.FindFirstValue(ClaimTypes.NameIdentifier), out var parentId))
+        await languages.SetParentLanguageAsync(parentId, language, context.RequestAborted);
     context.Response.Cookies.Append(AppCulture.CookieName, language, new CookieOptions
     {
         HttpOnly = false,

@@ -84,8 +84,8 @@
             <div class="topbar-actions">
                 <button type="button" class="icon-btn" onclick="ocpToggleTheme()" title="@L["Layout.ToggleTheme"]" aria-label="@L["Layout.ToggleTheme"]">◐</button>
                 <span class="lang-switch" role="group" aria-label="@L["Layout.Language"]">
-                    <a class="lang-link @(IsSpanish ? "" : "active")" href="/language/en?returnUrl=@CurrentPath" title="@L["Language.English"]">EN</a>
-                    <a class="lang-link @(IsSpanish ? "active" : "")" href="/language/es-MX?returnUrl=@CurrentPath" title="@L["Language.Spanish"]">ES</a>
+                    <a class="lang-link @(IsSpanish ? "" : "active")" data-enhance-nav="false" href="/language/en?returnUrl=@CurrentPath" title="@L["Language.English"]">EN</a>
+                    <a class="lang-link @(IsSpanish ? "active" : "")" data-enhance-nav="false" href="/language/es-MX?returnUrl=@CurrentPath" title="@L["Language.Spanish"]">ES</a>
                 </span>
                 <AuthorizeView>
                     <Authorized Context="auth">
