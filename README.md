@@ -39,7 +39,7 @@ dotnet test
 
 ## Server deployment
 
-Stack directory on `opcontrol-dockers`: `/opt/stacks/opcontrol-parental/`.
+Stack directory on the Docker host: `/opt/stacks/opcontrol-parental/`.
 
 - `docker-compose.yml` and `docker-compose.override.yml` (host port `127.0.0.1:8096`)
 - `.env` (database password, not committed)
@@ -85,9 +85,9 @@ the server administrator and there is no public sign-up.
 
 Health: `GET /health`. Public URL: `https://parental.opcontrol.net` (Cloudflare Tunnel).
 
-## Windows build host (Dell Precision `ziur-w10gaminglap`)
+## Windows build host
 
-The permanent Windows build host is Hendry's Dell Precision (`100.89.228.36`, SSH user `Ziur`).
+Windows client builds run on a dedicated Windows build host, never on a monitored child device.
 Everything is kept under `C:\BuildTools\opcontrol-parental`:
 
 ```powershell
@@ -105,7 +105,7 @@ powershell -ExecutionPolicy Bypass -File C:\BuildTools\opcontrol-parental\repo\i
 ```
 
 Artifacts land in `artifacts\OpControlParental-<version>.msi` and
-`artifacts\OpControlParental-Setup-<version>.exe`. Do **not** build on the X1.
+`artifacts\OpControlParental-Setup-<version>.exe`. Do **not** build on a monitored child device.
 
 ## Windows client
 
@@ -141,8 +141,8 @@ cp artifacts/setup-0.5.0/OpControl.Parental.Setup.exe artifacts/OpControlParenta
 must run on Windows. The setup bootstrapper is interactive; the MSI supports silent install:
 
 ```bat
-msiexec /i OpControlParental.msi /qn SERVER=https://parental.opcontrol.net CODE=XXXXXXXXXX ACCOUNT=Emma
-OpControlParental-Setup-0.5.0.exe /S SERVER=https://parental.opcontrol.net CODE=XXXXXXXXXX ACCOUNT=Emma
+msiexec /i OpControlParental.msi /qn SERVER=https://parental.opcontrol.net CODE=XXXXXXXXXX ACCOUNT=<child-windows-account>
+OpControlParental-Setup-0.5.0.exe /S SERVER=https://parental.opcontrol.net CODE=XXXXXXXXXX ACCOUNT=<child-windows-account>
 ```
 
 The pre-configured download names the setup `OpControlParental-<CODE>.exe`; the bootstrapper reads
