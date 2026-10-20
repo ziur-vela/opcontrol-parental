@@ -30,13 +30,27 @@ public enum ParentPermissions
     ViewReports = 16,
     ManageDevices = 32,
     ManagePin = 64,
-    All = LockUnlockBonus | WebsiteRules | AppRules | SchedulesLimits | ViewReports | ManageDevices | ManagePin
+    RemoteView = 128,
+    All = LockUnlockBonus | WebsiteRules | AppRules | SchedulesLimits | ViewReports | ManageDevices | ManagePin | RemoteView
 }
 
 public enum InvitationKind
 {
     CoParent = 0,
     NewFamily = 1
+}
+
+public enum RemoteSessionKind
+{
+    Screen = 0,
+    Camera = 1
+}
+
+public enum RemoteSessionStatus
+{
+    Requested = 0,
+    Active = 1,
+    Ended = 2
 }
 
 public enum RuleMode
@@ -361,6 +375,8 @@ public static class DeviceHubMethods
 {
     public const string DeviceStateChanged = "DeviceStateChanged";
     public const string UpdateRequested = "UpdateRequested";
+    public const string RemoteSessionRequested = "RemoteSessionRequested";
+    public const string RemoteSessionStopped = "RemoteSessionStopped";
 }
 
 public sealed record PinPipeRequest(
@@ -430,3 +446,20 @@ public sealed record AlertPreferencesDto(
     int QuietEndMinutes,
     bool DailyDigest,
     int DigestHour);
+
+
+public sealed record RemoteSessionRequest(
+    Guid SessionId,
+    Guid DeviceId,
+    Guid ChildId,
+    RemoteSessionKind Kind);
+
+public sealed record RemoteSessionCreatedDto(
+    Guid Id,
+    Guid DeviceId,
+    Guid ChildId,
+    RemoteSessionKind Kind,
+    DateTime CreatedUtc,
+    DateTime ExpiresUtc);
+
+public sealed record RemoteSessionStopRequest(Guid SessionId);

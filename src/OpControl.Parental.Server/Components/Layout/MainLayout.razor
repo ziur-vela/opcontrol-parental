@@ -39,6 +39,10 @@
             {
                 <NavLink class="nav-link" href="/devices"><span class="nav-ico">▣</span> Devices</NavLink>
             }
+            @if (Can(PermissionFlags.RemoteView))
+            {
+                <NavLink class="nav-link" href="/remote"><span class="nav-ico">◉</span> Remote</NavLink>
+            }
             @if (Can(PermissionFlags.SchedulesLimits))
             {
                 <NavLink class="nav-link" href="/schedules"><span class="nav-ico">◷</span> Schedules</NavLink>
@@ -115,7 +119,8 @@
         SchedulesLimits = 8,
         ViewReports = 16,
         ManageDevices = 32,
-        ManagePin = 64
+        ManagePin = 64,
+        RemoteView = 128
     }
 
     private bool Can(PermissionFlags permission) =>

@@ -397,6 +397,42 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.ToTable("BlockEvents");
                 });
 
+            modelBuilder.Entity("OpControl.Parental.Server.Data.CameraConsent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AcceptedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("ParentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FamilyId", "AcceptedUtc");
+
+                    b.HasIndex("ParentId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("CameraConsents");
+                });
+
             modelBuilder.Entity("OpControl.Parental.Server.Data.Category", b =>
                 {
                     b.Property<string>("Key")
@@ -1236,6 +1272,58 @@ namespace OpControl.Parental.Server.Data.Migrations
                         .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("OpControl.Parental.Server.Data.RemoteSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ChildId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EndReason")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTime?>("EndedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<Guid?>("RequestedByParentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("StartedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChildId", "CreatedUtc");
+
+                    b.HasIndex("DeviceId", "Status");
+
+                    b.HasIndex("FamilyId", "CreatedUtc");
+
+                    b.ToTable("RemoteSessions");
                 });
 
             modelBuilder.Entity("OpControl.Parental.Server.Data.RuleHistory", b =>

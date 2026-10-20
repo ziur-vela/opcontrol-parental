@@ -1,3 +1,4 @@
+using System.Net.WebSockets;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
@@ -93,6 +94,12 @@ builder.Services.AddRateLimiter(options =>
         limiter.Window = TimeSpan.FromMinutes(1);
         limiter.QueueLimit = 0;
     });
+    options.AddFixedWindowLimiter("remote", limiter =>
+    {
+        limiter.PermitLimit = 10;
+        limiter.Window = TimeSpan.FromMinutes(1);
+        limiter.QueueLimit = 0;
+    });
 });
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
@@ -116,6 +123,9 @@ builder.Services.AddScoped<EmailSender>();
 builder.Services.AddScoped<InvitationService>();
 builder.Services.AddScoped<ServerAdminService>();
 builder.Services.AddScoped<TeamService>();
+builder.Services.AddScoped<RemoteSessionService>();
+builder.Services.AddSingleton<RemoteSessionRegistry>();
+builder.Services.AddScoped<CameraConsentService>();
 builder.Services.AddScoped<FamilyScope>();
 builder.Services.AddScoped<DeviceAuthService>();
 builder.Services.AddScoped<EnrollmentService>();
@@ -194,6 +204,7 @@ if (!string.IsNullOrWhiteSpace(adminEmailArgument))
     return;
 }
 
+app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(20) });
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
@@ -888,6 +899,84 @@ app.MapGet("/api/server/audit", async (FamilyScope family, ServerAdminService ad
     return Results.Ok(await admin.RecentAuditAsync(100, ct));
 }).RequireAuthorization();
 
+app.MapGet("/api/remote/camera-consent", async (FamilyScope family, CameraConsentService consent, CancellationToken ct) =>
+{
+    await family.RequireAsync(ParentPermissions.RemoteView, ct);
+    return Results.Ok(await consent.StatusAsync(family.ParentId, ct));
+}).RequireAuthorization();
+
+app.MapPost("/api/remote/camera-consent", async (CameraConsentAcceptRequest request, HttpContext context, IAntiforgery antiforgery, FamilyScope family, CameraConsentService consent, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    await family.RequireAsync(ParentPermissions.RemoteView, ct);
+    if (!request.Accepted || request.Version != CameraConsentService.CurrentVersion)
+        return Results.BadRequest(new { error = "Camera supervision terms were not accepted." });
+    await consent.AcceptAsync(family.FamilyId, family.ParentId,
+        context.Connection.RemoteIpAddress?.ToString(), context.Request.Headers.UserAgent.ToString(), ct);
+    return Results.Ok(await consent.StatusAsync(family.ParentId, ct));
+}).RequireAuthorization();
+
+app.MapPost("/api/remote/sessions", async (RemoteSessionCreateRequest request, HttpContext context, IAntiforgery antiforgery, FamilyScope family, RemoteSessionService remote, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    await family.RequireAsync(ParentPermissions.RemoteView, ct);
+    try
+    {
+        var created = await remote.CreateAsync(family.FamilyId, family.ParentId, request.DeviceId, request.Kind, ct);
+        return Results.Ok(created);
+    }
+    catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization().RequireRateLimiting("remote");
+
+app.MapPost("/api/remote/sessions/{sessionId:guid}/stop", async (Guid sessionId, HttpContext context, IAntiforgery antiforgery, FamilyScope family, RemoteSessionService remote, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    await family.RequireAsync(ParentPermissions.RemoteView, ct);
+    await remote.StopAsync(sessionId, family.FamilyId, "parent-stopped", ct);
+    return Results.Ok(new { ok = true });
+}).RequireAuthorization();
+
+app.MapGet("/ws/remote/{sessionId:guid}", async (HttpContext context, Guid sessionId, FamilyScope family, ParentalDbContext db, RemoteSessionRegistry registry, CancellationToken ct) =>
+{
+    if (!context.WebSockets.IsWebSocketRequest)
+    {
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        return;
+    }
+    var session = await db.RemoteSessions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sessionId && s.FamilyId == family.FamilyId, ct);
+    if (session is null || session.Status == RemoteSessionStatus.Ended)
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+    await family.RequireAsync(ParentPermissions.RemoteView, ct);
+    using var socket = await context.WebSockets.AcceptWebSocketAsync();
+    await registry.AttachParentAsync(sessionId, socket, ct);
+}).RequireAuthorization();
+
+app.MapGet("/ws/device-remote/{sessionId:guid}", async (HttpContext context, Guid sessionId, ClaimsPrincipal user, ParentalDbContext db, RemoteSessionRegistry registry, CancellationToken ct) =>
+{
+    if (!context.WebSockets.IsWebSocketRequest)
+    {
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        return;
+    }
+    var value = user.FindFirstValue(ParentalClaims.DeviceId);
+    if (!Guid.TryParse(value, out var deviceId))
+    {
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return;
+    }
+    var session = await db.RemoteSessions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sessionId && s.DeviceId == deviceId, ct);
+    if (session is null || session.Status == RemoteSessionStatus.Ended)
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+    using var socket = await context.WebSockets.AcceptWebSocketAsync();
+    await registry.AttachDeviceAsync(sessionId, socket, ct);
+}).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
+
 app.MapPost("/api/devices/{deviceId:guid}/timezone", async (Guid deviceId, DeviceTimeZoneRequest request, HttpContext context, IAntiforgery antiforgery, FamilyScope family, ParentalDbContext db, CancellationToken ct) =>
 {
     await antiforgery.ValidateRequestAsync(context);
@@ -931,3 +1020,5 @@ public sealed record ServerInviteRequest(string? Email, string? FamilyName);
 public sealed record DeleteFamilyRequest(string? FamilyName, string? Confirmation);
 public sealed record ServerSmtpRequest(string? Host, int Port, bool UseSsl, string? Username, string? Password, string? FromAddress, string? FromName);
 public sealed record DeviceTimeZoneRequest(string TimeZoneId);
+public sealed record RemoteSessionCreateRequest(Guid DeviceId, RemoteSessionKind Kind);
+public sealed record CameraConsentAcceptRequest(bool Accepted, int Version);

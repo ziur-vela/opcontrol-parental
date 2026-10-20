@@ -10,6 +10,7 @@ public sealed class HelperContext : ApplicationContext
     private readonly KeyboardHook _hook = new();
     private readonly UsageSampler _usage = new();
     private readonly System.Windows.Forms.Timer _timer;
+    private readonly RemoteCaptureHost _remote;
     private PinDialog? _pinDialog;
     private NotificationForm? _notification;
     private readonly DateTime _helperStartedUtc = DateTime.UtcNow;
@@ -26,6 +27,8 @@ public sealed class HelperContext : ApplicationContext
         _overlays = new LockOverlayManager();
         _overlays.OverrideClicked += ShowPinDialog;
         _countdown = new CountdownForm();
+        _remote = new RemoteCaptureHost(monitored);
+        _remote.Start();
         _timer = new System.Windows.Forms.Timer { Interval = 500 };
         _timer.Tick += (_, _) => Tick();
         _timer.Start();
@@ -249,6 +252,7 @@ public sealed class HelperContext : ApplicationContext
         if (disposing)
         {
             _timer.Dispose();
+            _remote.Dispose();
             _hook.Dispose();
             _overlays.Dispose();
             _countdown.Dispose();

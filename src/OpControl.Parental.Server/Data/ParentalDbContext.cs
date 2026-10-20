@@ -42,6 +42,8 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
     public DbSet<ServerSettings> ServerSettings => Set<ServerSettings>();
     public DbSet<AlertPreference> AlertPreferences => Set<AlertPreference>();
     public DbSet<ServerAdminAudit> ServerAdminAudits => Set<ServerAdminAudit>();
+    public DbSet<RemoteSession> RemoteSessions => Set<RemoteSession>();
+    public DbSet<CameraConsent> CameraConsents => Set<CameraConsent>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -368,6 +370,26 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
             e.Property(x => x.Action).HasMaxLength(80).IsRequired();
             e.Property(x => x.Detail).HasMaxLength(1000);
             e.HasIndex(x => x.CreatedUtc);
+        });
+
+        builder.Entity<CameraConsent>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.IpAddress).HasMaxLength(64);
+            e.Property(x => x.UserAgent).HasMaxLength(512);
+            e.HasIndex(x => new { x.ParentId, x.Version }).IsUnique();
+            e.HasIndex(x => new { x.FamilyId, x.AcceptedUtc });
+        });
+
+        builder.Entity<RemoteSession>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(16);
+            e.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+            e.Property(x => x.EndReason).HasMaxLength(80);
+            e.HasIndex(x => new { x.FamilyId, x.CreatedUtc });
+            e.HasIndex(x => new { x.DeviceId, x.Status });
+            e.HasIndex(x => new { x.ChildId, x.CreatedUtc });
         });
     }
 }

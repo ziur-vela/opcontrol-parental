@@ -500,10 +500,12 @@ public class Job5BMultiTenantTests
         Assert.True(parent.Has(ParentPermissions.ViewReports));
         Assert.True(parent.Has(ParentPermissions.LockUnlockBonus));
         Assert.False(parent.Has(ParentPermissions.ManagePin));
+        Assert.False(parent.Has(ParentPermissions.RemoteView));
         Assert.Throws<PermissionDeniedException>(() => parent.Require(ParentPermissions.ManageDevices));
 
         var owner = parent with { Role = FamilyRole.Owner, Permissions = ParentPermissions.None };
         Assert.True(owner.Has(ParentPermissions.ManageDevices));
+        Assert.True(owner.Has(ParentPermissions.RemoteView));
         owner.Require(ParentPermissions.ManagePin);
     }
 

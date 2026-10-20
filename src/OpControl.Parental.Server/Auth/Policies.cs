@@ -14,6 +14,7 @@ public static class ParentalPolicies
     public const string ViewReports = "Permission.ViewReports";
     public const string ManageDevices = "Permission.ManageDevices";
     public const string ManagePin = "Permission.ManagePin";
+    public const string RemoteView = "Permission.RemoteView";
 
     public static void AddParentalPolicies(this AuthorizationOptions options)
     {
@@ -29,6 +30,7 @@ public static class ParentalPolicies
         AddPermission(options, ViewReports, ParentPermissions.ViewReports);
         AddPermission(options, ManageDevices, ParentPermissions.ManageDevices);
         AddPermission(options, ManagePin, ParentPermissions.ManagePin);
+        AddPermission(options, RemoteView, ParentPermissions.RemoteView);
     }
 
     private static void AddPermission(AuthorizationOptions options, string name, ParentPermissions permission)

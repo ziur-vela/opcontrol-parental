@@ -15,9 +15,10 @@ public sealed class Worker : BackgroundService
     private readonly ClientSettings _settings;
     private readonly UpdateService _updates;
     private readonly TaskManagerPolicy _policy;
+    private readonly RemoteRelayService _remote;
     private DeviceCredential? _credential;
     private ClientOptions _options = new();
-    private string ClientVersion => typeof(Worker).Assembly.GetName().Version?.ToString(3) ?? "0.7.3";
+    private string ClientVersion => typeof(Worker).Assembly.GetName().Version?.ToString(3) ?? "0.9.0";
 
     private readonly IServiceProvider _serviceProvider;
 
@@ -32,6 +33,7 @@ public sealed class Worker : BackgroundService
         ClientSettings settings,
         UpdateService updates,
         TaskManagerPolicy policy,
+        RemoteRelayService remote,
         IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
@@ -45,6 +47,7 @@ public sealed class Worker : BackgroundService
         _settings = settings;
         _updates = updates;
         _policy = policy;
+        _remote = remote;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -185,6 +188,9 @@ public sealed class Worker : BackgroundService
         connection.ServerTimeout = TimeSpan.FromSeconds(60);
 
         connection.On<UpdateInfoDto>(DeviceHubMethods.UpdateRequested, info => _updates.RequestUpdate(info));
+
+        connection.On<RemoteSessionRequest>(DeviceHubMethods.RemoteSessionRequested, request => _remote.Start(request));
+        connection.On<RemoteSessionStopRequest>(DeviceHubMethods.RemoteSessionStopped, request => _remote.Stop(request.SessionId));
 
         connection.On<DeviceStateDto>(DeviceHubMethods.DeviceStateChanged, state =>
         {

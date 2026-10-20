@@ -474,3 +474,31 @@ public class ServerAdminAudit
     public string? Detail { get; set; }
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
 }
+
+
+public class RemoteSession
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid FamilyId { get; set; }
+    public Guid ChildId { get; set; }
+    public Guid DeviceId { get; set; }
+    public Guid? RequestedByParentId { get; set; }
+    public RemoteSessionKind Kind { get; set; }
+    public RemoteSessionStatus Status { get; set; }
+    public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
+    public DateTime? StartedUtc { get; set; }
+    public DateTime? EndedUtc { get; set; }
+    public string? EndReason { get; set; }
+}
+
+
+public class CameraConsent
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid FamilyId { get; set; }
+    public Guid ParentId { get; set; }
+    public int Version { get; set; }
+    public DateTime AcceptedUtc { get; set; } = DateTime.UtcNow;
+    public string? IpAddress { get; set; }
+    public string? UserAgent { get; set; }
+}

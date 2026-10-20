@@ -1,0 +1,198 @@
+@page "/remote"
+@attribute [Authorize(Policy = ParentalPolicies.RemoteView)]
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using OpControl.Parental.Contracts
+@using OpControl.Parental.Server.Auth
+@using OpControl.Parental.Server.Data
+@using OpControl.Parental.Server.Services
+@inject AuthenticationStateProvider AuthState
+@inject IServiceScopeFactory Scopes
+@inject DevicePresenceService Presence
+@inject IJSRuntime JS
+
+<PageTitle>Remote · Parental OpControl</PageTitle>
+
+<div class="page-head">
+    <div>
+        <div class="eyebrow">Family</div>
+        <h1>Remote</h1>
+        <p class="muted">View the device screen or camera on demand. Screen view is silent; camera access is indicated by the device's hardware light.</p>
+    </div>
+    @if (_cameraConsentAccepted)
+    {
+        <span class="pill-soft consent-ok">✓ Camera supervision terms accepted</span>
+    }
+</div>
+
+@if (_error is not null)
+{
+    <div class="alert danger">@_error</div>
+}
+
+<section class="card">
+    <div class="card-title-row">
+        <h2>Devices</h2>
+        <span class="pill-soft">Parent-initiated · 10 min max</span>
+    </div>
+    @if (_devices.Count == 0)
+    {
+        <p class="muted">No devices are enrolled yet.</p>
+    }
+    else
+    {
+        <div class="device-list">
+            @foreach (var device in _devices)
+            {
+                <div class="device-row">
+                    <span class="status-dot @(device.Online ? "online" : "offline")"></span>
+                    <div class="device-main">
+                        <div class="device-name">@device.Name</div>
+                        <div class="muted tiny">@device.ChildName · @(device.Online ? "Online" : "Offline")</div>
+                    </div>
+                    <div class="device-meta">
+                        <button class="btn btn-ghost" disabled="@(!device.Online || _starting)" @onclick="() => StartAsync(device, RemoteSessionKind.Screen)">View screen</button>
+                        <button class="btn btn-ghost" disabled="@(!device.Online || _starting)" @onclick="() => StartAsync(device, RemoteSessionKind.Camera)">View camera</button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</section>
+
+@if (_showConsent)
+{
+    <div class="modal-backdrop">
+        <section class="card modal">
+            <div class="card-title-row">
+                <h2>Camera supervision terms</h2>
+                <span class="pill-soft">One-time acceptance</span>
+            </div>
+            <pre class="consent-text">@_consentText</pre>
+            @if (_consentError is not null)
+            {
+                <div class="alert danger">@_consentError</div>
+            }
+            <div class="button-row">
+                <button class="btn btn-primary" @onclick="AcceptConsentAsync">I agree</button>
+                <button class="btn btn-ghost" @onclick="CancelConsent">Cancel</button>
+            </div>
+        </section>
+    </div>
+}
+
+@if (_active)
+{
+    <section class="card" id="remote-viewer">
+        <div class="card-title-row">
+            <h2>@_activeLabel</h2>
+            <div class="button-row">
+                <button class="btn btn-ghost" @onclick="FullscreenAsync">Fullscreen</button>
+                <button class="btn btn-danger" @onclick="StopAsync">Stop</button>
+            </div>
+        </div>
+        <div class="remote-canvas-wrap">
+            <canvas id="remote-canvas"></canvas>
+        </div>
+        <div id="remote-status" class="muted tiny">Waiting for the device…</div>
+    </section>
+}
+
+@code {
+    private sealed record DeviceRow(Guid DeviceId, string Name, string ChildName, bool Online);
+    private sealed record ConsentStatus(bool Accepted, int Version, string Text);
+    private List<DeviceRow> _devices = [];
+    private bool _active;
+    private bool _starting;
+    private bool _cameraConsentAccepted;
+    private bool _showConsent;
+    private string _consentText = "";
+    private string? _consentError;
+    private string? _pendingDeviceId;
+    private string _activeLabel = "";
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        if (!Guid.TryParse(auth.User.FindFirst("family_id")?.Value, out var familyId)) return;
+        using var scope = Scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
+        var rows = await db.Devices.AsNoTracking()
+            .Where(d => d.FamilyId == familyId)
+            .OrderBy(d => d.Name)
+            .Join(db.Children.AsNoTracking(), d => d.ChildId, c => c.Id, (d, c) => new { d.Id, d.Name, ChildName = c.Name })
+            .ToListAsync();
+        _devices = rows.Select(d => new DeviceRow(d.Id, d.Name, d.ChildName, Presence.IsOnline(d.Id))).ToList();
+        try
+        {
+            var status = await JS.InvokeAsync<ConsentStatus>("ocpRemote.getConsent");
+            _cameraConsentAccepted = status.Accepted;
+            _consentText = status.Text;
+        }
+        catch { }
+    }
+
+    private async Task StartAsync(DeviceRow device, RemoteSessionKind kind)
+    {
+        if (kind == RemoteSessionKind.Camera && !_cameraConsentAccepted)
+        {
+            _pendingDeviceId = device.DeviceId.ToString();
+            _consentError = null;
+            _showConsent = true;
+            return;
+        }
+        _starting = true;
+        _error = null;
+        try
+        {
+            _active = true;
+            _activeLabel = $"{device.Name} · {(kind == RemoteSessionKind.Camera ? "Camera" : "Screen")}";
+            StateHasChanged();
+            await Task.Delay(120);
+            var started = await JS.InvokeAsync<bool>("ocpRemote.start", device.DeviceId.ToString(), (int)kind, "remote-canvas", "remote-status");
+            if (!started) _active = false;
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _starting = false; }
+    }
+
+    private async Task AcceptConsentAsync()
+    {
+        _consentError = null;
+        try
+        {
+            var ok = await JS.InvokeAsync<bool>("ocpRemote.acceptCameraConsent");
+            if (!ok)
+            {
+                _consentError = "The acceptance could not be saved. Try again.";
+                return;
+            }
+            _cameraConsentAccepted = true;
+            _showConsent = false;
+            var device = _devices.FirstOrDefault(d => d.DeviceId.ToString() == _pendingDeviceId);
+            _pendingDeviceId = null;
+            if (device is not null) await StartAsync(device, RemoteSessionKind.Camera);
+        }
+        catch (Exception ex) { _consentError = ex.Message; }
+    }
+
+    private void CancelConsent()
+    {
+        _showConsent = false;
+        _pendingDeviceId = null;
+        _consentError = null;
+    }
+
+    private async Task StopAsync()
+    {
+        try { await JS.InvokeVoidAsync("ocpRemote.stop", true); } catch { }
+        _active = false;
+        _activeLabel = "";
+    }
+
+    private async Task FullscreenAsync()
+    {
+        try { await JS.InvokeVoidAsync("ocpRemote.fullscreen", "remote-viewer"); } catch { }
+    }
+}

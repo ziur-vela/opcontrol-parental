@@ -388,3 +388,15 @@ code { font-family: var(--mono); background: var(--panel-2); padding: 2px 5px; f
     *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
     .skeleton-line { animation: none; }
 }
+
+/* Remote viewer */
+.remote-canvas-wrap { background: #050b09; border: 1px solid var(--line); width: 100%; min-height: 240px; display: flex; align-items: center; justify-content: center; overflow: auto; }
+.remote-canvas-wrap canvas { display: block; max-width: 100%; height: auto; image-rendering: auto; }
+#remote-viewer:fullscreen { background: var(--bg); padding: 12px; overflow: auto; }
+#remote-viewer:fullscreen .remote-canvas-wrap { min-height: calc(100vh - 120px); }
+
+/* Camera consent */
+.consent-ok { border-color: color-mix(in srgb, var(--value) 45%, var(--line)); color: var(--value); }
+.modal-backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(3, 10, 8, .82); display: flex; align-items: center; justify-content: center; padding: 18px; }
+.modal { max-width: 720px; width: 100%; max-height: 86vh; overflow: auto; }
+.consent-text { white-space: pre-wrap; font-family: var(--sans); font-size: 13px; line-height: 1.6; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); padding: 14px; margin: 0; }

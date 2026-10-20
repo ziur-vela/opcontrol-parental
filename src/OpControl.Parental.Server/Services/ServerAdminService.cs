@@ -107,6 +107,8 @@ public sealed class ServerAdminService
             await _db.AlertPreferences.Where(x => x.FamilyId == familyId).ExecuteDeleteAsync(ct);
             await _db.FamilySettings.Where(x => x.FamilyId == familyId).ExecuteDeleteAsync(ct);
             await _db.Invitations.Where(x => x.FamilyId == familyId).ExecuteDeleteAsync(ct);
+            await _db.RemoteSessions.Where(x => x.FamilyId == familyId).ExecuteDeleteAsync(ct);
+            await _db.CameraConsents.Where(x => x.FamilyId == familyId).ExecuteDeleteAsync(ct);
             await _db.ScheduleRuntimeStates.Where(x => childIds.Contains(x.ChildId)).ExecuteDeleteAsync(ct);
             await _db.Children.Where(x => x.FamilyId == familyId).ExecuteDeleteAsync(ct);
             await _db.Families.Where(x => x.Id == familyId).ExecuteDeleteAsync(ct);
