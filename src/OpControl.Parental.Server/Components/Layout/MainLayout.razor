@@ -13,7 +13,7 @@
 @{
     var brand = BrandOptions.Value;
 }
-<style>:root { --accent: @brand.AccentColor; }</style>
+<style>:root { --brand: @brand.AccentColor; }</style>
 <div class="app-shell">
     <aside class="sidebar">
         <div class="brand-row">
@@ -90,6 +90,7 @@
         </header>
         <main class="content">
             @Body
+            <div class="site-foot">CREATED BY OpControl</div>
         </main>
     </div>
 </div>

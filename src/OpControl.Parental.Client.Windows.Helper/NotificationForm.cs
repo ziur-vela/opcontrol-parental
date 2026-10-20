@@ -9,12 +9,13 @@ public sealed class NotificationForm : Form
 
     public NotificationForm(string title, string message)
     {
+        AutoScaleMode = AutoScaleMode.None;
         FormBorderStyle = FormBorderStyle.None;
         ShowInTaskbar = false;
         TopMost = true;
         StartPosition = FormStartPosition.Manual;
-        BackColor = Color.FromArgb(24, 27, 33);
-        ForeColor = Color.White;
+        BackColor = Theme.Panel;
+        ForeColor = Theme.Text;
         Padding = new Padding(16, 12, 16, 12);
         Width = 360;
         Height = 96;
@@ -22,8 +23,8 @@ public sealed class NotificationForm : Form
         var heading = new Label
         {
             Text = title,
-            Font = new Font("Segoe UI", 10f, FontStyle.Bold),
-            ForeColor = Color.FromArgb(255, 149, 64),
+            Font = Theme.Mono(9.5f, FontStyle.Bold),
+            ForeColor = Theme.Label,
             AutoSize = false,
             Dock = DockStyle.Top,
             Height = 24
@@ -31,14 +32,19 @@ public sealed class NotificationForm : Form
         var body = new Label
         {
             Text = message,
-            Font = new Font("Segoe UI", 9f),
-            ForeColor = Color.Gainsboro,
+            Font = Theme.Sans(9.5f),
+            ForeColor = Theme.Text,
             AutoSize = false,
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.TopLeft
         };
         Controls.Add(body);
         Controls.Add(heading);
+        Paint += (_, e) =>
+        {
+            using var pen = new Pen(Theme.Line2, 1);
+            e.Graphics.DrawRectangle(pen, 0, 0, Width - 1, Height - 1);
+        };
 
         Dpi.ScaleForm(this);
         var area = Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1920, 1080);

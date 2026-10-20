@@ -165,14 +165,15 @@ internal sealed class InstallForm : Form
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
         AutoScaleMode = AutoScaleMode.Dpi;
-        Font = new Font("Segoe UI", 9.5f);
-        ClientSize = new Size(560, 360);
+        Theme.StyleForm(this);
+        ClientSize = new Size(560, 380);
         Padding = new Padding(20);
 
         var title = new Label
         {
-            Text = "Parental OpControl",
-            Font = new Font("Segoe UI Semibold", 16f),
+            Text = "PARENTAL OPCONTROL",
+            Font = Theme.Sans(18f, FontStyle.Bold),
+            ForeColor = Theme.Text,
             AutoSize = true,
             Location = new Point(22, 18)
         };
@@ -182,20 +183,21 @@ internal sealed class InstallForm : Form
             AutoSize = false,
             Size = new Size(510, 36),
             Location = new Point(24, 58),
-            ForeColor = Color.FromArgb(90, 90, 100)
+            ForeColor = Theme.Muted,
+            Font = Theme.Mono(9f)
         };
 
-        var serverLabel = new Label { Text = "Server URL", AutoSize = true, Location = new Point(24, 104) };
+        var serverLabel = new Label { Text = "SERVER URL", AutoSize = true, Location = new Point(24, 104), ForeColor = Theme.Label, Font = Theme.Mono(9f) };
         _server.Location = new Point(24, 124);
         _server.Size = new Size(510, 28);
         _server.Text = server;
 
-        var codeLabel = new Label { Text = "One-time code", AutoSize = true, Location = new Point(24, 160) };
+        var codeLabel = new Label { Text = "ONE-TIME CODE", AutoSize = true, Location = new Point(24, 160), ForeColor = Theme.Label, Font = Theme.Mono(9f) };
         _code.Location = new Point(24, 180);
         _code.Size = new Size(240, 28);
         _code.Text = code ?? "";
 
-        var accountLabel = new Label { Text = "Windows account to protect", AutoSize = true, Location = new Point(24, 216) };
+        var accountLabel = new Label { Text = "WINDOWS ACCOUNT TO PROTECT", AutoSize = true, Location = new Point(24, 216), ForeColor = Theme.Label, Font = Theme.Mono(9f) };
         _account.Location = new Point(24, 236);
         _account.Size = new Size(510, 28);
         _account.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -215,21 +217,26 @@ internal sealed class InstallForm : Form
         _status.Location = new Point(24, 274);
         _status.Size = new Size(510, 24);
         _status.AutoSize = false;
-        _status.ForeColor = Color.FromArgb(90, 90, 100);
+        _status.ForeColor = Theme.Muted;
+        _status.Font = Theme.Mono(9f);
 
-        _progress.Location = new Point(24, 300);
+        _progress.Location = new Point(24, 310);
         _progress.Size = new Size(510, 8);
         _progress.Style = ProgressBarStyle.Marquee;
         _progress.Visible = false;
 
         _install.Text = "Install";
         _install.Size = new Size(140, 34);
-        _install.Location = new Point(394, 316);
+        _install.Location = new Point(394, 326);
+        Theme.StyleInput(_server); Theme.StyleInput(_code); Theme.StyleInput(_account);
+        Theme.StyleButton(_install, primary: true);
         _install.Click += async (_, _) => await InstallAsync();
 
-        var cancel = new Button { Text = "Cancel", Size = new Size(100, 34), Location = new Point(284, 316), DialogResult = DialogResult.Cancel };
+        var cancel = new Button { Text = "CANCEL", Size = new Size(100, 34), Location = new Point(284, 326), DialogResult = DialogResult.Cancel };
+        Theme.StyleButton(cancel);
 
-        Controls.AddRange([title, subtitle, serverLabel, _server, codeLabel, _code, accountLabel, _account, _status, _progress, _install, cancel]);
+        var foot = new Label { Text = "CREATED BY OPCONTROL", AutoSize = true, Location = new Point(24, 356), ForeColor = Theme.Muted, Font = Theme.Mono(8f) };
+        Controls.AddRange([title, subtitle, serverLabel, _server, codeLabel, _code, accountLabel, _account, _status, _progress, _install, cancel, foot]);
         AcceptButton = _install;
         CancelButton = cancel;
         Shown += (_, _) => _install.Focus();

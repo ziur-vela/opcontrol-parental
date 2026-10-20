@@ -3,8 +3,8 @@ param(
     [Parameter(Mandatory = $true)][string]$PublishRoot,
     [Parameter(Mandatory = $true)][string]$OutFile,
     [string]$InstallerDir = $PSScriptRoot,
-    [string]$WixTool = "C:\ocp-build\tools\wix.exe",
-    [string]$DotnetRoot = "C:\ocp-build\dotnet"
+    [string]$WixTool = "C:\BuildTools\opcontrol-parental\tools\wix.exe",
+    [string]$DotnetRoot = "C:\BuildTools\opcontrol-parental\dotnet"
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,8 +21,8 @@ if (-not (Test-Path $WixTool)) {
     -d "ProductVersion=$Version" `
     -d "ClientDir=$PublishRoot\client" `
     -d "HelperDir=$PublishRoot\helper" `
-    -d "BrandIcon=$(Join-Path $InstallerDir 'icon-color-128.png')" `
-    -d "ProductIcon=$(Join-Path $InstallerDir 'favicon.ico')" `
+    -d "BrandIcon=$(Join-Path (Split-Path $InstallerDir -Parent) 'src\OpControl.Parental.Client.Windows.Helper\brand\icon-color-128.png')" `
+    -d "ProductIcon=$(Join-Path (Split-Path $InstallerDir -Parent) 'src\OpControl.Parental.Server\wwwroot\brand\favicon.ico')" `
     -d "InstallerDir=$InstallerDir" `
     -o $OutFile
 

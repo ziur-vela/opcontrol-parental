@@ -9,6 +9,7 @@ public sealed class PinDialog : Form
 
     public PinDialog()
     {
+        AutoScaleMode = AutoScaleMode.None;
         Text = "Parent override";
         FormBorderStyle = FormBorderStyle.FixedSingle;
         StartPosition = FormStartPosition.CenterScreen;
@@ -16,15 +17,15 @@ public sealed class PinDialog : Form
         TopMost = true;
         Width = 390;
         Height = 240;
-        BackColor = Color.FromArgb(25, 28, 35);
-        ForeColor = Color.FromArgb(233, 235, 239);
+        BackColor = Theme.Bg;
+        ForeColor = Theme.Text;
         MaximizeBox = false;
         MinimizeBox = false;
 
         var title = new Label
         {
             Text = "Parent override PIN",
-            Font = new Font("Segoe UI", 16f, FontStyle.Bold),
+            Font = Theme.Sans(16f, FontStyle.Bold),
             AutoSize = true,
             Location = new Point(22, 20)
         };
@@ -33,14 +34,14 @@ public sealed class PinDialog : Form
             UseSystemPasswordChar = true,
             MaxLength = 12,
             Width = 330,
-            Font = new Font("Segoe UI", 18f),
+            Font = Theme.Mono(18f),
             Location = new Point(22, 62),
             TextAlign = HorizontalAlignment.Center
         };
         _status = new Label
         {
             Text = "",
-            ForeColor = Color.FromArgb(240, 101, 93),
+            ForeColor = Theme.Danger,
             AutoSize = false,
             Width = 330,
             Height = 38,
@@ -52,8 +53,8 @@ public sealed class PinDialog : Form
             Width = 150,
             Height = 38,
             Location = new Point(22, 150),
-            BackColor = Color.FromArgb(0, 200, 83),
-            ForeColor = Color.FromArgb(6, 19, 10),
+            BackColor = Theme.Brand,
+            ForeColor = Theme.BrandDark,
             FlatStyle = FlatStyle.Flat
         };
         var cancel = new Button
@@ -64,6 +65,11 @@ public sealed class PinDialog : Form
             Location = new Point(190, 150),
             FlatStyle = FlatStyle.Flat
         };
+        Theme.StyleForm(this);
+        title.ForeColor = Theme.Text;
+        _pin.BackColor = Theme.Panel2; _pin.ForeColor = Theme.Text;
+        Theme.StyleButton(_ok, primary: true);
+        Theme.StyleButton(cancel);
         _ok.Click += async (_, _) => await VerifyAsync();
         cancel.Click += (_, _) => Close();
         AcceptButton = _ok;
@@ -86,7 +92,7 @@ public sealed class PinDialog : Form
     {
         if (string.IsNullOrWhiteSpace(_pin.Text)) return;
         _ok.Enabled = false;
-        _status.ForeColor = Color.FromArgb(160, 167, 179);
+        _status.ForeColor = Theme.Muted;
         _status.Text = "Checking…";
         var response = await PinPipeClient.VerifyPinAsync(_pin.Text, CancellationToken.None);
         if (response.Ok && !string.IsNullOrWhiteSpace(response.Ticket))
@@ -96,7 +102,7 @@ public sealed class PinDialog : Form
             return;
         }
 
-        _status.ForeColor = Color.FromArgb(240, 101, 93);
+        _status.ForeColor = Theme.Danger;
         var attempts = response.AttemptsRemaining is { } remaining ? $" ({remaining} attempts left)" : "";
         _status.Text = response.LockedOut
             ? $"Too many attempts. Try again in {response.RemainingSeconds ?? 60} s."

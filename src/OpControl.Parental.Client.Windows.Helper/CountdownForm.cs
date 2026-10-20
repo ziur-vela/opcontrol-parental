@@ -7,11 +7,12 @@ public sealed class CountdownForm : Form
 
     public CountdownForm()
     {
+        AutoScaleMode = AutoScaleMode.None;
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.Manual;
         ShowInTaskbar = false;
         TopMost = true;
-        BackColor = Color.FromArgb(20, 23, 29);
+        BackColor = Theme.Panel;
         Width = 390;
         Height = 62;
         Padding = new Padding(10, 4, 10, 4);
@@ -22,8 +23,8 @@ public sealed class CountdownForm : Form
         {
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleCenter,
-            Font = new Font("Segoe UI Semibold", 10f, FontStyle.Regular),
-            ForeColor = Color.FromArgb(0, 200, 83),
+            Font = Theme.Mono(10f),
+            ForeColor = Theme.Value,
             BackColor = Color.Transparent
         };
         Controls.Add(_label);
@@ -31,7 +32,7 @@ public sealed class CountdownForm : Form
         Location = new Point(area.Right - Width - 16, area.Bottom - Height - 12);
         Paint += (_, e) =>
         {
-            using var pen = new Pen(Color.FromArgb(43, 48, 58), 1);
+            using var pen = new Pen(Theme.Line2, 1);
             e.Graphics.DrawRectangle(pen, 0, 0, Width - 1, Height - 1);
         };
     }
@@ -41,9 +42,9 @@ public sealed class CountdownForm : Form
         _label.Text = text;
         _blink = !_blink;
         if (remaining.TotalSeconds <= 60)
-            _label.ForeColor = _blink ? Color.FromArgb(240, 101, 93) : Color.FromArgb(232, 188, 74);
+            _label.ForeColor = _blink ? Theme.Danger : Theme.Warn;
         else
-            _label.ForeColor = Color.FromArgb(0, 200, 83);
+            _label.ForeColor = Theme.Value;
 
         // Compact pill sized to the text (was a fixed 390x62 box, oversized at 200% scaling).
         var text_ = TextRenderer.MeasureText(text, _label.Font);

@@ -70,7 +70,7 @@
     </div>
     <p class="muted small">This comes from the running image, not from a typed setting.</p>
     <div class="version-line">@Build.DisplayVersion</div>
-    <div class="muted tiny">Version @Build.Version · commit @Build.Commit · built @Build.BuildDate</div>
+    <div class="muted tiny">@($"Version {Build.Version} · commit {Build.Commit} · built {Build.BuildDate}")</div>
     <div class="button-row">
         <a class="btn btn-ghost" href="/version" target="_blank">Open /version</a>
         <a class="btn btn-ghost" href="/health" target="_blank">Open /health</a>

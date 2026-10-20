@@ -17,7 +17,7 @@ public sealed class Worker : BackgroundService
     private readonly TaskManagerPolicy _policy;
     private DeviceCredential? _credential;
     private ClientOptions _options = new();
-    private string ClientVersion => typeof(Worker).Assembly.GetName().Version?.ToString(3) ?? "0.5.0";
+    private string ClientVersion => typeof(Worker).Assembly.GetName().Version?.ToString(3) ?? "0.7.3";
 
     private readonly IServiceProvider _serviceProvider;
 

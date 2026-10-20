@@ -13,12 +13,15 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <AssemblyName>OpControl.Parental.Helper</AssemblyName>
     <RootNamespace>OpControl.Parental.Helper</RootNamespace>
-    <Version>0.5.0</Version>
+    <Version>0.7.3</Version>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\OpControl.Parental.Contracts\OpControl.Parental.Contracts.csproj" />
     <Compile Include="..\OpControl.Parental.Client.Windows\AppIdentity.cs" Link="AppIdentity.cs" />
     <EmbeddedResource Include="brand\lockup-ondark-300h.png" />
     <EmbeddedResource Include="brand\icon-color-128.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="fonts\*.ttf" />
   </ItemGroup>
 </Project>

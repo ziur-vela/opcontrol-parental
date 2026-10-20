@@ -4,6 +4,7 @@ public sealed class OverrideMenu : Form
 {
     public OverrideMenu(Action<string, int?> onSelected, Action onCancel)
     {
+        AutoScaleMode = AutoScaleMode.None;
         Text = "Parent override";
         FormBorderStyle = FormBorderStyle.FixedSingle;
         StartPosition = FormStartPosition.CenterScreen;
@@ -11,22 +12,22 @@ public sealed class OverrideMenu : Form
         TopMost = true;
         Width = 440;
         Height = 310;
-        BackColor = Color.FromArgb(25, 28, 35);
-        ForeColor = Color.FromArgb(233, 235, 239);
+        BackColor = Theme.Bg;
+        ForeColor = Theme.Text;
         MaximizeBox = false;
         MinimizeBox = false;
 
         var title = new Label
         {
             Text = "Parent override",
-            Font = new Font("Segoe UI", 18f, FontStyle.Bold),
+            Font = Theme.Sans(18f, FontStyle.Bold),
             AutoSize = true,
             Location = new Point(24, 20)
         };
         var subtitle = new Label
         {
             Text = "Choose what happens next.",
-            ForeColor = Color.FromArgb(160, 167, 179),
+            ForeColor = Theme.Muted,
             AutoSize = true,
             Location = new Point(24, 56)
         };
@@ -42,6 +43,9 @@ public sealed class OverrideMenu : Form
         cancel.Click += (_, _) => { onCancel(); Close(); };
 
         Controls.AddRange([title, subtitle, unlock, bonus, cancel]);
+        Theme.StyleForm(this);
+        title.ForeColor = Theme.Text; subtitle.ForeColor = Theme.Muted;
+        foreach (var button in new[] { unlock, bonus, cancel }) Theme.StyleButton(button);
         Dpi.ScaleForm(this);
     }
 
@@ -54,8 +58,8 @@ public sealed class OverrideMenu : Form
         FlatStyle = FlatStyle.Flat,
         TextAlign = ContentAlignment.MiddleLeft,
         Padding = new Padding(12, 0, 0, 0),
-        BackColor = Color.FromArgb(33, 37, 46),
-        ForeColor = Color.FromArgb(233, 235, 239)
+        BackColor = Theme.Panel2,
+        ForeColor = Theme.Text
     };
 
     protected override bool ShowWithoutActivation => false;
@@ -66,6 +70,7 @@ public sealed class BonusDialog : Form
     private readonly NumericUpDown _custom;
     public BonusDialog(Action<int> onSelected)
     {
+        AutoScaleMode = AutoScaleMode.None;
         Text = "Give bonus time";
         FormBorderStyle = FormBorderStyle.FixedDialog;
         StartPosition = FormStartPosition.CenterParent;
@@ -73,15 +78,15 @@ public sealed class BonusDialog : Form
         TopMost = true;
         Width = 400;
         Height = 260;
-        BackColor = Color.FromArgb(25, 28, 35);
-        ForeColor = Color.FromArgb(233, 235, 239);
+        BackColor = Theme.Bg;
+        ForeColor = Theme.Text;
         MaximizeBox = false;
         MinimizeBox = false;
 
         var title = new Label
         {
             Text = "Give bonus time",
-            Font = new Font("Segoe UI", 16f, FontStyle.Bold),
+            Font = Theme.Sans(16f, FontStyle.Bold),
             AutoSize = true,
             Location = new Point(22, 20)
         };
@@ -94,8 +99,8 @@ public sealed class BonusDialog : Form
                 Width = 100,
                 Height = 40,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(20, 80, 45),
-                ForeColor = Color.FromArgb(200, 255, 220)
+                BackColor = Theme.Panel2,
+                ForeColor = Theme.Value
             };
             button.Click += (_, _) => { onSelected(minutes); Close(); };
             quick.Controls.Add(button);
@@ -109,8 +114,8 @@ public sealed class BonusDialog : Form
             Width = 140,
             Height = 40,
             Location = new Point(22, 175),
-            BackColor = Color.FromArgb(0, 200, 83),
-            ForeColor = Color.FromArgb(6, 19, 10),
+            BackColor = Theme.Brand,
+            ForeColor = Theme.BrandDark,
             FlatStyle = FlatStyle.Flat
         };
         var cancel = new Button { Text = "Cancel", Width = 110, Height = 40, Location = new Point(180, 175), FlatStyle = FlatStyle.Flat };
@@ -118,6 +123,11 @@ public sealed class BonusDialog : Form
         cancel.Click += (_, _) => Close();
 
         Controls.AddRange([title, quick, label, _custom, give, cancel]);
+        Theme.StyleForm(this);
+        title.ForeColor = Theme.Text; label.ForeColor = Theme.Label; label.Font = Theme.Mono(9f);
+        _custom.BackColor = Theme.Panel2; _custom.ForeColor = Theme.Text;
+        Theme.StyleButton(give, primary: true); Theme.StyleButton(cancel);
+        foreach (Control c in quick.Controls) Theme.StyleButton((Button)c);
         Dpi.ScaleForm(this);
     }
 

@@ -2,7 +2,7 @@
 # Build the Windows client MSI and the interactive setup bootstrapper on Linux.
 # Requirements: .NET 10 SDK, WiX 5 as a global dotnet tool (`dotnet tool install -g wix`).
 # Usage: installer/build-installer.sh [version]
-#   version defaults to the Version in Directory.Build.props (0.5.0).
+#   version defaults to the Version in Directory.Build.props (0.7.0).
 # Optional signing: run installer/sign.ps1 on Windows after this script (see README).
 set -euo pipefail
 

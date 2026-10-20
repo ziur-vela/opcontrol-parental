@@ -98,7 +98,7 @@ catch {
         _logger = logger;
     }
 
-    public static string Version => typeof(UpdateService).Assembly.GetName().Version?.ToString(3) ?? "0.5.0";
+    public static string Version => typeof(UpdateService).Assembly.GetName().Version?.ToString(3) ?? "0.7.3";
 
     public void RequestUpdate(UpdateInfoDto? info)
     {
@@ -326,7 +326,7 @@ catch {
         try { File.WriteAllText(ClientPaths.UpdateCompletedFile, DateTime.UtcNow.ToString("o")); } catch { }
         try { File.Delete(ClientPaths.UpdatePendingFile); } catch { }
         try { File.Delete(ClientPaths.UpdateInProgressFile); } catch { }
-        try { File.Delete(ClientPaths.UpdateHealthyFile); } catch { }
+        // Keep update-healthy.flag for the runner to observe; the next update deletes it before starting.
         try { File.Delete(ClientPaths.ForceRollbackFile); } catch { }
     }
 

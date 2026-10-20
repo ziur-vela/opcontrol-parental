@@ -1,3 +1,12 @@
+@inject OpControl.Parental.Server.Services.BuildInfo Build
+@inject Microsoft.Extensions.Options.IOptions<OpControl.Parental.Server.Services.BrandOptions> BrandOptions
+@{
+    var brand = BrandOptions.Value;
+    var isOwner = string.Equals(User.FindFirst("family_role")?.Value, "Owner", StringComparison.OrdinalIgnoreCase);
+    var isAdmin = string.Equals(User.FindFirst("server_admin")?.Value, "true", StringComparison.OrdinalIgnoreCase);
+    var permissions = int.TryParse(User.FindFirst("permissions")?.Value, out var pv) ? pv : 0;
+    bool Can(int bit) => isOwner || (permissions & bit) == bit;
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,27 +14,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] · Parental OpControl</title>
     <link rel="icon" type="image/x-icon" href="/brand/favicon.ico" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" />
     <link rel="stylesheet" href="/css/parental.css" />
 </head>
+<style>:root { --brand: @brand.AccentColor; }</style>
 <body class="t-dark">
     <div class="app-shell">
         <aside class="sidebar">
             <div class="brand-row">
-                <img src="/brand/lockup-ondark.svg" alt="Parental OpControl" class="brand-logo brand-dark" />
-                <img src="/brand/lockup-color.svg" alt="Parental OpControl" class="brand-logo brand-light" />
+                <img src="@brand.LogoDark" alt="@brand.ProductName" class="brand-logo brand-dark" />
+                <img src="@brand.LogoLight" alt="@brand.ProductName" class="brand-logo brand-light" />
             </div>
             <nav class="nav">
                 <a class="nav-link" href="/"><span class="nav-ico">⌂</span> Home</a>
-                <a class="nav-link" href="/devices"><span class="nav-ico">▣</span> Devices</a>
-                <a class="nav-link" href="/schedules"><span class="nav-ico">◷</span> Schedules</a>
-                <a class="nav-link" href="/add-device"><span class="nav-ico">＋</span> Add device</a>
+                @if (Can(16))
+                {
+                    <a class="nav-link" href="/screen-time"><span class="nav-ico">◔</span> Screen time</a>
+                    <a class="nav-link" href="/activity"><span class="nav-ico">≡</span> Activity</a>
+                }
+                @if (Can(2)) { <a class="nav-link" href="/websites"><span class="nav-ico">◎</span> Websites</a> }
+                @if (Can(4)) { <a class="nav-link" href="/apps"><span class="nav-ico">▤</span> Apps</a> }
+                @if (Can(32))
+                {
+                    <a class="nav-link" href="/devices"><span class="nav-ico">▣</span> Devices</a>
+                    <a class="nav-link" href="/add-device"><span class="nav-ico">＋</span> Add device</a>
+                }
+                @if (Can(8)) { <a class="nav-link" href="/schedules"><span class="nav-ico">◷</span> Schedules</a> }
+                @if (isOwner) { <a class="nav-link" href="/team"><span class="nav-ico">👥</span> Parents</a> }
+                @if (isAdmin) { <a class="nav-link" href="/server-admin"><span class="nav-ico">☷</span> Server admin</a> }
                 <a class="nav-link" href="/settings"><span class="nav-ico">⚙</span> Settings</a>
             </nav>
             <div class="sidebar-foot">
-                <div class="pill-soft">Job 1 foundation</div>
-                <div class="muted small">Rules &amp; reports arrive in later jobs.</div>
+                <div class="pill-soft">@Build.DisplayVersion</div>
+                <div class="muted small">@brand.ProductName</div>
             </div>
         </aside>
         <div class="main-col">
@@ -42,6 +62,7 @@
             </header>
             <main class="content">
                 @RenderBody()
+                <div class="site-foot">CREATED BY OpControl</div>
             </main>
         </div>
     </div>

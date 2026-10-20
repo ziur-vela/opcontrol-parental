@@ -57,6 +57,9 @@ The image tag is `<version>-<YYYYMMDD>`. `GET /version` and `GET /health` return
 version string; the dashboard sidebar and Settings show it too. A build from an untagged commit
 shows a `git describe` value such as `v0.6.0-3-g1a2b3c4`, so it is never mistaken for a release.
 
+Fonts (IBM Plex Mono and Manrope) are self-hosted in `wwwroot/fonts` and embedded in the
+Windows helper/setup; no Google Fonts runtime dependency. Licences are next to the fonts.
+
 Server administrator and SMTP (no dashboard login needed):
 
 ```bash
@@ -71,9 +74,31 @@ the server administrator and there is no public sign-up.
 
 Health: `GET /health`. Public URL: `https://parental.opcontrol.net` (Cloudflare Tunnel).
 
+## Windows build host (Dell Precision `ziur-w10gaminglap`)
+
+The permanent Windows build host is Hendry's Dell Precision (`100.89.228.36`, SSH user `Ziur`).
+Everything is kept under `C:\BuildTools\opcontrol-parental`:
+
+```powershell
+# one-time setup (already done)
+Invoke-WebRequest https://dot.net/v1/dotnet-install.ps1 -OutFile C:\BuildTools\opcontrol-parental\dotnet-install.ps1
+& C:\BuildTools\opcontrol-parental\dotnet-install.ps1 -Version 10.0.402 -InstallDir C:\BuildTools\opcontrol-parental\dotnet -NoPath
+& C:\BuildTools\opcontrol-parental\dotnet\dotnet.exe tool install wix --tool-path C:\BuildTools\opcontrol-parental\tools --version 5.0.2
+& C:\BuildTools\opcontrol-parental\tools\wix.exe extension add -g WixToolset.Util.wixext/5.0.2
+```
+
+Build the client, helper, MSI and setup bootstrapper in one step:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File C:\BuildTools\opcontrol-parental\repo\installer\build-windows.ps1 -Version 0.7.0
+```
+
+Artifacts land in `artifacts\OpControlParental-<version>.msi` and
+`artifacts\OpControlParental-Setup-<version>.exe`. Do **not** build on the X1.
+
 ## Windows client
 
-Publish:
+Publish (Linux payload publish only; WiX still needs Windows):
 
 ```bash
 dotnet publish src/OpControl.Parental.Client.Windows -c Release -r win-x64 -o out/client

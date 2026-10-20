@@ -77,11 +77,12 @@ public sealed class LockForm : Form
     public LockForm(Screen screen)
     {
         IsPrimary = screen.Primary;
+        AutoScaleMode = AutoScaleMode.None;
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.Manual;
         Bounds = screen.Bounds;
-        BackColor = Color.FromArgb(16, 18, 23);
-        ForeColor = Color.FromArgb(233, 235, 239);
+        BackColor = Theme.Bg;
+        ForeColor = Theme.Text;
         ShowInTaskbar = false;
         TopMost = true;
         KeyPreview = true;
@@ -114,9 +115,9 @@ public sealed class LockForm : Form
         };
         var title = new Label
         {
-            Text = "This device is locked",
-            Font = new Font("Segoe UI", 34f, FontStyle.Bold),
-            ForeColor = Color.FromArgb(233, 235, 239),
+            Text = "THIS DEVICE IS LOCKED",
+            Font = Theme.Sans(38f, FontStyle.Bold),
+            ForeColor = Theme.Text,
             AutoSize = true,
             Anchor = AnchorStyles.None,
             BackColor = Color.Transparent,
@@ -125,8 +126,8 @@ public sealed class LockForm : Form
         _reason = new Label
         {
             Text = "A parent has paused this device.",
-            Font = new Font("Segoe UI", 16f),
-            ForeColor = Color.FromArgb(160, 167, 179),
+            Font = Theme.Mono(14f),
+            ForeColor = Theme.Muted,
             AutoSize = true,
             Anchor = AnchorStyles.None,
             BackColor = Color.Transparent
@@ -134,8 +135,8 @@ public sealed class LockForm : Form
         _end = new Label
         {
             Text = "",
-            Font = new Font("Segoe UI", 14f),
-            ForeColor = Color.FromArgb(232, 188, 74),
+            Font = Theme.Mono(12f),
+            ForeColor = Theme.Warn,
             AutoSize = true,
             Anchor = AnchorStyles.None,
             BackColor = Color.Transparent,
@@ -143,15 +144,15 @@ public sealed class LockForm : Form
         };
         var overrideLink = new Button
         {
-            Text = "Parent override",
-            Font = new Font("Segoe UI", 13f, FontStyle.Underline),
-            ForeColor = Color.FromArgb(0, 200, 83),
+            Text = "PARENT OVERRIDE",
+            Font = Theme.Mono(12f, FontStyle.Bold),
+            ForeColor = Theme.Brand,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Padding = new Padding(Dpi.S(this, 16), Dpi.S(this, 6), Dpi.S(this, 16), Dpi.S(this, 6)),
             TextAlign = ContentAlignment.MiddleCenter,
             Anchor = AnchorStyles.None,
-            BackColor = Color.FromArgb(16, 18, 23),
+            BackColor = Theme.Bg,
             FlatStyle = FlatStyle.Flat,
             Cursor = Cursors.Hand
         };
@@ -160,9 +161,9 @@ public sealed class LockForm : Form
 
         var footer = new Label
         {
-            Text = "Managed by OpControl Parental",
-            Font = new Font("Segoe UI", 10f),
-            ForeColor = Color.FromArgb(111, 119, 132),
+            Text = "MANAGED BY OPCONTROL",
+            Font = Theme.Mono(9f),
+            ForeColor = Theme.Muted,
             AutoSize = true,
             Anchor = AnchorStyles.Left,
             BackColor = Color.Transparent

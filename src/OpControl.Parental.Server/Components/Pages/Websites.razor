@@ -197,7 +197,7 @@ else
                     <div class="toggle-row">
                         <div>
                             <div class="rule-title">@category.Name</div>
-                            <div class="muted tiny">v@category.Version</div>
+                            <div class="muted tiny">v@(category.Version)</div>
                         </div>
                         <button class="toggle @(category.Enabled ? "on" : "")" @onclick="() => ToggleCategoryAsync(category.Key, !category.Enabled)">
                             <span></span>

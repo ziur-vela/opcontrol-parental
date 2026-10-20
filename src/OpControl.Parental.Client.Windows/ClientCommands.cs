@@ -69,5 +69,5 @@ public static class ClientCommands
         return null;
     }
 
-    public static string ClientVersion => typeof(ClientCommands).Assembly.GetName().Version?.ToString(3) ?? "0.5.0";
+    public static string ClientVersion => typeof(ClientCommands).Assembly.GetName().Version?.ToString(3) ?? "0.7.3";
 }
