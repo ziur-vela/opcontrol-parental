@@ -11,6 +11,7 @@ public sealed class HelperContext : ApplicationContext
     private readonly UsageSampler _usage = new();
     private readonly System.Windows.Forms.Timer _timer;
     private readonly RemoteCaptureHost _remote;
+    private RemoteNoticeForm? _notice;
     private PinDialog? _pinDialog;
     private NotificationForm? _notification;
     private readonly DateTime _helperStartedUtc = DateTime.UtcNow;
@@ -38,6 +39,7 @@ public sealed class HelperContext : ApplicationContext
 
     private void Tick()
     {
+        UpdateRemoteNotice();
         CheckNotification();
         var state = HelperPaths.ReadState();
         _usage.Sample(state);
@@ -104,6 +106,19 @@ public sealed class HelperContext : ApplicationContext
         {
             _countdown.HideBanner();
             SetVisible(false, false, state.Reason);
+        }
+    }
+
+    private void UpdateRemoteNotice()
+    {
+        if (_remote.NoticeActive && !string.IsNullOrWhiteSpace(_remote.NoticeText))
+        {
+            _notice ??= new RemoteNoticeForm(_remote.NoticeText!);
+            _notice.ShowNotice(_remote.NoticeText!);
+        }
+        else
+        {
+            _notice?.HideNotice();
         }
     }
 
@@ -253,6 +268,7 @@ public sealed class HelperContext : ApplicationContext
         {
             _timer.Dispose();
             _remote.Dispose();
+            _notice?.Dispose();
             _hook.Dispose();
             _overlays.Dispose();
             _countdown.Dispose();

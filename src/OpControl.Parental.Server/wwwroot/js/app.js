@@ -31,6 +31,14 @@
         }
         return response.json();
     };
+    window.ocpSaveDeviceNotice = async function (deviceId, screenNotice, cameraNotice, hasCameraLightOrShutter) {
+        await window.ocpJsonPost('/api/devices/' + deviceId + '/notices', {
+            screenNotice: screenNotice,
+            cameraNotice: cameraNotice,
+            hasCameraLightOrShutter: hasCameraLightOrShutter
+        });
+        return true;
+    };
     window.ocpRequestUpdate = async function (button, deviceId) {
         var original = button.textContent;
         button.disabled = true;

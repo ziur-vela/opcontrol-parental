@@ -98,7 +98,7 @@ catch {
         _logger = logger;
     }
 
-    public static string Version => typeof(UpdateService).Assembly.GetName().Version?.ToString(3) ?? "0.9.0";
+    public static string Version => typeof(UpdateService).Assembly.GetName().Version?.ToString(3) ?? "0.9.1";
 
     public void RequestUpdate(UpdateInfoDto? info)
     {

@@ -594,6 +594,11 @@ namespace OpControl.Parental.Server.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("CameraNoticeEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<Guid>("ChildId")
                         .HasColumnType("uuid");
 
@@ -616,6 +621,9 @@ namespace OpControl.Parental.Server.Data.Migrations
 
                     b.Property<Guid>("FamilyId")
                         .HasColumnType("uuid");
+
+                    b.Property<bool>("HasCameraLightOrShutter")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsRevoked")
                         .HasColumnType("boolean");
@@ -643,6 +651,9 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.Property<string>("PreviousClientVersion")
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)");
+
+                    b.Property<bool>("ScreenNoticeEnabled")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("TimeZoneId")
                         .IsRequired()
@@ -1303,6 +1314,9 @@ namespace OpControl.Parental.Server.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)");
+
+                    b.Property<bool>("NoticeShown")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid?>("RequestedByParentId")
                         .HasColumnType("uuid");

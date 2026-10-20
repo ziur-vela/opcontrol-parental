@@ -82,6 +82,7 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
             e.Property(x => x.Platform).HasConversion<string>().HasMaxLength(16);
             e.Property(x => x.OsVersion).HasMaxLength(120);
             e.Property(x => x.TimeZoneId).HasMaxLength(80).IsRequired();
+            e.Property(x => x.CameraNoticeEnabled).HasDefaultValue(true);
             e.Property(x => x.CredentialHash).HasMaxLength(64);
             e.Property(x => x.ClientVersion).HasMaxLength(40);
             e.Property(x => x.PreviousClientVersion).HasMaxLength(40);

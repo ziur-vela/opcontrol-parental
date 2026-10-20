@@ -400,3 +400,7 @@ code { font-family: var(--mono); background: var(--panel-2); padding: 2px 5px; f
 .modal-backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(3, 10, 8, .82); display: flex; align-items: center; justify-content: center; padding: 18px; }
 .modal { max-width: 720px; width: 100%; max-height: 86vh; overflow: auto; }
 .consent-text { white-space: pre-wrap; font-family: var(--sans); font-size: 13px; line-height: 1.6; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); padding: 14px; margin: 0; }
+
+/* Per-device notice settings */
+.notice-settings { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.notice-settings .check { font-size: 12px; }

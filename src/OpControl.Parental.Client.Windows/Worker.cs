@@ -18,7 +18,7 @@ public sealed class Worker : BackgroundService
     private readonly RemoteRelayService _remote;
     private DeviceCredential? _credential;
     private ClientOptions _options = new();
-    private string ClientVersion => typeof(Worker).Assembly.GetName().Version?.ToString(3) ?? "0.9.0";
+    private string ClientVersion => typeof(Worker).Assembly.GetName().Version?.ToString(3) ?? "0.9.1";
 
     private readonly IServiceProvider _serviceProvider;
 

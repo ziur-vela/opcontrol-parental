@@ -10,6 +10,7 @@
 @inject DevicePresenceService Presence
 @inject DashboardEventBus Events
 @inject OpControl.Parental.Server.Services.ReleaseCatalog Releases
+@inject IJSRuntime JS
 
 <PageTitle>Devices · Parental OpControl</PageTitle>
 
@@ -21,6 +22,11 @@
     </div>
     <a class="btn btn-primary" href="/add-device">Add device</a>
 </div>
+
+@if (_error is not null)
+{
+    <div class="alert danger">@_error</div>
+}
 
 <div class="card">
     @if (_devices.Count == 0)
@@ -54,6 +60,14 @@
                                 }
                             </select>
                         </div>
+                        @if (_isOwner && _noticeSettings.TryGetValue(device.DeviceId, out var notice))
+                        {
+                            <div class="notice-settings">
+                                <label class="check"><input type="checkbox" checked="@notice.Screen" @onchange="e => SaveNoticeAsync(device.DeviceId, (bool)(e.Value ?? false), notice.Camera, notice.Light)" /> Show on-screen notice during screen view</label>
+                                <label class="check"><input type="checkbox" checked="@notice.Camera" @onchange="e => SaveNoticeAsync(device.DeviceId, notice.Screen, (bool)(e.Value ?? false), notice.Light)" /> Show on-screen notice during camera view</label>
+                                <label class="check"><input type="checkbox" checked="@notice.Light" @onchange="e => SaveNoticeAsync(device.DeviceId, notice.Screen, !(bool)(e.Value ?? false), (bool)(e.Value ?? false))" /> This device has a camera light or physical privacy shutter</label>
+                            </div>
+                        }
                         @if (_updateStatuses.TryGetValue(device.DeviceId, out var updateStatus) && !string.IsNullOrWhiteSpace(updateStatus))
                         {
                             <div class="muted tiny">Update: @updateStatus</div>
@@ -77,7 +91,11 @@
     private Guid _familyId;
     private List<DeviceStatusDto> _devices = [];
     private string? _currentRelease;
+    private string? _error;
     private Dictionary<Guid, string?> _updateStatuses = [];
+    private Dictionary<Guid, NoticeSettings> _noticeSettings = new();
+    private bool _isOwner;
+    private sealed record NoticeSettings(bool Screen, bool Camera, bool Light);
     private static readonly IReadOnlyList<TimeZoneInfo> TimeZones = TimeZoneInfo.GetSystemTimeZones();
 
     private async Task SetTimeZoneAsync(DeviceStatusDto device, string? zoneId)
@@ -108,6 +126,7 @@
         _currentRelease = Releases.CurrentInfo()?.Version;
         var auth = await AuthState.GetAuthenticationStateAsync();
         Guid.TryParse(auth.User.FindFirst("family_id")?.Value, out _familyId);
+        _isOwner = string.Equals(auth.User.FindFirst("family_role")?.Value, "Owner", StringComparison.OrdinalIgnoreCase);
         Events.DeviceStatusChanged += OnStatus;
         await RefreshAsync();
     }
@@ -127,6 +146,18 @@
             .ToDictionaryAsync(x => x.DeviceId, x => x.Account);
         _devices = devices.Select(d => new DeviceStatusDto(d.Id, d.ChildId, d.Name, d.Platform, Presence.IsOnline(d.Id), d.LastSeenUtc, d.TimeZoneId, accounts.GetValueOrDefault(d.Id), d.ClientVersion)).ToList();
         _updateStatuses = devices.ToDictionary(d => d.Id, d => d.UpdateStatus is null ? null : $"{d.UpdateStatus} {d.UpdateTargetVersion}".Trim());
+        _noticeSettings = devices.ToDictionary(d => d.Id, d => new NoticeSettings(d.ScreenNoticeEnabled, d.CameraNoticeEnabled, d.HasCameraLightOrShutter));
+    }
+
+    private async Task SaveNoticeAsync(Guid deviceId, bool screen, bool camera, bool light)
+    {
+        try
+        {
+            await JS.InvokeAsync<bool>("ocpSaveDeviceNotice", deviceId, screen, camera, light);
+            _error = null;
+            await RefreshAsync();
+        }
+        catch (Exception ex) { _error = ex.Message; }
     }
 
     public ValueTask DisposeAsync()

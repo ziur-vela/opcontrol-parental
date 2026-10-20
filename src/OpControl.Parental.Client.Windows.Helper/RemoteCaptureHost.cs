@@ -24,9 +24,14 @@ internal sealed class RemoteCaptureHost : IDisposable
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) { PropertyNameCaseInsensitive = true };
     private readonly string _monitored;
     private readonly CancellationTokenSource _cts = new();
+    private volatile bool _noticeActive;
+    private volatile string? _noticeText;
     private Task? _loop;
 
     public RemoteCaptureHost(string monitored) => _monitored = monitored;
+
+    public bool NoticeActive => _noticeActive;
+    public string? NoticeText => _noticeText;
 
     public void Start() => _loop ??= Task.Run(() => AcceptLoopAsync(_cts.Token));
 
@@ -73,6 +78,13 @@ internal sealed class RemoteCaptureHost : IDisposable
         string kind;
         try { kind = JsonSerializer.Deserialize<RemoteCommand>(line, JsonOptions)?.Kind ?? ""; }
         catch { return; }
+        var command = JsonSerializer.Deserialize<RemoteCommand>(line, JsonOptions);
+        kind = command?.Kind ?? "";
+        var showNotice = command?.ShowNotice == true;
+        _noticeText = kind == "camera" ? "Camera in use" : "A parent is viewing this screen";
+        _noticeActive = showNotice;
+        try
+        {
         if (kind == "camera")
         {
             HelperPaths.LogEvent("remote-camera-start");
@@ -84,6 +96,12 @@ internal sealed class RemoteCaptureHost : IDisposable
             HelperPaths.LogEvent("remote-screen-start");
             try { await ScreenLoopAsync(pipe, ct); }
             finally { HelperPaths.LogEvent("remote-screen-stop"); }
+        }
+        }
+        finally
+        {
+            _noticeActive = false;
+            _noticeText = null;
         }
     }
 
@@ -220,5 +238,5 @@ internal sealed class RemoteCaptureHost : IDisposable
         _cts.Dispose();
     }
 
-    private sealed record RemoteCommand(string Kind);
+    private sealed record RemoteCommand(string Kind, bool ShowNotice = false);
 }

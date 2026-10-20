@@ -977,6 +977,30 @@ app.MapGet("/ws/device-remote/{sessionId:guid}", async (HttpContext context, Gui
     await registry.AttachDeviceAsync(sessionId, socket, ct);
 }).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
 
+app.MapPost("/api/devices/{deviceId:guid}/notices", async (Guid deviceId, DeviceNoticeRequest request, HttpContext context, IAntiforgery antiforgery, FamilyScope family, ParentalDbContext db, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    var access = await family.AccessAsync(ct);
+    if (!access.IsOwner) throw new PermissionDeniedException("Only the family owner can change the on-screen notice settings.");
+    var device = await db.Devices.FirstOrDefaultAsync(d => d.Id == deviceId && d.FamilyId == family.FamilyId, ct);
+    if (device is null) return Results.NotFound(new { error = "Device not found in this family." });
+    device.ScreenNoticeEnabled = request.ScreenNotice;
+    device.CameraNoticeEnabled = request.CameraNotice;
+    device.HasCameraLightOrShutter = request.HasCameraLightOrShutter;
+    db.OverrideEvents.Add(new OverrideEvent
+    {
+        FamilyId = family.FamilyId,
+        ChildId = device.ChildId,
+        DeviceId = device.Id,
+        CreatedByParentId = access.ParentId,
+        Option = "remote-notice-changed",
+        Detail = $"{device.Name}: screen={(request.ScreenNotice ? "on" : "off")}, camera={(request.CameraNotice ? "on" : "off")}, camera light/shutter={(request.HasCameraLightOrShutter ? "yes" : "no")}",
+        CreatedUtc = DateTime.UtcNow
+    });
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(new { ok = true });
+}).RequireAuthorization();
+
 app.MapPost("/api/devices/{deviceId:guid}/timezone", async (Guid deviceId, DeviceTimeZoneRequest request, HttpContext context, IAntiforgery antiforgery, FamilyScope family, ParentalDbContext db, CancellationToken ct) =>
 {
     await antiforgery.ValidateRequestAsync(context);
@@ -1020,5 +1044,6 @@ public sealed record ServerInviteRequest(string? Email, string? FamilyName);
 public sealed record DeleteFamilyRequest(string? FamilyName, string? Confirmation);
 public sealed record ServerSmtpRequest(string? Host, int Port, bool UseSsl, string? Username, string? Password, string? FromAddress, string? FromName);
 public sealed record DeviceTimeZoneRequest(string TimeZoneId);
+public sealed record DeviceNoticeRequest(bool ScreenNotice, bool CameraNotice, bool HasCameraLightOrShutter);
 public sealed record RemoteSessionCreateRequest(Guid DeviceId, RemoteSessionKind Kind);
 public sealed record CameraConsentAcceptRequest(bool Accepted, int Version);

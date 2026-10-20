@@ -56,6 +56,9 @@ public class Device
     public DateTime? CredentialExpiresUtc { get; set; }
     public bool IsRevoked { get; set; }
     public string? ClientVersion { get; set; }
+    public bool ScreenNoticeEnabled { get; set; }
+    public bool CameraNoticeEnabled { get; set; } = true;
+    public bool HasCameraLightOrShutter { get; set; }
     public string? PreviousClientVersion { get; set; }
     public DateTime? UpdateRequestedUtc { get; set; }
     public string? UpdateTargetVersion { get; set; }
@@ -489,6 +492,7 @@ public class RemoteSession
     public DateTime? StartedUtc { get; set; }
     public DateTime? EndedUtc { get; set; }
     public string? EndReason { get; set; }
+    public bool NoticeShown { get; set; }
 }
 
 
