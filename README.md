@@ -1,21 +1,63 @@
 # Parental OpControl
 
-Self-hosted parental control for families: a web dashboard, a Windows client and installer, built as a ground-up rebuild of the ArktinMonitor parental control system. Job 1 established the
-foundation (identity, family/child/device model, enrollment, SignalR, dashboard, Windows service
-and user-session helper). Job 2 added the lock overlay, schedules, PIN overrides, bonus time and
-2FA. Job 3 adds website filtering through a local DNS resolver, visited-site history, curated
-categories, app inventory/review, real-time app blocking, per-item bonus unlocks and the
-Websites/Apps dashboard pages. Job 4 adds active screen-time and foreground-app tracking,
-website time (approximate), daily device and per-app limits, always-allowed apps, reports,
-the activity timeline and alerts with optional email delivery. Job 5A adds the WiX MSI and
-interactive setup bootstrapper, the Add device install-link/QR flow, automatic client updates with
-SHA-256 verification and rollback, helper authentication, usage sanity checks, unaccounted
-helper-down time and additional tamper alerts. Job 5B adds co-parent roles and permissions,
-multi-family tenancy with invite-only registration, server administrator tools, per-device time
-zones, alert controls (mute/quiet hours/digest/retry), swappable branding and build-version
-stamping. Job 7 adds parent-initiated remote screen and camera viewing over the existing
-WebSocket relay, with a per-parent one-time camera supervision acknowledgement and the
-`RemoteView` permission.
+Self-hosted parental control software for families. It has a web dashboard for parents, a Windows client for the child's computer and a guided installer. It is a ground-up rebuild of the ArktinMonitor parental control system, available in English and Spanish.
+
+![Family dashboard](assets/screenshots/dashboard.png)
+
+## Features
+
+### Lock and unlock
+- Lock or unlock a device instantly from the dashboard
+- Full-screen lock overlay on the child's computer that keeps working offline
+- Lock schedules per child, including overnight windows such as 21:00 to 07:00
+- Bonus time (+15 min, +30 min or a custom amount) with a countdown banner on the child's screen
+- Parent override PIN on the lock screen, with a menu to unlock until the next lock or give bonus time
+
+### Screen time
+- Active screen time per child across all of the child's devices, with idle time excluded
+- Daily device limit and per-app limits that end in the lock screen
+- Day, week and month usage charts, most used apps and an activity timeline
+
+### Websites and apps
+- Website filtering through a local DNS resolver on the device, with curated categories (adult, gambling)
+- Visited sites history with inline block and unblock
+- Installed app inventory, a review list for new apps and real-time app blocking
+- Always-allowed apps and sites, plus bonus unlocks for a single blocked site or app
+
+### Remote viewing
+- Parent-initiated screen and camera viewing, up to 10 minutes per session, no audio and no recording
+- Optional on-screen notice on the child's device, configurable per device
+- One-time camera supervision acknowledgement per parent, plus a separate RemoteView permission
+
+### Alerts and email
+- Alerts for tampering (service stopped, helper killed, DNS changes, clock changes, uninstall attempts) and limits
+- Email alerts and a daily digest, with mute per alert type and quiet hours
+- Bilingual HTML emails (invitations, alerts, digest) with a plain-text version
+
+### Families and parents
+- Multiple families on one server, with invite-only registration and no public sign-up
+- Co-parents with per-parent permissions; every action records which parent made it
+- Two-factor authentication (TOTP) for parent accounts
+- Server administrator tools and a build version shown in the dashboard
+
+### Windows client
+- MSI installer and setup wizard; parents add a device with a one-time install link or QR code
+- Automatic updates with SHA-256 verification and automatic rollback
+- SYSTEM service plus a user-session helper, with tamper detection and offline enforcement from a local cache
+
+### Interface
+- English and Spanish (es-MX), selected per parent, per family and per device
+- Dark and light themes, built for both desktop and phone screens
+
+## Screenshots
+
+| Screen time | Lock schedules |
+|---|---|
+| ![Screen time](assets/screenshots/screen-time.png) | ![Lock schedules](assets/screenshots/schedules.png) |
+
+![Remote screen viewing](assets/screenshots/remote.png)
+
+Screenshots use demo names.
 
 ## Solution
 
@@ -25,6 +67,8 @@ WebSocket relay, with a per-parent one-time camera supervision acknowledgement a
 | `src/OpControl.Parental.Contracts` | Platform-neutral DTOs and hub method names |
 | `src/OpControl.Parental.Client.Windows` | Windows service: enrollment, credential storage, SignalR, heartbeat, offline state cache |
 | `src/OpControl.Parental.Client.Windows.Helper` | User-session helper: full-screen lock window driven by the cached state |
+| `src/OpControl.Parental.Setup` | Setup bootstrapper (interactive install wizard that embeds the MSI) |
+| `src/OpControl.Parental.Localization` | Shared English and Spanish strings for the Windows client and setup |
 | `tests/OpControl.Parental.Tests` | Model, enrollment, credential and lock-evaluation tests |
 
 Target framework: **.NET 10 (LTS), SDK 10.0.402, runtime 10.0.13**.
