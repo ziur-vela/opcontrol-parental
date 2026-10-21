@@ -325,15 +325,30 @@ app.Use(async (context, next) =>
             context.Response.Redirect("/login");
             return;
         }
-        var state = await db.Users.AsNoTracking()
-            .Where(u => u.Id == parentId)
-            .Join(db.Families.AsNoTracking(), u => u.FamilyId, f => f.Id, (u, f) => new { f.Status })
+        var parent = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == parentId);
+        if (parent is null)
+        {
+            await context.SignOutAsync();
+            context.Response.Redirect("/login");
+            return;
+        }
+        var familyStatus = await db.Families.AsNoTracking()
+            .Where(f => f.Id == parent.FamilyId)
+            .Select(f => (FamilyStatus?)f.Status)
             .FirstOrDefaultAsync();
-        if (state is null || state.Status == FamilyStatus.Suspended)
+        if (familyStatus is null || familyStatus == FamilyStatus.Suspended)
         {
             await context.SignOutAsync();
             context.Response.Redirect("/login?error=suspended");
             return;
+        }
+
+        var refreshed = ParentClaimsRefresher.RefreshIfNeeded(context.User, parent);
+        if (refreshed is not null)
+        {
+            await context.SignInAsync(IdentityConstants.ApplicationScheme, refreshed,
+                new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30) });
+            context.User = refreshed;
         }
     }
     await next();
@@ -842,7 +857,7 @@ app.MapPost("/api/children/{childId:guid}/messages/read", async (Guid childId, H
 {
     await antiforgery.ValidateRequestAsync(context);
     await family.RequireAsync(ParentPermissions.Messaging, ct);
-    await messages.MarkParentReadAsync(family.FamilyId, childId, ct);
+    await messages.MarkParentReadAsync(family.FamilyId, childId, family.ParentId, ct);
     return Results.Ok(new { ok = true });
 }).RequireAuthorization();
 

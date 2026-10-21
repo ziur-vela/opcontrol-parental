@@ -18,6 +18,7 @@ public static class HelperPaths
     public static string LastVisitFile => Path.Combine(PublicDirectory, "last-visit.json");
     public static string MessageDirectory => Path.Combine(UserDirectory, "messages");
     public static string MessageThreadFile => Path.Combine(MessageDirectory, "thread.json");
+    public static string MessageOutboxFile => Path.Combine(MessageDirectory, "outbox.jsonl");
     public static string MessagePopupDirectory => Path.Combine(MessageDirectory, "popup");
 
     public static readonly JsonSerializerOptions JsonOptions = new()

@@ -74,6 +74,7 @@ public sealed class PinPipeServer : BackgroundService
 
     private async Task HandleAsync(NamedPipeServerStream pipe, CancellationToken ct)
     {
+        var requestType = "unknown";
         try
         {
             var clientPid = WindowsSession.GetPipeClientProcessId(pipe.SafePipeHandle);
@@ -103,6 +104,7 @@ public sealed class PinPipeServer : BackgroundService
                 var line = await reader.ReadLineAsync(ct);
                 if (string.IsNullOrWhiteSpace(line)) return;
                 var request = JsonSerializer.Deserialize<PinPipeRequest>(line, JsonOptions);
+                requestType = request?.Type ?? "unknown";
                 var response = request is null
                     ? new PinPipeResponse(false, Loc.T("Client.Pipe.InvalidRequest"))
                     : await DispatchAsync(request, ct);
@@ -111,7 +113,7 @@ public sealed class PinPipeServer : BackgroundService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "PIN pipe request failed");
+            _logger.LogWarning(ex, "PIN pipe request failed type={Type}", requestType);
         }
         finally
         {
@@ -132,9 +134,15 @@ public sealed class PinPipeServer : BackgroundService
             case "messages-thread":
                 return new PinPipeResponse(true, Messages: await _messages.GetThreadAsync(ct));
             case "message-send":
+                _logger.LogInformation("message-send received length={Length}", request.Text?.Length ?? 0);
                 if (string.IsNullOrWhiteSpace(request.Text))
+                {
+                    _logger.LogInformation("message-send rejected: empty");
                     return new PinPipeResponse(false, Loc.T("Client.Messages.Placeholder"));
+                }
                 var result = await _messages.SendAsync(request.Text, ct);
+                _logger.LogInformation("message-send result ok={Ok} queued={Queued} error={Error}",
+                    result.Ok, result.Queued, result.Error ?? "");
                 return new PinPipeResponse(result.Ok, result.Error, Message: result.Message, Queued: result.Queued);
             case "message-seen":
                 if (request.MessageId is not { } seenId) return new PinPipeResponse(false, Loc.T("Client.Pipe.InvalidRequest"));

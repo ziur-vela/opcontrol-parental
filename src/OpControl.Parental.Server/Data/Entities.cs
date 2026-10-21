@@ -524,6 +524,8 @@ public class ChildMessage
     public DateTime? AcknowledgedUtc { get; set; }
     public Guid? AcknowledgedByDeviceId { get; set; }
     public DateTime? ParentReadUtc { get; set; }
+    public Guid? ParentDeliveredByParentId { get; set; }
+    public Guid? ParentReadByParentId { get; set; }
     public DateTime? DeletedUtc { get; set; }
 }
 

@@ -604,6 +604,12 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.Property<Guid>("FamilyId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ParentDeliveredByParentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ParentReadByParentId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("ParentReadUtc")
                         .HasColumnType("timestamp with time zone");
 

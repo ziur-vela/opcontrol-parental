@@ -23,6 +23,8 @@ internal static class MessageDisplay
     public static string Sender(ChildMessageDto message) =>
         string.IsNullOrWhiteSpace(message.SenderName) ? Loc.T("Client.Messages.ParentFallback") : message.SenderName;
 
-    public static string Time(ChildMessageDto message) =>
-        message.CreatedUtc.ToLocalTime().ToString("d MMM, HH:mm", System.Globalization.CultureInfo.CurrentCulture);
+    public static string Time(ChildMessageDto message) => Time(message.CreatedUtc);
+
+    public static string Time(DateTime utc) =>
+        utc.ToLocalTime().ToString("d MMM, HH:mm", System.Globalization.CultureInfo.CurrentCulture);
 }

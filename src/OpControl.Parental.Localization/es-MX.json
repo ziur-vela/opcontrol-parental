@@ -108,5 +108,21 @@
  "Client.Messages.SendHint": "Pulsa Enviar para entregarlo a tus papás.",
  "Client.Messages.Loading": "Cargando…",
  "Client.Messages.Sending": "Enviando…",
- "Client.Messages.NoParents": "Tus papás verán este mensaje en el panel."
+ "Client.Messages.NoParents": "Tus papás verán este mensaje en el panel.",
+ "Client.Messages.Status.Pending": "Pendiente",
+ "Client.Messages.Status.Failed": "Falló",
+ "Client.Messages.Status.Sent": "Enviado",
+ "Client.Messages.Status.Delivered": "Entregado",
+ "Client.Messages.Status.Read": "Leído",
+ "Client.Messages.Status.Ack": "Entendido",
+ "Client.Messages.StatusTitle": "Estado",
+ "Client.Messages.StatusAt": "{0}: {1}",
+ "Client.Messages.By": " · por {0}",
+ "Client.Messages.Queued": "Guardado. Se enviará cuando este dispositivo esté en línea.",
+ "Client.Messages.SendFailedHint": "No se pudo enviar. Pulsa Reintentar.",
+ "Client.Messages.Retry": "REINTENTAR",
+ "Client.Messages.You": "Tú",
+ "Client.Messages.EmptyInput": "Escribe un mensaje primero.",
+ "Client.Messages.PendingHint": "Esperando para enviar.",
+ "Client.Messages.TapForTimes": "Toca para ver las horas exactas."
 }

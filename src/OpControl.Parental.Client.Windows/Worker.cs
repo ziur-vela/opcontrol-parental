@@ -20,7 +20,7 @@ public sealed class Worker : BackgroundService
     private readonly MessageSyncService _messages;
     private DeviceCredential? _credential;
     private ClientOptions _options = new();
-    private string ClientVersion => typeof(Worker).Assembly.GetName().Version?.ToString(3) ?? "0.12.0";
+    private string ClientVersion => typeof(Worker).Assembly.GetName().Version?.ToString(3) ?? "0.12.1";
 
     private readonly IServiceProvider _serviceProvider;
 
@@ -202,6 +202,7 @@ public sealed class Worker : BackgroundService
         connection.On<RemoteSessionRequest>(DeviceHubMethods.RemoteSessionRequested, request => _remote.Start(request));
         connection.On<RemoteSessionStopRequest>(DeviceHubMethods.RemoteSessionStopped, request => _remote.Stop(request.SessionId));
         connection.On<ChildMessageDto>(DeviceHubMethods.MessageReceived, message => _ = _messages.HandleIncomingAsync(message, CancellationToken.None));
+        connection.On<ChildMessageDto>(DeviceHubMethods.MessageStatusChanged, message => _messages.ApplyStatusUpdate(message));
 
         connection.On<DeviceStateDto>(DeviceHubMethods.DeviceStateChanged, state =>
         {

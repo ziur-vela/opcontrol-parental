@@ -24,7 +24,7 @@ public static class PinPipeClient
         await SendAsync(new PinPipeRequest("messages-thread"), ct);
 
     public static async Task<PinPipeResponse> SendMessageAsync(string text, CancellationToken ct) =>
-        await SendAsync(new PinPipeRequest("message-send", Text: text), ct);
+        await SendAsync(new PinPipeRequest("message-send", Text: text), ct, timeoutSeconds: 25);
 
     public static async Task<PinPipeResponse> MarkSeenAsync(Guid messageId, CancellationToken ct) =>
         await SendAsync(new PinPipeRequest("message-seen", MessageId: messageId), ct);
@@ -32,14 +32,14 @@ public static class PinPipeClient
     public static async Task<PinPipeResponse> MarkAcknowledgedAsync(Guid messageId, CancellationToken ct) =>
         await SendAsync(new PinPipeRequest("message-ack", MessageId: messageId), ct);
 
-    private static async Task<PinPipeResponse> SendAsync(PinPipeRequest request, CancellationToken ct)
+    private static async Task<PinPipeResponse> SendAsync(PinPipeRequest request, CancellationToken ct, int timeoutSeconds = 5)
     {
         try
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            timeout.CancelAfter(TimeSpan.FromSeconds(5));
+            timeout.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
             await using var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
-            await pipe.ConnectAsync(3000, timeout.Token);
+            await pipe.ConnectAsync(Math.Min(5000, timeoutSeconds * 1000), timeout.Token);
             using var reader = new StreamReader(pipe, leaveOpen: true);
             using var writer = new StreamWriter(pipe, leaveOpen: true) { AutoFlush = true };
             await writer.WriteLineAsync(JsonSerializer.Serialize(request, JsonOptions));
@@ -50,6 +50,7 @@ public static class PinPipeClient
         }
         catch (Exception ex)
         {
+            HelperPaths.LogEvent($"pipe-request-failed type={request.Type} {ex.GetType().Name}: {ex.Message}");
             return new PinPipeResponse(false, Loc.T("Client.Pipe.ServiceUnavailable", ex.Message));
         }
     }

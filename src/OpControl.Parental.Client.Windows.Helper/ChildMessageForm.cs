@@ -14,7 +14,7 @@ public sealed class ChildMessageForm : Form
         ShowInTaskbar = true;
         TopMost = aboveLock;
         MinimumSize = new Size(420, 460);
-        Size = new Size(560, 640);
+        Size = new Size(600, 680);
         BackColor = Theme.Bg;
         ForeColor = Theme.Text;
         Padding = new Padding(14);

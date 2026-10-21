@@ -3,7 +3,7 @@
     <LangVersion>latest</LangVersion>
     <Company>OpControl IT Solutions</Company>
     <Product>Parental OpControl</Product>
-    <Version>0.12.0</Version>
+    <Version>0.12.1</Version>
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>

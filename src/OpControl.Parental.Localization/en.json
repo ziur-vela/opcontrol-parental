@@ -108,5 +108,21 @@
  "Client.Messages.SendHint": "Press Send to deliver it to your parents.",
  "Client.Messages.Loading": "Loading…",
  "Client.Messages.Sending": "Sending…",
- "Client.Messages.NoParents": "Your parents will see this message in the dashboard."
+ "Client.Messages.NoParents": "Your parents will see this message in the dashboard.",
+ "Client.Messages.Status.Pending": "Pending",
+ "Client.Messages.Status.Failed": "Failed",
+ "Client.Messages.Status.Sent": "Sent",
+ "Client.Messages.Status.Delivered": "Delivered",
+ "Client.Messages.Status.Read": "Read",
+ "Client.Messages.Status.Ack": "Got it",
+ "Client.Messages.StatusTitle": "Status",
+ "Client.Messages.StatusAt": "{0}: {1}",
+ "Client.Messages.By": " · by {0}",
+ "Client.Messages.Queued": "Saved. It will send when this device is online.",
+ "Client.Messages.SendFailedHint": "Could not send. Tap Retry.",
+ "Client.Messages.Retry": "RETRY",
+ "Client.Messages.You": "You",
+ "Client.Messages.EmptyInput": "Write a message first.",
+ "Client.Messages.PendingHint": "Waiting to send.",
+ "Client.Messages.TapForTimes": "Tap for the exact times."
 }

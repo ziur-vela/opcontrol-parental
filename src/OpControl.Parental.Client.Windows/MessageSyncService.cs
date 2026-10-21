@@ -13,8 +13,6 @@ public sealed record SendMessageResult(bool Ok, bool Queued, string? Error, Chil
 public sealed class MessageSyncService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(ClientOptions.JsonOptions);
-    private sealed record OutboxMessage(string Text, DateTime CreatedUtc);
-
     private readonly IHttpClientFactory _httpFactory;
     private readonly CredentialStore _credentials;
     private readonly EnrollmentClient _enrollment;
@@ -70,6 +68,21 @@ public sealed class MessageSyncService
         return LoadThread();
     }
 
+    public void ApplyStatusUpdate(ChildMessageDto message)
+    {
+        if (message.Deleted)
+        {
+            lock (_gate)
+            {
+                var thread = LoadThread();
+                thread.RemoveAll(m => m.Id == message.Id);
+                SaveThread(thread);
+            }
+            return;
+        }
+        UpsertThread(message);
+    }
+
     public async Task MarkSeenAsync(Guid messageId, CancellationToken ct) =>
         await MarkAsync(messageId, "seen", ct);
 
@@ -85,7 +98,11 @@ public sealed class MessageSyncService
             return new SendMessageResult(false, false, Loc.T("Client.Messages.TooLong"), null);
 
         if (!TryReserveSend())
+        {
+            _logger.LogInformation("message-send reserve failed rate-limit remaining={Minutes}", RateLimitRemainingMinutes());
             return new SendMessageResult(false, false, Loc.T("Client.Messages.RateLimited", RateLimitRemainingMinutes()), null);
+        }
+        _logger.LogInformation("message-send reserve ok length={Length}", value.Length);
 
         try
         {
@@ -94,11 +111,19 @@ public sealed class MessageSyncService
             {
                 UpsertThread(message);
                 RecordSent();
+                _logger.LogInformation("message-send stored id={MessageId}", message.Id);
                 return new SendMessageResult(true, false, null, message);
             }
+            _logger.LogWarning("message-send POST returned no message; queueing offline");
         }
         catch (RateLimitedException ex)
         {
+            _logger.LogWarning("message-send rejected by rate limit: {Error}", ex.Message);
+            return new SendMessageResult(false, false, ex.Message, null);
+        }
+        catch (SendRejectedException ex)
+        {
+            _logger.LogWarning("message-send rejected by server: {Error}", ex.Message);
             return new SendMessageResult(false, false, ex.Message, null);
         }
         catch (Exception ex)
@@ -108,14 +133,16 @@ public sealed class MessageSyncService
 
         QueueOutbox(value);
         RecordSent();
+        _logger.LogInformation("message-send queued offline length={Length}", value.Length);
         return new SendMessageResult(false, true, Loc.T("Client.Messages.SendFailed"), null);
     }
 
     public async Task FlushOutboxAsync(CancellationToken ct)
     {
-        var pending = ReadOutbox();
+        var pending = MessageOutbox.Read(ClientPaths.MessageOutboxFile);
         if (pending.Count == 0) return;
-        var remaining = new List<OutboxMessage>();
+        _logger.LogInformation("message-outbox flush count={Count}", pending.Count);
+        var remaining = new List<MessageOutboxEntry>();
         for (var i = 0; i < pending.Count; i++)
         {
             ct.ThrowIfCancellationRequested();
@@ -125,8 +152,10 @@ public sealed class MessageSyncService
                 if (message is not null)
                 {
                     UpsertThread(message);
+                    _logger.LogInformation("message-outbox sent id={MessageId}", message.Id);
                     continue;
                 }
+                _logger.LogWarning("message-outbox send returned no message");
                 remaining.AddRange(pending.Skip(i));
                 break;
             }
@@ -141,7 +170,9 @@ public sealed class MessageSyncService
                 break;
             }
         }
-        WriteOutbox(remaining);
+        MessageOutbox.Rewrite(ClientPaths.MessageOutboxFile, remaining);
+        if (remaining.Count > 0)
+            _logger.LogInformation("message-outbox remaining={Count}", remaining.Count);
     }
 
     public async Task<int> UnreadThreadCountAsync(CancellationToken ct) =>
@@ -170,17 +201,23 @@ public sealed class MessageSyncService
             };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", credential.Credential);
             using var response = await client.SendAsync(request, ct);
+            var body = await response.Content.ReadAsStringAsync(ct);
+            _logger.LogInformation("message-send POST status={Status}", (int)response.StatusCode);
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
-            {
-                var body = await response.Content.ReadAsStringAsync(ct);
                 throw new RateLimitedException(Loc.T("Client.Messages.RateLimited", 10));
-            }
             if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                _logger.LogWarning("message-send POST unauthorized; credential may need refresh");
                 return null;
+            }
+            if ((int)response.StatusCode is >= 400 and < 500)
+                throw new SendRejectedException(ReadError(body) ?? Loc.T("Client.Messages.SendFailedHint"));
             if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("message-send POST failed with HTTP {Status}", (int)response.StatusCode);
                 return null;
-            var json = await response.Content.ReadAsStringAsync(ct);
-            return JsonSerializer.Deserialize<ChildMessageDto>(json, JsonOptions);
+            }
+            return JsonSerializer.Deserialize<ChildMessageDto>(body, JsonOptions);
         }
     }
 
@@ -380,56 +417,12 @@ public sealed class MessageSyncService
         {
             try
             {
-                Directory.CreateDirectory(ClientPaths.MessageDirectory);
-                var line = JsonSerializer.Serialize(new OutboxMessage(text, DateTime.UtcNow), JsonOptions);
-                File.AppendAllText(ClientPaths.MessageOutboxFile, line + Environment.NewLine);
+                MessageOutbox.Append(ClientPaths.MessageOutboxFile, new MessageOutboxEntry(text, DateTime.UtcNow));
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Could not queue outgoing child message");
             }
-        }
-    }
-
-    private List<OutboxMessage> ReadOutbox()
-    {
-        lock (_gate)
-        {
-            try
-            {
-                if (!File.Exists(ClientPaths.MessageOutboxFile)) return [];
-                var result = new List<OutboxMessage>();
-                foreach (var line in File.ReadAllLines(ClientPaths.MessageOutboxFile))
-                {
-                    if (string.IsNullOrWhiteSpace(line)) continue;
-                    try
-                    {
-                        var item = JsonSerializer.Deserialize<OutboxMessage>(line, JsonOptions);
-                        if (item is not null) result.Add(item);
-                    }
-                    catch { }
-                }
-                return result;
-            }
-            catch { return []; }
-        }
-    }
-
-    private void WriteOutbox(List<OutboxMessage> messages)
-    {
-        lock (_gate)
-        {
-            try
-            {
-                Directory.CreateDirectory(ClientPaths.MessageDirectory);
-                var temp = ClientPaths.MessageOutboxFile + ".tmp";
-                var content = new StringBuilder();
-                foreach (var message in messages)
-                    content.AppendLine(JsonSerializer.Serialize(message, JsonOptions));
-                File.WriteAllText(temp, content.ToString());
-                File.Move(temp, ClientPaths.MessageOutboxFile, overwrite: true);
-            }
-            catch { }
         }
     }
 
@@ -444,4 +437,5 @@ public sealed class MessageSyncService
     }
 
     private sealed class RateLimitedException(string message) : Exception(message);
+    private sealed class SendRejectedException(string message) : Exception(message);
 }

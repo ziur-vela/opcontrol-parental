@@ -190,13 +190,97 @@ public class MessageTests
         var message = await messages.SendFromChildAsync(seed.Device, new DeviceMessageRequest("hi parents"));
         Assert.Equal(1, await messages.UnreadCountAsync(seed.Family.Id));
 
-        await messages.MarkParentReadAsync(seed.Family.Id, seed.Child.Id);
+        await messages.MarkParentReadAsync(seed.Family.Id, seed.Child.Id, seed.Parent.Id);
         Assert.Equal(0, await messages.UnreadCountAsync(seed.Family.Id));
 
         await messages.DeleteAsync(seed.Family.Id, message.Id);
         Assert.Empty(await messages.GetThreadAsync(seed.Family.Id, seed.Child.Id));
         Assert.Empty(await messages.GetThreadForDeviceAsync(seed.Device));
         Assert.Equal(0, await messages.UnreadCountAsync(seed.Family.Id));
+    }
+
+    [Fact]
+    public async Task Parent_to_child_status_transitions_record_the_device_and_read()
+    {
+        await using var db = NewDb();
+        var seed = await SeedAsync(db, "StatusNames");
+        var messages = NewMessages(db);
+        var message = await messages.SendFromParentAsync(seed.Family.Id, seed.Parent.Id, seed.Child.Id,
+            new ParentMessageRequest("check this", null, false, true, null));
+
+        Assert.Equal(MessageUiStatus.Sent, MessageStatusRules.ForDisplay(message));
+        var delivered = await messages.MarkDeliveredAsync(seed.Device, message.Id);
+        Assert.Equal(MessageUiStatus.Delivered, MessageStatusRules.ForDisplay(delivered));
+        Assert.Equal(seed.Device.Name, delivered.DeliveredBy);
+
+        var seen = await messages.MarkSeenAsync(seed.SecondDevice, message.Id);
+        Assert.Equal(MessageUiStatus.Read, MessageStatusRules.ForDisplay(seen));
+        Assert.Equal(seed.SecondDevice.Name, seen.SeenBy);
+
+        var ack = await messages.MarkAcknowledgedAsync(seed.SecondDevice, message.Id);
+        Assert.Equal(MessageUiStatus.Read, MessageStatusRules.ForDisplay(ack));
+        Assert.Equal(seed.SecondDevice.Name, ack.AcknowledgedBy);
+    }
+
+    [Fact]
+    public async Task Child_to_parent_delivered_and_read_are_recorded_on_the_parent_dashboard()
+    {
+        await using var db = NewDb();
+        var seed = await SeedAsync(db, "ParentStatus");
+        var messages = NewMessages(db);
+        var message = await messages.SendFromChildAsync(seed.Device, new DeviceMessageRequest("hello parents"));
+        Assert.Equal(MessageUiStatus.Sent, MessageStatusRules.ForDisplay(message));
+
+        Assert.Equal(1, await messages.MarkParentDeliveredAsync(seed.Family.Id, seed.Child.Id, seed.Parent.Id));
+        var delivered = (await messages.GetThreadAsync(seed.Family.Id, seed.Child.Id)).Last();
+        Assert.Equal(MessageUiStatus.Delivered, MessageStatusRules.ForDisplay(delivered));
+        Assert.Equal(seed.Parent.DisplayName, delivered.ParentDeliveredBy);
+        Assert.Null(delivered.ParentReadUtc);
+
+        Assert.Equal(1, await messages.MarkParentReadAsync(seed.Family.Id, seed.Child.Id, seed.Parent.Id));
+        var read = (await messages.GetThreadAsync(seed.Family.Id, seed.Child.Id)).Last();
+        Assert.Equal(MessageUiStatus.Read, MessageStatusRules.ForDisplay(read));
+        Assert.Equal(seed.Parent.DisplayName, read.ParentReadBy);
+        Assert.NotNull(read.ParentReadUtc);
+        Assert.Equal(0, await messages.UnreadCountAsync(seed.Family.Id));
+    }
+
+    [Fact]
+    public void Outbox_round_trip_ignores_malformed_lines()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "job11-outbox-" + Guid.NewGuid() + ".jsonl");
+        try
+        {
+            MessageOutbox.Append(path, new MessageOutboxEntry("first", DateTime.UtcNow));
+            MessageOutbox.Append(path, new MessageOutboxEntry("second", DateTime.UtcNow.AddSeconds(1)));
+            File.AppendAllText(path, "not json" + Environment.NewLine);
+            var entries = MessageOutbox.Read(path);
+            Assert.Equal(2, entries.Count);
+            Assert.Equal("first", entries[0].Text);
+            Assert.Equal("second", entries[1].Text);
+
+            MessageOutbox.Rewrite(path, [entries[1]]);
+            var remaining = MessageOutbox.Read(path);
+            Assert.Single(remaining);
+            Assert.Equal("second", remaining[0].Text);
+
+            MessageOutbox.Rewrite(path, []);
+            Assert.Empty(MessageOutbox.Read(path));
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { }
+        }
+    }
+
+    [Fact]
+    public void Pending_and_failed_status_labels_are_distinct()
+    {
+        Assert.Equal("Messages.Status.Pending", MessageStatusRules.LabelKey(MessageUiStatus.Pending));
+        Assert.Equal("Messages.Status.Failed", MessageStatusRules.LabelKey(MessageUiStatus.Failed));
+        Assert.Equal("◷", MessageStatusRules.Icon(MessageUiStatus.Pending));
+        Assert.Equal("!", MessageStatusRules.Icon(MessageUiStatus.Failed));
+        Assert.NotEqual(MessageStatusRules.Icon(MessageUiStatus.Sent), MessageStatusRules.Icon(MessageUiStatus.Delivered));
     }
 
     [Fact]

@@ -49,6 +49,45 @@ public enum MessageStatus
     Acknowledged = 3
 }
 
+public enum MessageUiStatus
+{
+    Pending = 0,
+    Failed = 1,
+    Sent = 2,
+    Delivered = 3,
+    Read = 4
+}
+
+public static class MessageStatusRules
+{
+    public static MessageUiStatus ForDisplay(ChildMessageDto message) =>
+        message.Direction == MessageDirection.ParentToChild
+            ? message.AcknowledgedUtc is not null || message.SeenUtc is not null
+                ? MessageUiStatus.Read
+                : message.DeliveredUtc is not null ? MessageUiStatus.Delivered : MessageUiStatus.Sent
+            : message.ParentReadUtc is not null
+                ? MessageUiStatus.Read
+                : message.DeliveredUtc is not null ? MessageUiStatus.Delivered : MessageUiStatus.Sent;
+
+    public static string LabelKey(MessageUiStatus status) => status switch
+    {
+        MessageUiStatus.Pending => "Messages.Status.Pending",
+        MessageUiStatus.Failed => "Messages.Status.Failed",
+        MessageUiStatus.Delivered => "Messages.Status.Delivered",
+        MessageUiStatus.Read => "Messages.Status.Read",
+        _ => "Messages.Status.Sent"
+    };
+
+    public static string Icon(MessageUiStatus status) => status switch
+    {
+        MessageUiStatus.Pending => "◷",
+        MessageUiStatus.Failed => "!",
+        MessageUiStatus.Delivered => "✓✓",
+        MessageUiStatus.Read => "✓✓",
+        _ => "✓"
+    };
+}
+
 public enum InvitationKind
 {
     CoParent = 0,
@@ -395,6 +434,7 @@ public static class DeviceHubMethods
     public const string RemoteSessionRequested = "RemoteSessionRequested";
     public const string RemoteSessionStopped = "RemoteSessionStopped";
     public const string MessageReceived = "MessageReceived";
+    public const string MessageStatusChanged = "MessageStatusChanged";
 }
 
 public sealed record ChildMessageDto(
@@ -414,7 +454,12 @@ public sealed record ChildMessageDto(
     DateTime? AcknowledgedUtc,
     DateTime? ParentReadUtc,
     MessageStatus Status,
-    bool Deleted);
+    bool Deleted,
+    string? DeliveredBy = null,
+    string? SeenBy = null,
+    string? AcknowledgedBy = null,
+    string? ParentDeliveredBy = null,
+    string? ParentReadBy = null);
 
 public sealed record ParentMessageRequest(
     string Text,

@@ -447,6 +447,26 @@ code { font-family: var(--mono); background: var(--panel-2); padding: 2px 5px; f
 .msg-status { color: var(--muted); letter-spacing: 0; }
 .msg-status.seen { color: var(--value); }
 .msg-status.ack { color: var(--brand); }
+.msg-status.pending { color: var(--muted); }
+.msg-status.failed { color: var(--danger); }
+.msg-status.sent { color: var(--muted); }
+.msg-status.delivered { color: var(--muted); }
+.msg-status.read { color: var(--value); }
+.msg-status-details { position: relative; display: inline-flex; }
+.msg-status-details > summary { list-style: none; cursor: pointer; }
+.msg-status-details > summary::-webkit-details-marker { display: none; }
+.msg-status-pop {
+    position: absolute; top: 1.5em; z-index: 30; min-width: 270px; max-width: min(340px, calc(100vw - 48px));
+    background: var(--panel); border: 1px solid var(--line-2); padding: 8px 10px;
+    font-family: var(--mono); font-size: 10px; line-height: 1.6; color: var(--text);
+    white-space: nowrap; text-transform: none; letter-spacing: 0;
+}
+.msg-row.from-parent .msg-status-pop { left: auto; right: 0; }
+.msg-row.from-child .msg-status-pop { left: 0; right: auto; }
+.msg-status-details[open] .msg-status-pop { display: block; }
+@media (max-width: 620px) {
+    .msg-status-pop { min-width: 230px; white-space: normal; }
+}
 .ack-pill { color: var(--brand); border-color: color-mix(in srgb, var(--brand) 55%, var(--line)); }
 .msg-text { font-family: var(--sans); font-size: 14px; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; }
 .msg-delete { margin-left: auto; border: 0; background: transparent; color: var(--faint); cursor: pointer; font-size: 15px; line-height: 1; padding: 0 2px; }

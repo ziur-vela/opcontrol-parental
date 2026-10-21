@@ -70,15 +70,22 @@ else
                             <div class="msg-head">
                                 <span class="msg-sender">@message.SenderName</span>
                                 <span class="msg-time">@FormatTime(message.CreatedUtc)</span>
-                                @if (!fromChild)
+                                <details class="msg-status-details">
+                                    <summary class="msg-status @StatusClass(MessageStatusRules.ForDisplay(message))"
+                                             title="@string.Join(" · ", StatusDetails(message))"
+                                             aria-label="@StatusLabel(MessageStatusRules.ForDisplay(message))">
+                                        @MessageStatusRules.Icon(MessageStatusRules.ForDisplay(message))
+                                    </summary>
+                                    <div class="msg-status-pop">
+                                        @foreach (var line in StatusDetails(message))
+                                        {
+                                            <div>@line</div>
+                                        }
+                                    </div>
+                                </details>
+                                @if (message.Direction == MessageDirection.ParentToChild && message.AcknowledgedUtc is not null)
                                 {
-                                    <span class="msg-status @StatusClass(message.Status)" title="@StatusLabel(message.Status)" aria-label="@StatusLabel(message.Status)">
-                                        @StatusTick(message.Status)
-                                    </span>
-                                    @if (message.Status == MessageStatus.Acknowledged)
-                                    {
-                                        <span class="state-pill ack-pill">@L["Messages.Status.Ack"]</span>
-                                    }
+                                    <span class="state-pill ack-pill">@L["Messages.Status.Ack"]</span>
                                 }
                                 <button type="button" class="msg-delete" title="@L["Messages.Delete"]"
                                         aria-label="@L["Messages.Delete"]" @onclick="() => DeleteAsync(message)">
@@ -125,6 +132,7 @@ else
     public Guid? DeviceQuery { get; set; }
 
     private Guid _familyId;
+    private Guid _parentId;
     private Guid _childId;
     private string _childName = "";
     private string _timeZoneId = "UTC";
@@ -140,6 +148,7 @@ else
     {
         var auth = await AuthState.GetAuthenticationStateAsync();
         Guid.TryParse(auth.User.FindFirst("family_id")?.Value, out _familyId);
+        Guid.TryParse(auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out _parentId);
         Events.MessageChanged += OnMessageChanged;
         await LoadChildrenAsync();
         if (ChildQuery is { } requested && _children.Any(c => c.Id == requested))
@@ -195,8 +204,19 @@ else
                 .ToListAsync();
             if (_targetDeviceId is not null && !_devices.Any(d => d.Id.ToString() == _targetDeviceId))
                 _targetDeviceId = null;
+            _suppressMessageEvents = true;
+            try
+            {
+                var delivered = await messages.MarkParentDeliveredAsync(_familyId, _childId, _parentId);
+                if (delivered > 0)
+                    await Task.Delay(600);
+                await messages.MarkParentReadAsync(_familyId, _childId, _parentId);
+            }
+            finally
+            {
+                _suppressMessageEvents = false;
+            }
             _messages = await messages.GetThreadAsync(_familyId, _childId, 300);
-            await messages.MarkParentReadAsync(_familyId, _childId);
             _error = null;
         }
         catch (Exception ex)
@@ -209,29 +229,44 @@ else
         TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeZoneResolver.Resolve(_timeZoneId))
             .ToString("d MMM, HH:mm", System.Globalization.CultureInfo.CurrentCulture);
 
-    private string StatusLabel(MessageStatus status) => status switch
+    private bool _suppressMessageEvents;
+
+    private string StatusLabel(MessageUiStatus status) => L[MessageStatusRules.LabelKey(status)];
+
+    private static string StatusClass(MessageUiStatus status) => status switch
     {
-        MessageStatus.Delivered => L["Messages.Status.Delivered"],
-        MessageStatus.Seen => L["Messages.Status.Seen"],
-        MessageStatus.Acknowledged => L["Messages.Status.Ack"],
-        _ => L["Messages.Status.Sent"]
+        MessageUiStatus.Pending => "pending",
+        MessageUiStatus.Failed => "failed",
+        MessageUiStatus.Delivered => "delivered",
+        MessageUiStatus.Read => "read",
+        _ => "sent"
     };
 
-    private static string StatusTick(MessageStatus status) => status switch
+    private IEnumerable<string> StatusDetails(ChildMessageDto message)
     {
-        MessageStatus.Sent => "✓",
-        MessageStatus.Delivered => "✓✓",
-        MessageStatus.Seen => "✓✓",
-        MessageStatus.Acknowledged => "✓✓",
-        _ => "✓"
-    };
-
-    private static string StatusClass(MessageStatus status) => status switch
-    {
-        MessageStatus.Seen => "seen",
-        MessageStatus.Acknowledged => "ack",
-        _ => ""
-    };
+        yield return L["Messages.StatusAt", L["Messages.Status.Sent"], FormatTime(message.CreatedUtc)];
+        if (message.Direction == MessageDirection.ParentToChild)
+        {
+            if (message.DeliveredUtc is { } delivered)
+                yield return L["Messages.StatusAt", L["Messages.Status.Delivered"], FormatTime(delivered)]
+                    + (string.IsNullOrWhiteSpace(message.DeliveredBy) ? "" : L["Messages.By", message.DeliveredBy]);
+            if (message.SeenUtc is { } seen)
+                yield return L["Messages.StatusAt", L["Messages.Status.Read"], FormatTime(seen)]
+                    + (string.IsNullOrWhiteSpace(message.SeenBy) ? "" : L["Messages.By", message.SeenBy]);
+            if (message.AcknowledgedUtc is { } ack)
+                yield return L["Messages.StatusAt", L["Messages.Status.Ack"], FormatTime(ack)]
+                    + (string.IsNullOrWhiteSpace(message.AcknowledgedBy) ? "" : L["Messages.By", message.AcknowledgedBy]);
+        }
+        else
+        {
+            if (message.DeliveredUtc is { } delivered)
+                yield return L["Messages.StatusAt", L["Messages.Status.Delivered"], FormatTime(delivered)]
+                    + (string.IsNullOrWhiteSpace(message.ParentDeliveredBy) ? "" : L["Messages.By", message.ParentDeliveredBy]);
+            if (message.ParentReadUtc is { } read)
+                yield return L["Messages.StatusAt", L["Messages.Status.Read"], FormatTime(read)]
+                    + (string.IsNullOrWhiteSpace(message.ParentReadBy) ? "" : L["Messages.By", message.ParentReadBy]);
+        }
+    }
 
     private async Task DeleteAsync(ChildMessageDto message)
     {
@@ -239,7 +274,9 @@ else
         {
             using var scope = Scopes.CreateScope();
             var messages = scope.ServiceProvider.GetRequiredService<MessageService>();
-            await messages.DeleteAsync(_familyId, message.Id);
+            _suppressMessageEvents = true;
+            try { await messages.DeleteAsync(_familyId, message.Id); }
+            finally { _suppressMessageEvents = false; }
             await ReloadAsync();
         }
         catch (Exception ex) { _error = ex.Message; }
@@ -253,7 +290,9 @@ else
             if (!confirmed) return;
             using var scope = Scopes.CreateScope();
             var messages = scope.ServiceProvider.GetRequiredService<MessageService>();
-            await messages.ClearThreadAsync(_familyId, _childId);
+            _suppressMessageEvents = true;
+            try { await messages.ClearThreadAsync(_familyId, _childId); }
+            finally { _suppressMessageEvents = false; }
             await ReloadAsync();
         }
         catch (Exception ex) { _error = ex.Message; }
@@ -261,7 +300,7 @@ else
 
     private void OnMessageChanged(ChildMessageDto message)
     {
-        if (message.ChildId != _childId) return;
+        if (_suppressMessageEvents || message.ChildId != _childId) return;
         _ = InvokeAsync(async () =>
         {
             await ReloadAsync();

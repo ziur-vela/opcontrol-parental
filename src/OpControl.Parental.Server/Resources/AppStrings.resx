@@ -921,4 +921,9 @@ If you were not expecting this, ignore this email.</value></data>
   <data name="Messages.Target" xml:space="preserve"><value>Send to</value></data>
   <data name="Email.Error.MessageFailed" xml:space="preserve"><value>The message email could not be sent.</value></data>
   <data name="Messages.TooLong" xml:space="preserve"><value>Messages can be up to 500 characters.</value></data>
+  <data name="Messages.Status.Pending" xml:space="preserve"><value>Pending</value></data>
+  <data name="Messages.Status.Failed" xml:space="preserve"><value>Failed</value></data>
+  <data name="Messages.Status.Read" xml:space="preserve"><value>Read</value></data>
+  <data name="Messages.StatusAt" xml:space="preserve"><value>{0}: {1}</value></data>
+  <data name="Messages.By" xml:space="preserve"><value> · by {0}</value></data>
 </root>
