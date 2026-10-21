@@ -32,6 +32,12 @@ else
     @if (_notice is not null) { <div class="alert ok">@_notice</div> }
 
     <section class="card">
+        <h2>@L["ServerAdmin.EmailPreview"]</h2>
+        <p class="muted small">@L["ServerAdmin.EmailPreviewHelp"]</p>
+        <a class="btn btn-primary" href="/server-admin/email-preview">@L["ServerAdmin.OpenEmailPreview"]</a>
+    </section>
+
+    <section class="card">
         <h2>@L["ServerAdmin.InviteFamily"]</h2>
         <p class="muted small">@L["ServerAdmin.InviteHelp"]</p>
         <div class="grid-2">
@@ -124,7 +130,10 @@ else
             <label class="field"><span>@L["ServerAdmin.FromName"]</span><input @bind="_smtpFromName" /></label>
         </div>
         <label class="check"><input type="checkbox" @bind="_smtpSsl" /> @L["Settings.UseSsl"]</label>
-        <div class="button-row"><button class="btn btn-primary" @onclick="SaveSmtpAsync">@L["ServerAdmin.SaveSmtp"]</button></div>
+        <div class="button-row">
+            <button class="btn btn-primary" @onclick="SaveSmtpAsync">@L["ServerAdmin.SaveSmtp"]</button>
+            <button class="btn btn-ghost" @onclick="SendTestEmailAsync">@L["Settings.SendTestEmail"]</button>
+        </div>
     </section>
 
     <section class="card">
@@ -298,6 +307,31 @@ else
             _smtpPassword = null;
             _notice = L["ServerAdmin.SmtpSaved"];
             await RefreshAsync();
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private async Task SendTestEmailAsync()
+    {
+        _error = null;
+        _notice = null;
+        try
+        {
+            var auth = await AuthState.GetAuthenticationStateAsync();
+            var address = auth.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+            if (string.IsNullOrWhiteSpace(address))
+            {
+                _error = L["EmailPreview.NoEmail"].Value;
+                return;
+            }
+            using var scope = Scopes.CreateScope();
+            var renderer = scope.ServiceProvider.GetRequiredService<EmailRenderer>();
+            var rendered = renderer.RenderTest(System.Globalization.CultureInfo.CurrentUICulture.Name,
+                auth.User.FindFirst(ParentalClaims.DisplayName)?.Value, DateTime.UtcNow);
+            var (sent, error) = await scope.ServiceProvider.GetRequiredService<EmailSender>()
+                .SendAsync(new EmailOutgoing(address, rendered));
+            if (sent) _notice = L["Settings.TestEmailSent", address].Value;
+            else _error = L["EmailPreview.Failed", error ?? ""].Value;
         }
         catch (Exception ex) { _error = ex.Message; }
     }

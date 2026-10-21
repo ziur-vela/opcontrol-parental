@@ -121,6 +121,8 @@ builder.Services.AddLocalization();
 builder.Services.Configure<BrandOptions>(builder.Configuration.GetSection("Branding"));
 builder.Services.AddSingleton<BuildInfo>();
 builder.Services.AddSingleton<LoginThrottle>();
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
+builder.Services.AddScoped<EmailRenderer>();
 builder.Services.AddScoped<EmailSender>();
 builder.Services.AddScoped<LanguageService>();
 builder.Services.AddScoped<InvitationService>();
@@ -204,6 +206,75 @@ if (!string.IsNullOrWhiteSpace(adminEmailArgument))
     user.IsServerAdmin = true;
     await db.SaveChangesAsync();
     Console.WriteLine($"Server administrator granted to {user.Email} ({user.DisplayName}).");
+    return;
+}
+
+var dumpEmailPreviews = GetArgument(args, "--dump-email-previews");
+if (!string.IsNullOrWhiteSpace(dumpEmailPreviews))
+{
+    using var scope = app.Services.CreateScope();
+    var renderer = scope.ServiceProvider.GetRequiredService<EmailRenderer>();
+    var directory = Path.GetFullPath(dumpEmailPreviews);
+    Directory.CreateDirectory(directory);
+    foreach (var kind in Enum.GetValues<EmailTemplateKind>())
+    {
+        foreach (var language in new[] { AppCulture.English, AppCulture.Spanish })
+        {
+            var rendered = renderer.RenderSample(kind, language);
+            var prefix = $"{kind}-{language}";
+            await File.WriteAllTextAsync(Path.Combine(directory, prefix + ".subject.txt"), rendered.Subject);
+            await File.WriteAllTextAsync(Path.Combine(directory, prefix + ".html"), rendered.HtmlBody);
+            await File.WriteAllTextAsync(Path.Combine(directory, prefix + ".txt"), rendered.TextBody);
+        }
+    }
+    Console.WriteLine($"Wrote email previews to {directory}.");
+    return;
+}
+
+var sendEmailPreview = GetArgument(args, "--send-email-preview");
+if (!string.IsNullOrWhiteSpace(sendEmailPreview))
+{
+    using var scope = app.Services.CreateScope();
+    var renderer = scope.ServiceProvider.GetRequiredService<EmailRenderer>();
+    var sender = scope.ServiceProvider.GetRequiredService<EmailSender>();
+    var failed = 0;
+    foreach (var kind in Enum.GetValues<EmailTemplateKind>())
+    {
+        foreach (var language in new[] { AppCulture.English, AppCulture.Spanish })
+        {
+            var rendered = renderer.RenderSample(kind, language);
+            var (sent, error) = await sender.SendAsync(new EmailOutgoing(sendEmailPreview, rendered));
+            Console.WriteLine($"{kind} {language}: {(sent ? "sent" : "failed")}{(error is null ? "" : " - " + error)}");
+            if (!sent) failed++;
+        }
+    }
+    Environment.ExitCode = failed == 0 ? 0 : 1;
+    return;
+}
+
+var sendInviteTest = GetArgument(args, "--send-invite-test");
+if (!string.IsNullOrWhiteSpace(sendInviteTest))
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
+    var invites = scope.ServiceProvider.GetRequiredService<InvitationService>();
+    var adminId = await db.Users.Where(u => u.IsServerAdmin).Select(u => u.Id).FirstOrDefaultAsync();
+    if (adminId == Guid.Empty)
+    {
+        Console.Error.WriteLine("No server administrator account was found.");
+        Environment.ExitCode = 1;
+        return;
+    }
+    try
+    {
+        var created = await invites.CreateFamilyInviteAsync(adminId, sendInviteTest, null);
+        Console.WriteLine($"Invitation {created.Id}: emailSent={created.EmailSent}; link={created.Link}");
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine(ex.Message);
+        Environment.ExitCode = 1;
+    }
     return;
 }
 

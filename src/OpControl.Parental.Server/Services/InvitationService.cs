@@ -13,27 +13,26 @@ public sealed class InvitationService
     private readonly ParentalDbContext _db;
     private readonly UserManager<ParentUser> _users;
     private readonly EmailSender _email;
+    private readonly EmailRenderer _renderer;
     private readonly IDataProtector _protector;
-    private readonly IConfiguration _configuration;
     private readonly ILogger<InvitationService> _logger;
 
     public InvitationService(
         ParentalDbContext db,
         UserManager<ParentUser> users,
         EmailSender email,
+        EmailRenderer renderer,
         IDataProtectionProvider protection,
-        IConfiguration configuration,
         ILogger<InvitationService> logger)
     {
         _db = db;
         _users = users;
         _email = email;
+        _renderer = renderer;
         _protector = protection.CreateProtector("OpControl.Parental.Invitations");
-        _configuration = configuration;
         _logger = logger;
     }
 
-    private string BaseUrl => (_configuration["PublicBaseUrl"] ?? "").TrimEnd('/');
     private static string NormalizeEmail(string? email) => (email ?? "").Trim().ToLowerInvariant();
 
     public async Task<InvitationCreatedDto> CreateCoParentAsync(Guid familyId, Guid inviterId, string? email, ParentPermissions permissions, CancellationToken ct = default)
@@ -79,7 +78,7 @@ public sealed class InvitationService
         _db.Invitations.Add(invitation);
         await _db.SaveChangesAsync(ct);
 
-        var link = $"{BaseUrl}/invite/{token}";
+        var link = _renderer.Link($"/invite/{token}");
         var emailSent = false;
         if (email is not null)
             emailSent = await SendInviteEmailAsync(invitation, link, ct);
@@ -230,7 +229,7 @@ public sealed class InvitationService
         if (invitation.Email is null) return (false, AppText.Get("Invite.NoEmail"), false);
 
         var token = _protector.Unprotect(invitation.TokenProtected);
-        var sent = await SendInviteEmailAsync(invitation, $"{BaseUrl}/invite/{token}", ct);
+        var sent = await SendInviteEmailAsync(invitation, _renderer.Link($"/invite/{token}"), ct);
         return (true, sent ? null : AppText.Get("Invite.EmailFailed"), sent);
     }
 
@@ -238,14 +237,14 @@ public sealed class InvitationService
     {
         if (string.IsNullOrWhiteSpace(invitation.Email)) return false;
         var language = await InvitationLanguageAsync(invitation, ct);
-        using var scope = CultureScope.Use(language);
-        var subject = AppText.Get(invitation.Kind == InvitationKind.NewFamily
-            ? "Email.InviteNewFamilySubject"
-            : "Email.InviteCoParentSubject", language);
-        var body = invitation.Kind == InvitationKind.NewFamily
-            ? AppText.Get("Email.InviteNewFamilyBody", language, link)
-            : AppText.Get("Email.InviteCoParentBody", language, invitation.FamilyName ?? "", link);
-        var (sent, _) = await _email.SendAsync(invitation.Email, subject, body, ct);
+        var inviterName = await _db.Users.AsNoTracking()
+            .Where(u => u.Id == invitation.CreatedByParentId)
+            .Select(u => u.DisplayName)
+            .FirstOrDefaultAsync(ct);
+        var rendered = invitation.Kind == InvitationKind.NewFamily
+            ? _renderer.RenderInviteNewFamily(language, link, invitation.FamilyName, inviterName, invitation.ExpiresUtc)
+            : _renderer.RenderInviteCoParent(language, link, invitation.FamilyName ?? "", inviterName, invitation.ExpiresUtc);
+        var (sent, _) = await _email.SendAsync(new EmailOutgoing(invitation.Email, rendered), null, ct);
         return sent;
     }
 
@@ -257,11 +256,16 @@ public sealed class InvitationService
                 .Where(f => f.Id == familyId).Select(f => f.DefaultLanguage).FirstOrDefaultAsync(ct);
             if (!string.IsNullOrWhiteSpace(familyLanguage)) return AppCulture.Normalize(familyLanguage);
         }
-        var inviterLanguage = await _db.Users.AsNoTracking()
+        var inviter = await _db.Users.AsNoTracking()
             .Where(u => u.Id == invitation.CreatedByParentId)
-            .Join(_db.Families.AsNoTracking(), u => u.FamilyId, f => f.Id, (u, f) => f.DefaultLanguage)
+            .Select(u => new { u.PreferredLanguage, u.FamilyId })
             .FirstOrDefaultAsync(ct);
-        return AppCulture.Normalize(inviterLanguage);
+        if (!string.IsNullOrWhiteSpace(inviter?.PreferredLanguage))
+            return AppCulture.Normalize(inviter.PreferredLanguage);
+        var inviterFamilyLanguage = inviter is null
+            ? null
+            : await _db.Families.AsNoTracking().Where(f => f.Id == inviter.FamilyId).Select(f => f.DefaultLanguage).FirstOrDefaultAsync(ct);
+        return AppCulture.Normalize(inviterFamilyLanguage);
     }
 
     private static InvitationDto ToDto(Invitation i) =>

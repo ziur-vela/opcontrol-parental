@@ -1,0 +1,73 @@
+@page "/server-admin/email-preview"
+@model EmailPreviewModel
+@using OpControl.Parental.Server.Services
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = L["EmailPreview.PageTitle"];
+}
+
+<div class="page-head">
+    <div>
+        <div class="eyebrow">@L["EmailPreview.Eyebrow"]</div>
+        <h1>@L["EmailPreview.Title"]</h1>
+        <p class="muted">@L["EmailPreview.Subtitle"]</p>
+    </div>
+</div>
+
+@if (Model.Notice is not null)
+{
+    <div class="alert ok">@Model.Notice</div>
+}
+@if (Model.Error is not null)
+{
+    <div class="alert danger">@Model.Error</div>
+}
+
+@foreach (var preview in Model.Previews)
+{
+    <section class="card">
+        <div class="card-title-row">
+            <h2>@L[preview.TitleKey]</h2>
+        </div>
+        <div class="button-row">
+            <form method="post" asp-page-handler="Send">
+                <input type="hidden" name="kind" value="@preview.Kind" />
+                <button type="submit" name="language" value="en" class="btn btn-primary">@L["EmailPreview.SendTest"] · @L["Language.English"]</button>
+                <button type="submit" name="language" value="es-MX" class="btn btn-ghost">@L["EmailPreview.SendTest"] · @L["Language.Spanish"]</button>
+            </form>
+        </div>
+
+        <div class="grid-2">
+            <div>
+                <h3>@L["Language.English"]</h3>
+                <p class="muted tiny">@L["EmailPreview.Subject"]: @preview.EnglishSubject</p>
+                <div class="grid-2">
+                    <div>
+                        <div class="eyebrow">@L["EmailPreview.Html"]</div>
+                        <iframe title="@L["EmailPreview.Html"]" srcdoc="@preview.EnglishHtml" loading="lazy"
+                                style="width:100%;height:640px;border:1px solid var(--line);background:#fff;"></iframe>
+                    </div>
+                    <div>
+                        <div class="eyebrow">@L["EmailPreview.PlainText"]</div>
+                        <pre style="margin:0;max-height:640px;overflow:auto;white-space:pre-wrap;font-family:var(--mono);font-size:12px;line-height:1.5;background:var(--panel-2);border:1px solid var(--line);padding:12px;">@preview.EnglishText</pre>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <h3>@L["Language.Spanish"]</h3>
+                <p class="muted tiny">@L["EmailPreview.Subject"]: @preview.SpanishSubject</p>
+                <div class="grid-2">
+                    <div>
+                        <div class="eyebrow">@L["EmailPreview.Html"]</div>
+                        <iframe title="@L["EmailPreview.Html"]" srcdoc="@preview.SpanishHtml" loading="lazy"
+                                style="width:100%;height:640px;border:1px solid var(--line);background:#fff;"></iframe>
+                    </div>
+                    <div>
+                        <div class="eyebrow">@L["EmailPreview.PlainText"]</div>
+                        <pre style="margin:0;max-height:640px;overflow:auto;white-space:pre-wrap;font-family:var(--mono);font-size:12px;line-height:1.5;background:var(--panel-2);border:1px solid var(--line);padding:12px;">@preview.SpanishText</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+}

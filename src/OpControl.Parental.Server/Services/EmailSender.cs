@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Mail;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using OpControl.Parental.Server.Data;
 
 namespace OpControl.Parental.Server.Services;
@@ -10,12 +11,19 @@ public sealed class EmailSender
 {
     private readonly ParentalDbContext _db;
     private readonly IDataProtector _protector;
+    private readonly IDataProtector _familyProtector;
+    private readonly EmailRenderer _renderer;
+    private readonly EmailOptions _options;
     private readonly ILogger<EmailSender> _logger;
 
-    public EmailSender(ParentalDbContext db, IDataProtectionProvider protection, ILogger<EmailSender> logger)
+    public EmailSender(ParentalDbContext db, IDataProtectionProvider protection, EmailRenderer renderer,
+        IOptions<EmailOptions> options, ILogger<EmailSender> logger)
     {
         _db = db;
         _protector = protection.CreateProtector("OpControl.Parental.ServerSmtp");
+        _familyProtector = protection.CreateProtector("OpControl.Parental.Smtp");
+        _renderer = renderer;
+        _options = options.Value;
         _logger = logger;
     }
 
@@ -54,39 +62,67 @@ public sealed class EmailSender
         catch { return null; }
     }
 
-    public async Task<(bool Sent, string? Error)> SendAsync(string to, string subject, string body, CancellationToken ct = default)
+    public async Task<(bool Sent, string? Error)> SendAsync(EmailOutgoing outgoing, FamilySettings? family = null, CancellationToken ct = default)
     {
-        var settings = await EnsureSettingsAsync(ct);
-        if (!IsConfigured(settings))
-            return (false, "Server SMTP is not configured.");
+        var (valid, validationError) = _renderer.ValidateConfiguration();
+        if (!valid)
+        {
+            _logger.LogError("Email to {Recipient} was not sent: {Error}", outgoing.To, validationError);
+            return (false, validationError);
+        }
+
+        var server = await EnsureSettingsAsync(ct);
+        var useServer = IsConfigured(server);
+        string? host = useServer ? server.SmtpHost : family?.SmtpHost;
+        var port = useServer ? server.SmtpPort : family?.SmtpPort ?? 587;
+        var useSsl = useServer ? server.SmtpUseSsl : family?.SmtpUseSsl ?? true;
+        var username = useServer ? server.SmtpUsername : family?.SmtpUsername;
+        var fromAddress = string.IsNullOrWhiteSpace(_options.FromAddress)
+            ? server.FromAddress ?? family?.FromAddress
+            : _options.FromAddress.Trim();
+        var fromName = string.IsNullOrWhiteSpace(_options.FromName)
+            ? server.FromName ?? "Parental OpControl"
+            : _options.FromName.Trim();
+
+        if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(fromAddress))
+        {
+            var error = AppText.Get("Email.SmtpNotConfigured");
+            _logger.LogWarning("Email to {Recipient} was not sent: {Error}", outgoing.To, error);
+            return (false, error);
+        }
 
         try
         {
-            using var message = new MailMessage
+            using var message = EmailMime.Compose(outgoing, fromAddress, fromName, _options.ReplyTo, _renderer.Staging);
+            using var client = new SmtpClient(host, port)
             {
-                From = new MailAddress(settings.FromAddress!, settings.FromName ?? "Parental OpControl"),
-                Subject = subject,
-                Body = body,
-                IsBodyHtml = false
-            };
-            message.To.Add(to);
-
-            using var client = new SmtpClient(settings.SmtpHost, settings.SmtpPort)
-            {
-                EnableSsl = settings.SmtpUseSsl,
+                EnableSsl = useSsl,
                 DeliveryMethod = SmtpDeliveryMethod.Network,
                 UseDefaultCredentials = false
             };
-            if (!string.IsNullOrWhiteSpace(settings.SmtpUsername))
-                client.Credentials = new NetworkCredential(settings.SmtpUsername, UnprotectPassword(settings) ?? "");
+            if (!string.IsNullOrWhiteSpace(username))
+            {
+                var password = useServer ? UnprotectPassword(server) : UnprotectFamilyPassword(family);
+                client.Credentials = new NetworkCredential(username, password ?? "");
+            }
             await client.SendMailAsync(message, ct);
-            _logger.LogInformation("Email sent to {Recipient}: {Subject}", to, subject);
+            _logger.LogInformation("Email sent to {Recipient}: {Subject}", outgoing.To, message.Subject);
             return (true, null);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Email to {Recipient} failed", to);
+            _logger.LogWarning(ex, "Email to {Recipient} failed", outgoing.To);
             return (false, ex.Message);
         }
+    }
+
+    private string? UnprotectFamilyPassword(FamilySettings? family)
+    {
+        if (family is null || string.IsNullOrWhiteSpace(family.SmtpPasswordProtected)) return null;
+        try
+        {
+            return _familyProtector.Unprotect(family.SmtpPasswordProtected);
+        }
+        catch { return null; }
     }
 }

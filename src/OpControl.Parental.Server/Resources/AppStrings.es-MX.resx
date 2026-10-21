@@ -806,4 +806,68 @@ Si no esperabas este correo, ignóralo.</value></data>
   <data name="Websites.Subtitle" xml:space="preserve"><value>Sitios visitados, reglas de bloqueo y categorías seleccionadas. Solo dominio y hora.</value></data>
   <data name="Websites.Unblock" xml:space="preserve"><value>Desbloquear</value></data>
   <data name="Websites.VisitedSites" xml:space="preserve"><value>Sitios visitados</value></data>
+  <data name="Email.Alert.Button" xml:space="preserve"><value>Ver alertas</value></data>
+  <data name="Email.Alert.Detail.Child" xml:space="preserve"><value>Hijo</value></data>
+  <data name="Email.Alert.Detail.Device" xml:space="preserve"><value>Dispositivo</value></data>
+  <data name="Email.Alert.Detail.Time" xml:space="preserve"><value>Hora</value></data>
+  <data name="Email.Alert.Preheader" xml:space="preserve"><value>Nueva actividad de {0}.</value></data>
+  <data name="Email.Alert.Subject" xml:space="preserve"><value>Alerta de Parental OpControl: {0}</value></data>
+  <data name="Email.Digest.Button" xml:space="preserve"><value>Abrir panel</value></data>
+  <data name="Email.Digest.CountMany" xml:space="preserve"><value>{0} alertas</value></data>
+  <data name="Email.Digest.CountOne" xml:space="preserve"><value>1 alerta</value></data>
+  <data name="Email.Digest.Headline" xml:space="preserve"><value>Resumen diario de tu familia</value></data>
+  <data name="Email.Digest.MoreItems" xml:space="preserve"><value>+{0} más</value></data>
+  <data name="Email.Digest.Preheader" xml:space="preserve"><value>{0} alertas para tu familia hoy.</value></data>
+  <data name="Email.Error.BaseUrlMissing" xml:space="preserve"><value>PublicBaseUrl no está configurado.</value></data>
+  <data name="Email.Error.BaseUrlNotHttps" xml:space="preserve"><value>PublicBaseUrl debe usar HTTPS en producción.</value></data>
+  <data name="Email.Error.LogoNotHttps" xml:space="preserve"><value>La URL del logotipo del correo debe usar HTTPS.</value></data>
+  <data name="Email.Invite.Detail.Expires" xml:space="preserve"><value>Vence</value></data>
+  <data name="Email.Invite.Detail.Family" xml:space="preserve"><value>Familia</value></data>
+  <data name="Email.Invite.Detail.InvitedBy" xml:space="preserve"><value>Invitado por</value></data>
+  <data name="Email.InviteCoParent.Button" xml:space="preserve"><value>Aceptar invitación</value></data>
+  <data name="Email.InviteCoParent.Headline" xml:space="preserve"><value>Únete a {0} en Parental OpControl</value></data>
+  <data name="Email.InviteCoParent.Intro" xml:space="preserve"><value>Te invitaron a unirte a {0} como otro padre o madre en Parental OpControl. Acepta la invitación con el botón de abajo.</value></data>
+  <data name="Email.InviteCoParent.Preheader" xml:space="preserve"><value>Te invitaron a unirte a {0} como otro padre o madre en Parental OpControl.</value></data>
+  <data name="Email.InviteNewFamily.Button" xml:space="preserve"><value>Crear mi familia</value></data>
+  <data name="Email.InviteNewFamily.Headline" xml:space="preserve"><value>Crea tu familia en Parental OpControl</value></data>
+  <data name="Email.InviteNewFamily.Intro" xml:space="preserve"><value>Te invitaron a crear una familia en Parental OpControl. Usa el botón de abajo para elegir el nombre de tu familia, tu cuenta y el nombre de tu hijo.</value></data>
+  <data name="Email.InviteNewFamily.Preheader" xml:space="preserve"><value>Te invitaron a crear tu familia en Parental OpControl.</value></data>
+  <data name="Email.Layout.ButtonFallback" xml:space="preserve"><value>Si el botón no funciona, copia y pega este enlace en tu navegador:</value></data>
+  <data name="Email.Layout.Details" xml:space="preserve"><value>Detalles</value></data>
+  <data name="Email.Layout.Footer.Alert" xml:space="preserve"><value>Recibiste este correo porque los correos de alertas están activados para tu familia.</value></data>
+  <data name="Email.Layout.Footer.CreatedBy" xml:space="preserve"><value>Creado por OpControl</value></data>
+  <data name="Email.Layout.Footer.Invite" xml:space="preserve"><value>Recibiste este correo porque alguien te invitó a Parental OpControl.</value></data>
+  <data name="Email.Layout.Footer.Settings" xml:space="preserve"><value>Configuración de alertas</value></data>
+  <data name="Email.Layout.Footer.Staging" xml:space="preserve"><value>Servidor de pruebas: este correo se envió desde un entorno de prueba.</value></data>
+  <data name="Email.Layout.Footer.Test" xml:space="preserve"><value>Recibiste este correo porque se solicitó una prueba desde tu servidor de Parental OpControl.</value></data>
+  <data name="Email.Test.Button" xml:space="preserve"><value>Abrir panel</value></data>
+  <data name="Email.Test.Detail.Language" xml:space="preserve"><value>Idioma</value></data>
+  <data name="Email.Test.Detail.Recipient" xml:space="preserve"><value>Destinatario</value></data>
+  <data name="Email.Test.Detail.Server" xml:space="preserve"><value>Servidor</value></data>
+  <data name="Email.Test.Detail.Time" xml:space="preserve"><value>Hora</value></data>
+  <data name="Email.Test.Headline" xml:space="preserve"><value>El correo funciona</value></data>
+  <data name="Email.Test.Intro" xml:space="preserve"><value>Este es un correo de prueba de tu servidor de Parental OpControl. Si puedes leer esto, el envío de correo está configurado correctamente.</value></data>
+  <data name="Email.Test.Preheader" xml:space="preserve"><value>Un correo de prueba de tu servidor de Parental OpControl.</value></data>
+  <data name="Email.TestSubject" xml:space="preserve"><value>Correo de prueba de Parental OpControl</value></data>
+  <data name="EmailPreview.Alert" xml:space="preserve"><value>Alerta instantánea</value></data>
+  <data name="EmailPreview.Digest" xml:space="preserve"><value>Resumen diario</value></data>
+  <data name="EmailPreview.Eyebrow" xml:space="preserve"><value>Administración del servidor</value></data>
+  <data name="EmailPreview.Failed" xml:space="preserve"><value>No se pudo enviar la prueba: {0}</value></data>
+  <data name="EmailPreview.Html" xml:space="preserve"><value>HTML</value></data>
+  <data name="EmailPreview.InviteCoParent" xml:space="preserve"><value>Invitación para otro padre o madre</value></data>
+  <data name="EmailPreview.InviteNewFamily" xml:space="preserve"><value>Invitación para familia nueva</value></data>
+  <data name="EmailPreview.NoEmail" xml:space="preserve"><value>Tu cuenta no tiene dirección de correo.</value></data>
+  <data name="EmailPreview.PageTitle" xml:space="preserve"><value>Vista previa de correos</value></data>
+  <data name="EmailPreview.PlainText" xml:space="preserve"><value>Texto sin formato</value></data>
+  <data name="EmailPreview.SendTest" xml:space="preserve"><value>Enviarme una prueba</value></data>
+  <data name="EmailPreview.Sent" xml:space="preserve"><value>Prueba enviada a {0}.</value></data>
+  <data name="EmailPreview.Subject" xml:space="preserve"><value>Asunto</value></data>
+  <data name="EmailPreview.Subtitle" xml:space="preserve"><value>Revisa cada correo en inglés y español y luego envíate una prueba.</value></data>
+  <data name="EmailPreview.Test" xml:space="preserve"><value>Correo de prueba</value></data>
+  <data name="EmailPreview.Title" xml:space="preserve"><value>Plantillas de correo</value></data>
+  <data name="ServerAdmin.EmailPreview" xml:space="preserve"><value>Vista previa de correos</value></data>
+  <data name="ServerAdmin.EmailPreviewHelp" xml:space="preserve"><value>Revisa cada plantilla de correo en inglés y español y envíate una prueba.</value></data>
+  <data name="ServerAdmin.OpenEmailPreview" xml:space="preserve"><value>Abrir vista previa de correos</value></data>
+  <data name="Settings.SendTestEmail" xml:space="preserve"><value>Enviar correo de prueba</value></data>
+  <data name="Settings.TestEmailSent" xml:space="preserve"><value>Correo de prueba enviado a {0}.</value></data>
 </root>

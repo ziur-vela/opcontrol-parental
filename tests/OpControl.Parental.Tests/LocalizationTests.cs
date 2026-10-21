@@ -116,7 +116,7 @@ public class LocalizationTests
             "App.Name", "Language.English", "Language.Spanish", "Layout.Spanish",
             "Settings.NoticeDefault", "Downloads.Sha", "Common.Minutes", "Common.HourShort",
             "Common.MinuteShort", "Placeholder.InstallCode", "Setup.Title",
-            "Alert.Update.Detail", "Install.ForChild2", "Alert.Tampering.DeviceKind", "Alert.Tampering.DeviceKindMore", "Apps.FilterWin32", "Common.No", "Home.Bonus15", "Home.Bonus30", "Layout.English"
+            "Alert.Update.Detail", "Install.ForChild2", "Alert.Tampering.DeviceKind", "Alert.Tampering.DeviceKindMore", "Apps.FilterWin32", "Common.No", "Home.Bonus15", "Home.Bonus30", "Layout.English", "EmailPreview.Html"
         };
         Assert.All(identical, key => Assert.Contains(key, allowed));
     }

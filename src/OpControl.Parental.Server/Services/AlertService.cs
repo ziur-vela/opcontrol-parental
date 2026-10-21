@@ -1,5 +1,3 @@
-using System.Net;
-using System.Net.Mail;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using OpControl.Parental.Contracts;
@@ -13,15 +11,17 @@ public sealed class AlertService
     private readonly DashboardEventBus _events;
     private readonly IDataProtector _protector;
     private readonly EmailSender _serverEmail;
+    private readonly EmailRenderer _renderer;
     private readonly ILogger<AlertService> _logger;
 
     public AlertService(ParentalDbContext db, DashboardEventBus events, IDataProtectionProvider protection,
-        EmailSender serverEmail, ILogger<AlertService> logger)
+        EmailSender serverEmail, EmailRenderer renderer, ILogger<AlertService> logger)
     {
         _db = db;
         _events = events;
         _protector = protection.CreateProtector("OpControl.Parental.Smtp");
         _serverEmail = serverEmail;
+        _renderer = renderer;
         _logger = logger;
     }
 
@@ -252,22 +252,48 @@ public sealed class AlertService
     private async Task<int> SendDigestAsync(Guid familyId, FamilySettings settings, List<Alert> alerts, List<string> recipients,
         Func<string?, string> languageFor, CancellationToken ct)
     {
+        var childIds = alerts.Select(a => a.ChildId).Distinct().ToList();
+        var children = await _db.Children.AsNoTracking()
+            .Where(c => childIds.Contains(c.Id))
+            .Select(c => new { c.Id, c.Name })
+            .ToDictionaryAsync(c => c.Id, c => c.Name, ct);
+        var deviceIds = alerts.Where(a => a.DeviceId is not null).Select(a => a.DeviceId!.Value).Distinct().ToList();
+        var devices = await _db.Devices.AsNoTracking()
+            .Where(d => deviceIds.Contains(d.Id))
+            .Select(d => new { d.Id, d.Name, d.TimeZoneId })
+            .ToDictionaryAsync(d => d.Id, ct);
+        var familyTimeZone = await _db.Devices.AsNoTracking()
+            .Where(d => d.FamilyId == familyId)
+            .Select(d => d.TimeZoneId)
+            .FirstOrDefaultAsync(ct);
+
         string? lastError = null;
         foreach (var recipient in recipients)
         {
             var language = languageFor(recipient);
-            using var scope = CultureScope.Use(language);
-            var body = new System.Text.StringBuilder();
-            var count = alerts.Count;
-            body.AppendLine(AppText.Get(count == 1 ? "Email.DigestIntroOne" : "Email.DigestIntroMany", language, count.ToString(AppCulture.Culture(language))));
-            body.AppendLine();
-            foreach (var alert in alerts)
+            var groups = new List<EmailDigestChild>();
+            foreach (var group in alerts.GroupBy(a => a.ChildId).OrderBy(g => children.GetValueOrDefault(g.Key, "")))
             {
-                var (title, detail) = AlertText.Render(alert, language);
-                body.AppendLine($"• {title}\n  {detail}\n  {alert.CreatedUtc.ToString("u", AppCulture.Culture(language))}");
+                var items = group.OrderByDescending(a => a.CreatedUtc)
+                    .Select(a =>
+                    {
+                        var (title, detail) = AlertText.Render(a, language);
+                        var timeZone = a.DeviceId is { } deviceId && devices.TryGetValue(deviceId, out var device)
+                            ? device.TimeZoneId
+                            : familyTimeZone;
+                        return new EmailAlertEntry(title, detail, FormatTime(a.CreatedUtc, timeZone, language));
+                    })
+                    .ToList();
+                var top = items.Take(5).ToList();
+                groups.Add(new EmailDigestChild(
+                    children.GetValueOrDefault(group.Key, ""),
+                    items.Count,
+                    top,
+                    Math.Max(0, items.Count - top.Count)));
             }
-            var subject = AppText.Get("Email.DigestSubject", language);
-            var (ok, error) = await SendMessageAsync(settings, [recipient], subject, body.ToString(), ct);
+
+            var rendered = _renderer.RenderDigest(language, alerts.Count, groups, _renderer.AlertsUrl);
+            var (ok, error) = await SendMessageAsync(settings, rendered, [recipient], ct);
             if (!ok) lastError = error;
         }
         if (lastError is not null)
@@ -287,15 +313,31 @@ public sealed class AlertService
     private async Task<(bool Ok, string? Error)> SendOneAsync(FamilySettings settings, Alert alert, List<string> recipients,
         Func<string?, string> languageFor, CancellationToken ct)
     {
+        var childName = await _db.Children.AsNoTracking()
+            .Where(c => c.Id == alert.ChildId)
+            .Select(c => c.Name)
+            .FirstOrDefaultAsync(ct) ?? "";
+        string? deviceName = null;
+        string? deviceTimeZone = null;
+        if (alert.DeviceId is { } deviceId)
+        {
+            var device = await _db.Devices.AsNoTracking()
+                .Where(d => d.Id == deviceId)
+                .Select(d => new { d.Name, d.TimeZoneId })
+                .FirstOrDefaultAsync(ct);
+            deviceName = device?.Name;
+            deviceTimeZone = device?.TimeZoneId;
+        }
+
         string? lastError = null;
         var sentAny = false;
         foreach (var recipient in recipients)
         {
             var language = languageFor(recipient);
-            using var scope = CultureScope.Use(language);
             var (title, detail) = AlertText.Render(alert, language);
-            var body = $"{title}\n\n{detail}\n\n{alert.CreatedUtc.ToString("u", AppCulture.Culture(language))}";
-            var (ok, error) = await SendMessageAsync(settings, [recipient], title, body, ct);
+            var time = FormatTime(alert.CreatedUtc, deviceTimeZone, language);
+            var rendered = _renderer.RenderAlert(language, title, detail, childName, deviceName, time, _renderer.AlertsUrl);
+            var (ok, error) = await SendMessageAsync(settings, rendered, [recipient], ct);
             if (ok) sentAny = true; else lastError = error;
         }
         return (sentAny || lastError is null, lastError);
@@ -304,50 +346,22 @@ public sealed class AlertService
     private async Task<string> FamilyLanguageAsync(Guid familyId, CancellationToken ct) =>
         AppCulture.Normalize(await _db.Families.AsNoTracking().Where(f => f.Id == familyId).Select(f => f.DefaultLanguage).FirstOrDefaultAsync(ct));
 
-    private async Task<(bool Ok, string? Error)> SendMessageAsync(FamilySettings settings, List<string> recipients, string subject, string body, CancellationToken ct)
+    private async Task<(bool Ok, string? Error)> SendMessageAsync(FamilySettings settings, RenderedEmail rendered, List<string> recipients, CancellationToken ct)
     {
-        var server = await _serverEmail.EnsureSettingsAsync(ct);
-        if (_serverEmail.IsConfigured(server))
+        string? lastError = null;
+        foreach (var recipient in recipients)
         {
-            string? lastError = null;
-            foreach (var recipient in recipients)
-            {
-                var (sent, error) = await _serverEmail.SendAsync(recipient, subject, body, ct);
-                if (!sent) lastError = error;
-            }
-            return (lastError is null, lastError);
+            var (sent, error) = await _serverEmail.SendAsync(new EmailOutgoing(recipient, rendered), settings, ct);
+            if (!sent) lastError = error;
         }
+        return (lastError is null, lastError);
+    }
 
-        if (string.IsNullOrWhiteSpace(settings.SmtpHost) || string.IsNullOrWhiteSpace(settings.FromAddress))
-            return (false, "No SMTP server is configured.");
-
-        try
-        {
-            using var message = new MailMessage
-            {
-                From = new MailAddress(settings.FromAddress),
-                Subject = subject,
-                Body = body,
-                IsBodyHtml = false
-            };
-            foreach (var address in recipients) message.To.Add(address);
-            using var client = new SmtpClient(settings.SmtpHost, settings.SmtpPort)
-            {
-                EnableSsl = settings.SmtpUseSsl,
-                DeliveryMethod = SmtpDeliveryMethod.Network,
-                UseDefaultCredentials = false
-            };
-            var password = UnprotectPassword(settings);
-            if (!string.IsNullOrWhiteSpace(settings.SmtpUsername))
-                client.Credentials = new NetworkCredential(settings.SmtpUsername, password ?? "");
-            await client.SendMailAsync(message, ct);
-            return (true, null);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Alert email could not be sent");
-            return (false, ex.Message);
-        }
+    private static string FormatTime(DateTime utc, string? timeZoneId, string language)
+    {
+        var timeZone = TimeZoneResolver.Resolve(timeZoneId);
+        var local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), timeZone);
+        return local.ToString("d MMM yyyy, HH:mm", AppCulture.Culture(language));
     }
 
     private static void ScheduleRetry(Alert alert, string? error)

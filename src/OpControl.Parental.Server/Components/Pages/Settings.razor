@@ -31,6 +31,10 @@
 {
     <div class="alert ok">@L["Settings.Saved"]</div>
 }
+@if (_testNotice is not null)
+{
+    <div class="alert ok">@_testNotice</div>
+}
 
 <div class="card">
     <div class="card-title-row">
@@ -81,6 +85,7 @@
         {
             <div class="button-row">
                 <button class="btn btn-primary" disabled="@_busy" @onclick="SaveAsync">@L["Settings.SaveEmail"]</button>
+                <button class="btn btn-ghost" disabled="@_busy" @onclick="SendTestEmailAsync">@L["Settings.SendTestEmail"]</button>
             </div>
         }
     </div>
@@ -169,6 +174,7 @@
     private bool _isOwner;
     private bool _busy;
     private bool _saved;
+    private string? _testNotice;
     private string? _error;
     private bool _enabled;
     private bool _useSsl = true;
@@ -241,6 +247,34 @@
         _quietEnd = FormatMinutes(preference.QuietEndMinutes);
         _digest = preference.DailyDigest;
         _digestHour = preference.DigestHour;
+    }
+
+    private async Task SendTestEmailAsync()
+    {
+        _busy = true;
+        _error = null;
+        _saved = false;
+        _testNotice = null;
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var auth = await AuthState.GetAuthenticationStateAsync();
+            var address = auth.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+            if (string.IsNullOrWhiteSpace(address))
+            {
+                _error = L["EmailPreview.NoEmail"].Value;
+                return;
+            }
+            var renderer = scope.ServiceProvider.GetRequiredService<EmailRenderer>();
+            var settings = await scope.ServiceProvider.GetRequiredService<AlertService>().EnsureSettingsAsync(_familyId);
+            var rendered = renderer.RenderTest(_myLanguage, auth.User.FindFirst("display_name")?.Value, DateTime.UtcNow);
+            var (sent, error) = await scope.ServiceProvider.GetRequiredService<EmailSender>()
+                .SendAsync(new EmailOutgoing(address, rendered), settings);
+            if (sent) _testNotice = L["Settings.TestEmailSent", address].Value;
+            else _error = L["EmailPreview.Failed", error ?? ""].Value;
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _busy = false; }
     }
 
     private async Task SaveNoticeTextAsync()

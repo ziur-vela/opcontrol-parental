@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using OpControl.Parental.Contracts;
 using OpControl.Parental.Server.Data;
 using OpControl.Parental.Server.Services;
@@ -15,9 +17,19 @@ public class FoundationTests
             .UseInMemoryDatabase("test-" + Guid.NewGuid())
             .Options);
 
+    private static EmailRenderer NewRenderer() =>
+        new(Options.Create(new EmailOptions { LogoUrl = "https://parental.opcontrol.net/brand/email-lockup.png" }),
+            new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["PublicBaseUrl"] = "https://parental.opcontrol.net"
+            }).Build());
+
+    private static EmailSender NewEmailSender(ParentalDbContext db, IDataProtectionProvider protection) =>
+        new(db, protection, NewRenderer(), Options.Create(new EmailOptions()), NullLogger<EmailSender>.Instance);
+
     private static AlertService NewAlerts(ParentalDbContext db) =>
         new(db, new DashboardEventBus(), new EphemeralDataProtectionProvider(),
-            new EmailSender(db, new EphemeralDataProtectionProvider(), NullLogger<EmailSender>.Instance),
+            NewEmailSender(db, new EphemeralDataProtectionProvider()), NewRenderer(),
             NullLogger<AlertService>.Instance);
 
     private static ScheduleDto Schedule(int mask, int start, int end, string name = "Bedtime", bool enabled = true) =>
@@ -242,9 +254,19 @@ public class Job3PolicyTests
 
 public class Job4UsageTests
 {
+    private static EmailRenderer NewRenderer() =>
+        new(Options.Create(new EmailOptions { LogoUrl = "https://parental.opcontrol.net/brand/email-lockup.png" }),
+            new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["PublicBaseUrl"] = "https://parental.opcontrol.net"
+            }).Build());
+
+    private static EmailSender NewEmailSender(ParentalDbContext db, IDataProtectionProvider protection) =>
+        new(db, protection, NewRenderer(), Options.Create(new EmailOptions()), NullLogger<EmailSender>.Instance);
+
     private static AlertService NewAlerts(ParentalDbContext db) =>
         new(db, new DashboardEventBus(), new EphemeralDataProtectionProvider(),
-            new EmailSender(db, new EphemeralDataProtectionProvider(), NullLogger<EmailSender>.Instance),
+            NewEmailSender(db, new EphemeralDataProtectionProvider()), NewRenderer(),
             NullLogger<AlertService>.Instance);
 
     private static DeviceStateDto State(
@@ -406,8 +428,15 @@ public class Job5BMultiTenantTests
 
     private static AlertService Alerts(ParentalDbContext db) =>
         new(db, new DashboardEventBus(), new EphemeralDataProtectionProvider(),
-            new EmailSender(db, new EphemeralDataProtectionProvider(), NullLogger<EmailSender>.Instance),
-            NullLogger<AlertService>.Instance);
+            new EmailSender(db, new EphemeralDataProtectionProvider(), NewRenderer(), Options.Create(new EmailOptions()), NullLogger<EmailSender>.Instance),
+            NewRenderer(), NullLogger<AlertService>.Instance);
+
+    private static EmailRenderer NewRenderer() =>
+        new(Options.Create(new EmailOptions { LogoUrl = "https://parental.opcontrol.net/brand/email-lockup.png" }),
+            new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["PublicBaseUrl"] = "https://parental.opcontrol.net"
+            }).Build());
 
     private static (Family A, Child ChildA, Family B, Child ChildB) TwoFamilies()
     {
@@ -477,9 +506,8 @@ public class Job5BMultiTenantTests
         await db.SaveChangesAsync();
 
         var protection = new EphemeralDataProtectionProvider();
-        var email = new EmailSender(db, protection, NullLogger<EmailSender>.Instance);
-        var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build();
-        var service = new InvitationService(db, null!, email, protection, config, NullLogger<InvitationService>.Instance);
+        var email = new EmailSender(db, protection, NewRenderer(), Options.Create(new EmailOptions()), NullLogger<EmailSender>.Instance);
+        var service = new InvitationService(db, null!, email, NewRenderer(), protection, NullLogger<InvitationService>.Instance);
 
         var created = await service.CreateCoParentAsync(a.Id, Guid.NewGuid(), null, ParentPermissions.ViewReports);
         Assert.Null(created.Email);
