@@ -484,6 +484,7 @@ If you were not expecting this, ignore this email.</value></data>
   <data name="Layout.Spanish" xml:space="preserve"><value>Español</value></data>
   <data name="Layout.ToggleTheme" xml:space="preserve"><value>Toggle theme</value></data>
   <data name="Layout.VersionDetails" xml:space="preserve"><value>Version details</value></data>
+  <data name="Layout.ProductTagline" xml:space="preserve"><value>Parental Control Software</value></data>
   <data name="Login.Google" xml:space="preserve"><value>Continue with Google</value></data>
   <data name="Login.Incorrect" xml:space="preserve"><value>Email or password is incorrect.</value></data>
   <data name="Login.InviteNote" xml:space="preserve"><value>New families join by invitation from the server owner.</value></data>

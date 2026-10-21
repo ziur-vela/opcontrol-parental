@@ -484,6 +484,7 @@ Si no esperabas este correo, ignóralo.</value></data>
   <data name="Layout.Spanish" xml:space="preserve"><value>Español</value></data>
   <data name="Layout.ToggleTheme" xml:space="preserve"><value>Cambiar tema</value></data>
   <data name="Layout.VersionDetails" xml:space="preserve"><value>Detalles de la versión</value></data>
+  <data name="Layout.ProductTagline" xml:space="preserve"><value>Software de control parental</value></data>
   <data name="Login.Google" xml:space="preserve"><value>Continuar con Google</value></data>
   <data name="Login.Incorrect" xml:space="preserve"><value>El correo o la contraseña son incorrectos.</value></data>
   <data name="Login.InviteNote" xml:space="preserve"><value>Las familias nuevas se unen por invitación del propietario del servidor.</value></data>
