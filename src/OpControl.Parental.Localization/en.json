@@ -37,7 +37,7 @@
  "Client.Notice.MinutesLeftMany": "{0} minutes of screen time left today.",
  "Client.OverrideFailedTitle": "Parent override",
  "Client.OverrideFailedBody": "The override could not be applied.",
- "Client.NoticeDefault": "Tus papás están viendo",
+ "Client.NoticeDefault": "Parent's watching you",
  "Client.Remote.ScreenFailed": "Screen capture failed: {0}",
  "Client.Remote.NoCamera": "No camera detected (or the camera is covered).",
  "Client.Remote.CameraStopped": "Camera stopped responding.",

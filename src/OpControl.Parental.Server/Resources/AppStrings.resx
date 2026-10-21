@@ -660,7 +660,7 @@ If you were not expecting this, ignore this email.</value></data>
   <data name="Settings.MuteTamper" xml:space="preserve"><value>Mute tampering alerts</value></data>
   <data name="Settings.MyLanguage" xml:space="preserve"><value>My language</value></data>
   <data name="Settings.Notice" xml:space="preserve"><value>On-screen notice</value></data>
-  <data name="Settings.NoticeDefault" xml:space="preserve"><value>Tus papás están viendo</value></data>
+  <data name="Settings.NoticeDefault" xml:space="preserve"><value>Parent's watching you</value></data>
   <data name="Settings.NoticeHelp" xml:space="preserve"><value>A transparent eye and this text appear at the top centre of the screen while a parent is viewing, when the device notice is enabled. Leave blank to use the default.</value></data>
   <data name="Settings.NoticeText" xml:space="preserve"><value>Notice text</value></data>
   <data name="Settings.OfflineAfter" xml:space="preserve"><value>Device offline alert after (minutes)</value></data>
