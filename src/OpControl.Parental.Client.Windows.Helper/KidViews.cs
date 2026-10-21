@@ -399,7 +399,7 @@ internal sealed class HomeView : KidView
             {
                 ColumnCount = 2,
                 RowCount = 2,
-                Width = 230,
+                Width = 205,
                 Height = 42,
                 AutoSize = false,
                 BackColor = Color.Transparent,
