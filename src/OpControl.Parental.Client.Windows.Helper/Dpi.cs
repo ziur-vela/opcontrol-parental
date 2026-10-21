@@ -24,6 +24,15 @@ internal static class Dpi
 
     private static void ScaleChildren(Control parent, float f)
     {
+        if (parent is TableLayoutPanel table)
+        {
+            foreach (ColumnStyle style in table.ColumnStyles)
+                if (style.SizeType == SizeType.Absolute)
+                    style.Width = (int)Math.Round(style.Width * f);
+            foreach (RowStyle style in table.RowStyles)
+                if (style.SizeType == SizeType.Absolute)
+                    style.Height = (int)Math.Round(style.Height * f);
+        }
         foreach (Control c in parent.Controls)
         {
             c.Location = new Point((int)Math.Round(c.Left * f), (int)Math.Round(c.Top * f));

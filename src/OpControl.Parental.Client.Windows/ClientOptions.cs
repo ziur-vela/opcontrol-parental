@@ -97,6 +97,9 @@ public static class ClientPaths
     public static string MessagePopupDirectory => Path.Combine(MessageDirectory, "popup");
     public static string HelperStatusFile => Path.Combine(UserDirectory, "helper-status.json");
     public static string HelperEventsFile => Path.Combine(UserDirectory, "helper-events.log");
+    public static string SummaryFile => Path.Combine(UserDirectory, "child-summary.json");
+    public static string OnlineFile => Path.Combine(PublicDirectory, "online.json");
+    public static string UiCommandFile => Path.Combine(UserDirectory, "ui-command.json");
 
     public static void EnsureDataDirectory()
     {

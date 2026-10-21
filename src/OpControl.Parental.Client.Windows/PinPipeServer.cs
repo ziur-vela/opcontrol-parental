@@ -152,6 +152,27 @@ public sealed class PinPipeServer : BackgroundService
                 if (request.MessageId is not { } ackId) return new PinPipeResponse(false, Loc.T("Client.Pipe.InvalidRequest"));
                 await _messages.MarkAcknowledgedAsync(ackId, ct);
                 return new PinPipeResponse(true);
+            case "open-kid":
+                try
+                {
+                    Directory.CreateDirectory(ClientPaths.UserDirectory);
+                    var temp = ClientPaths.UiCommandFile + ".tmp";
+                    File.WriteAllText(temp, JsonSerializer.Serialize(new
+                    {
+                        tab = request.Tab ?? "home",
+                        theme = request.Theme,
+                        language = request.Language,
+                        messagesOnly = request.MessagesOnly ?? false,
+                        utc = DateTime.UtcNow
+                    }, JsonOptions));
+                    File.Move(temp, ClientPaths.UiCommandFile, overwrite: true);
+                    return new PinPipeResponse(true);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Could not queue the My OpControl window command");
+                    return new PinPipeResponse(false, ex.Message);
+                }
             default:
                 return new PinPipeResponse(false, Loc.T("Client.Pipe.UnknownRequest"));
         }

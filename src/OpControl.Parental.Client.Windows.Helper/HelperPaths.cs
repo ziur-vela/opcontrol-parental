@@ -20,6 +20,9 @@ public static class HelperPaths
     public static string MessageThreadFile => Path.Combine(MessageDirectory, "thread.json");
     public static string MessageOutboxFile => Path.Combine(MessageDirectory, "outbox.jsonl");
     public static string MessagePopupDirectory => Path.Combine(MessageDirectory, "popup");
+    public static string SummaryFile => Path.Combine(UserDirectory, "child-summary.json");
+    public static string OnlineFile => Path.Combine(PublicDirectory, "online.json");
+    public static string UiCommandFile => Path.Combine(UserDirectory, "ui-command.json");
 
     public static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -39,6 +42,25 @@ public static class HelperPaths
         catch
         {
             return null;
+        }
+    }
+
+    public static ChildSummaryDto? ReadSummary() => ChildSummaryCache.Read(SummaryFile);
+
+    public static bool ReadOnline()
+    {
+        try
+        {
+            if (!File.Exists(OnlineFile)) return false;
+            using var document = JsonDocument.Parse(File.ReadAllText(OnlineFile));
+            var root = document.RootElement;
+            if (!root.TryGetProperty("online", out var online) || !online.GetBoolean()) return false;
+            if (!root.TryGetProperty("utc", out var utc) || !utc.TryGetDateTime(out var when)) return false;
+            return DateTime.UtcNow - when.ToUniversalTime() < TimeSpan.FromMinutes(2);
+        }
+        catch
+        {
+            return false;
         }
     }
 

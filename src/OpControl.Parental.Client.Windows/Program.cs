@@ -68,10 +68,12 @@ Host.CreateDefaultBuilder(args)
         services.AddSingleton<PinPipeServer>();
         services.AddSingleton<RemoteRelayService>();
         services.AddSingleton<MessageSyncService>();
+        services.AddSingleton<ChildSummarySyncService>();
         services.AddHostedService(sp => sp.GetRequiredService<HelperSupervisor>());
         services.AddHostedService(sp => sp.GetRequiredService<RuntimeLoopService>());
         services.AddHostedService(sp => sp.GetRequiredService<PinPipeServer>());
         services.AddHostedService(sp => sp.GetRequiredService<DataSyncService>());
+        services.AddHostedService(sp => sp.GetRequiredService<ChildSummarySyncService>());
         services.AddHostedService(sp => sp.GetRequiredService<UpdateService>());
         services.AddHostedService<ClockMonitor>();
         services.AddHostedService<UnaccountedTracker>();

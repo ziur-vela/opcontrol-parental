@@ -461,6 +461,61 @@ public sealed record ChildMessageDto(
     string? ParentDeliveredBy = null,
     string? ParentReadBy = null);
 
+public sealed record SummaryWeekdayDto(int Day, int Minutes);
+
+public sealed record SummaryScheduleDto(
+    Guid Id,
+    string Name,
+    int DaysMask,
+    int StartMinutes,
+    int EndMinutes,
+    bool IsEnabled);
+
+public sealed record SummaryCategoryDto(string Key, string Name);
+
+public sealed record SummaryWebsiteDto(
+    string Domain,
+    bool Allowed,
+    bool Always,
+    string? ScheduleName);
+
+public sealed record SummaryAppDto(
+    string Identity,
+    string DisplayName,
+    bool Allowed,
+    bool AlwaysAllowed,
+    string? ScheduleName,
+    int? DailyLimitMinutes,
+    int UsedTodaySeconds);
+
+public sealed record SummaryAppUsageDto(string Identity, string DisplayName, int Seconds);
+
+public sealed record SummaryVisitDto(string Domain, DateTime VisitedUtc, bool Blocked);
+
+public sealed record SummaryHistoryDto(string Kind, int? Minutes, DateTime CreatedUtc);
+
+/// <summary>Read-only, per-child summary for the child's "My OpControl" window.</summary>
+public sealed record ChildSummaryDto(
+    Guid ChildId,
+    string ChildName,
+    string DeviceName,
+    DateTime GeneratedUtc,
+    bool ScreenTimeEnabled,
+    int TodayLimitMinutes,
+    int UsedTodaySeconds,
+    int UsedWeekSeconds,
+    IReadOnlyList<SummaryWeekdayDto> Weekdays,
+    IReadOnlyList<SummaryScheduleDto> Schedules,
+    IReadOnlyList<SummaryCategoryDto> Categories,
+    IReadOnlyList<SummaryWebsiteDto> Websites,
+    IReadOnlyList<SummaryAppDto> Apps,
+    IReadOnlyList<SummaryAppUsageDto> AppsToday,
+    IReadOnlyList<SummaryAppUsageDto> AppsWeek,
+    IReadOnlyList<SummaryVisitDto> Visits,
+    IReadOnlyList<SummaryHistoryDto> History,
+    IReadOnlyList<ChildMessageDto> RecentMessages,
+    int UnreadMessages);
+
 public sealed record ParentMessageRequest(
     string Text,
     string? Preset,
@@ -481,7 +536,11 @@ public sealed record PinPipeRequest(
     int? Minutes = null,
     string? Ticket = null,
     string? Text = null,
-    Guid? MessageId = null);
+    Guid? MessageId = null,
+    string? Tab = null,
+    bool? MessagesOnly = null,
+    string? Theme = null,
+    string? Language = null);
 
 public sealed record PinPipeResponse(
     bool Ok,

@@ -5,7 +5,7 @@ using OpControl.Parental.Localization;
 
 namespace OpControl.Parental.Helper;
 
-/// <summary>Self-contained child messaging panel; it can later be embedded in the Luna Chat window.</summary>
+/// <summary>Child messaging panel, embedded as the Messages tab of My OpControl.</summary>
 public sealed class ChildMessagingPanel : UserControl
 {
     private enum LocalState { Sending, Pending, Failed }
@@ -33,8 +33,11 @@ public sealed class ChildMessagingPanel : UserControl
     private readonly TextBox _input;
     private readonly Label _count;
     private readonly Label _status;
+    private readonly Label _legend;
     private readonly Button _send;
     private readonly System.Windows.Forms.Timer _timer;
+    private readonly System.Windows.Forms.Timer _statusTimer;
+    private readonly System.Windows.Forms.Timer _highlightTimer;
     private readonly ToolTip _toolTip = new();
     private readonly List<LocalMessage> _local = [];
     private FileSystemWatcher? _watcher;
@@ -42,36 +45,35 @@ public sealed class ChildMessagingPanel : UserControl
     private bool _loaded;
     private bool _sending;
     private string? _queuedText;
+    private DateTime _clearStatusAt = DateTime.MaxValue;
+    private Guid? _highlightId;
+    private DateTime _highlightUntil;
+    private int _unread;
+
+    public event Action<int>? UnreadChanged;
+
+    public int UnreadCount => _unread;
 
     public ChildMessagingPanel()
     {
         Dock = DockStyle.Fill;
         BackColor = Theme.Bg;
         ForeColor = Theme.Text;
-        Padding = new Padding(4);
+        Padding = new Padding(0);
 
         _layout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 5,
+            RowCount = 6,
             BackColor = Color.Transparent
         };
-        _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         _layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         _layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 96));
         _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-
-        var heading = new Label
-        {
-            Text = Loc.T("Client.Messages.YourParents"),
-            Font = Theme.Mono(10f, FontStyle.Bold),
-            ForeColor = Theme.Label,
-            AutoSize = true,
-            BackColor = Color.Transparent,
-            Margin = new Padding(2, 0, 0, 8)
-        };
+        _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         _thread = new FlowLayoutPanel
         {
@@ -80,8 +82,8 @@ public sealed class ChildMessagingPanel : UserControl
             WrapContents = false,
             AutoScroll = true,
             BackColor = Theme.Panel,
-            Padding = new Padding(10),
-            Margin = new Padding(0, 0, 0, 10)
+            Padding = new Padding(12),
+            Margin = new Padding(0, 0, 0, 8)
         };
 
         _status = new Label
@@ -91,8 +93,21 @@ public sealed class ChildMessagingPanel : UserControl
             ForeColor = Theme.Muted,
             AutoSize = true,
             BackColor = Color.Transparent,
-            Margin = new Padding(2, 0, 0, 4)
+            Margin = new Padding(2, 0, 0, 6)
         };
+
+        var quick = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = true,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0, 0, 0, 6)
+        };
+        AddQuickReply(quick, "Client.Messages.Quick.MoreTime");
+        AddQuickReply(quick, "Client.Messages.Quick.Homework");
+        AddQuickReply(quick, "Client.Messages.Quick.ComeHere");
 
         _input = new TextBox
         {
@@ -114,10 +129,42 @@ public sealed class ChildMessagingPanel : UserControl
             }
         };
 
+        var meta = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            ColumnCount = 2,
+            RowCount = 1,
+            AutoSize = true,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0, 6, 0, 0)
+        };
+        meta.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        meta.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        _legend = new Label
+        {
+            Text = Loc.T("Client.Messages.Legend"),
+            Font = Theme.Mono(8f),
+            ForeColor = Theme.Muted,
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            BackColor = Color.Transparent
+        };
+        _count = new Label
+        {
+            Text = "0/500",
+            Font = Theme.Mono(8.5f),
+            ForeColor = Theme.Muted,
+            AutoSize = true,
+            Anchor = AnchorStyles.Right,
+            BackColor = Color.Transparent
+        };
+        meta.Controls.Add(_legend, 0, 0);
+        meta.Controls.Add(_count, 1, 0);
+
         var footer = new TableLayoutPanel
         {
-            Dock = DockStyle.Bottom,
-            ColumnCount = 3,
+            Dock = DockStyle.Top,
+            ColumnCount = 2,
             RowCount = 1,
             AutoSize = true,
             BackColor = Color.Transparent,
@@ -125,30 +172,17 @@ public sealed class ChildMessagingPanel : UserControl
         };
         footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
         footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-
-        _count = new Label
-        {
-            Text = "0/500",
-            Font = Theme.Mono(8.5f),
-            ForeColor = Theme.Muted,
-            AutoSize = true,
-            Anchor = AnchorStyles.Left,
-            BackColor = Color.Transparent
-        };
         _send = new Button
         {
             Text = Loc.T("Client.Messages.Send"),
             AutoSize = true,
-            MinimumSize = new Size(110, 40),
+            MinimumSize = new Size(120, 40),
             Anchor = AnchorStyles.Right
         };
         Theme.StyleButton(_send, primary: true);
         _send.Click += async (_, _) => await SendAsync();
-
-        footer.Controls.Add(_count, 0, 0);
-        footer.Controls.Add(new Label { Text = "", AutoSize = true }, 1, 0);
-        footer.Controls.Add(_send, 2, 0);
+        footer.Controls.Add(new Label { Text = "", AutoSize = true }, 0, 0);
+        footer.Controls.Add(_send, 1, 0);
 
         _input.TextChanged += (_, _) =>
         {
@@ -156,15 +190,34 @@ public sealed class ChildMessagingPanel : UserControl
             if (_input.TextLength > 500) _input.Text = _input.Text[..500];
         };
 
-        _layout.Controls.Add(heading, 0, 0);
-        _layout.Controls.Add(_thread, 0, 1);
-        _layout.Controls.Add(_status, 0, 2);
+        _layout.Controls.Add(_thread, 0, 0);
+        _layout.Controls.Add(_status, 0, 1);
+        _layout.Controls.Add(quick, 0, 2);
         _layout.Controls.Add(_input, 0, 3);
-        _layout.Controls.Add(footer, 0, 4);
+        _layout.Controls.Add(meta, 0, 4);
+        _layout.Controls.Add(footer, 0, 5);
         Controls.Add(_layout);
 
         _timer = new System.Windows.Forms.Timer { Interval = 30000 };
         _timer.Tick += async (_, _) => await RefreshThreadAsync(showStatus: false);
+        _statusTimer = new System.Windows.Forms.Timer { Interval = 1000 };
+        _statusTimer.Tick += (_, _) =>
+        {
+            if (DateTime.UtcNow >= _clearStatusAt)
+            {
+                _status.Text = "";
+                _clearStatusAt = DateTime.MaxValue;
+            }
+        };
+        _statusTimer.Start();
+        _highlightTimer = new System.Windows.Forms.Timer { Interval = 1700 };
+        _highlightTimer.Tick += (_, _) =>
+        {
+            _highlightTimer.Stop();
+            _highlightId = null;
+            if (_loaded && IsHandleCreated && !IsDisposed)
+                BeginInvoke((Action)(() => BuildFromCache()));
+        };
         _thread.SizeChanged += (_, _) =>
         {
             if (_loaded && IsHandleCreated && !IsDisposed)
@@ -175,8 +228,28 @@ public sealed class ChildMessagingPanel : UserControl
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        _layout.RowStyles[3] = new RowStyle(SizeType.Absolute, Dpi.S(this, 96));
+        _legend.Text = Loc.T("Client.Messages.Legend");
         _layout.PerformLayout();
+    }
+
+    private void AddQuickReply(FlowLayoutPanel row, string key)
+    {
+        var button = new Button
+        {
+            Text = Loc.T(key),
+            AutoSize = true,
+            Height = 34,
+            Margin = new Padding(0, 0, 6, 4)
+        };
+        Theme.StyleButton(button);
+        button.Font = Theme.Mono(8.5f);
+        button.Click += (_, _) =>
+        {
+            _input.Text = Loc.T(key);
+            _input.SelectionStart = _input.TextLength;
+            _input.Focus();
+        };
+        row.Controls.Add(button);
     }
 
     public void Start()
@@ -196,6 +269,35 @@ public sealed class ChildMessagingPanel : UserControl
             _watcher = null;
         }
     }
+
+    public void Highlight(Guid messageId)
+    {
+        _highlightId = messageId;
+        _highlightUntil = DateTime.UtcNow.AddSeconds(2);
+        _highlightTimer.Stop();
+        _highlightTimer.Start();
+        BuildFromCache();
+    }
+
+    public async Task MarkSeenAsync(Guid messageId)
+    {
+        try
+        {
+            var response = await PinPipeClient.MarkSeenAsync(messageId, CancellationToken.None);
+            if (!response.Ok) HelperPaths.LogEvent($"message-seen-failed {messageId} {response.Error}");
+        }
+        catch { }
+    }
+
+    public async Task MarkAllSeenAsync()
+    {
+        var thread = ReadCachedThread() ?? [];
+        foreach (var message in thread.Where(m => m.Direction == MessageDirection.ParentToChild && m.SeenUtc is null))
+            await MarkSeenAsync(message.Id);
+        _ = RefreshThreadAsync(showStatus: false);
+    }
+
+    public static List<ChildMessageDto>? ReadCache() => ReadCachedThread();
 
     private void StartWatcher()
     {
@@ -329,14 +431,18 @@ public sealed class ChildMessagingPanel : UserControl
                 || outbox.Any(p => string.Equals(p.Text, _queuedText, StringComparison.Ordinal));
             if (!stillPending)
             {
-                _status.Text = Loc.T("Client.Messages.Status.Sent");
-                _status.ForeColor = Theme.Value;
+                ShowStatus(Loc.T("Client.Messages.Status.Sent"), error: false, clearAfter: TimeSpan.FromSeconds(4));
                 _queuedText = null;
             }
         }
 
         display.Sort((a, b) => a.CreatedUtc.CompareTo(b.CreatedUtc));
-        var width = Math.Max(240, _thread.ClientSize.Width - 28);
+        _unread = messages.Count(m => m.Direction == MessageDirection.ParentToChild && m.SeenUtc is null && !m.Deleted);
+        UnreadChanged?.Invoke(_unread);
+
+        var wasAtBottom = AtBottom();
+        var rowWidth = Math.Max(260, _thread.ClientSize.Width - _thread.Padding.Horizontal - 14);
+        var maxBubble = Math.Max(180, (int)(rowWidth * 0.62));
         _thread.SuspendLayout();
         try
         {
@@ -355,122 +461,197 @@ public sealed class ChildMessagingPanel : UserControl
             }
 
             foreach (var message in display)
-            {
-                var own = message.Direction == MessageDirection.ChildToParent;
-                var bubble = new Panel
-                {
-                    AutoSize = true,
-                    AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                    BackColor = Theme.Panel2,
-                    Padding = new Padding(10, 8, 10, 8),
-                    Margin = new Padding(own ? 70 : 0, 0, own ? 0 : 70, 8),
-                    MaximumSize = new Size(width, 0)
-                };
-
-                var inner = new TableLayoutPanel
-                {
-                    ColumnCount = 1,
-                    RowCount = message.Local?.State == LocalState.Failed ? 3 : 2,
-                    AutoSize = true,
-                    AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                    BackColor = Color.Transparent,
-                    Dock = DockStyle.Fill
-                };
-
-                var head = new FlowLayoutPanel
-                {
-                    FlowDirection = FlowDirection.LeftToRight,
-                    WrapContents = false,
-                    AutoSize = true,
-                    AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                    BackColor = Color.Transparent,
-                    Margin = new Padding(0, 0, 0, 3)
-                };
-                head.Controls.Add(new Label
-                {
-                    Text = message.Sender,
-                    Font = Theme.Mono(8.5f),
-                    ForeColor = own ? Theme.Value : Theme.Label,
-                    AutoSize = true,
-                    BackColor = Color.Transparent,
-                    Margin = new Padding(0, 0, 6, 0)
-                });
-                head.Controls.Add(new Label
-                {
-                    Text = MessageDisplay.Time(message.CreatedUtc),
-                    Font = Theme.Mono(8.5f),
-                    ForeColor = Theme.Muted,
-                    AutoSize = true,
-                    BackColor = Color.Transparent,
-                    Margin = new Padding(0, 0, 8, 0)
-                });
-
-                var statusLabel = new Label
-                {
-                    Text = $"{MessageStatusRules.Icon(message.Status)} {StatusText(message.Status)}",
-                    Font = Theme.Mono(8.5f, FontStyle.Bold),
-                    ForeColor = StatusColor(message.Status),
-                    AutoSize = true,
-                    BackColor = Color.Transparent,
-                    Cursor = Cursors.Hand,
-                    Margin = new Padding(0, 0, 6, 0)
-                };
-                _toolTip.SetToolTip(statusLabel, message.Details + Environment.NewLine + Loc.T("Client.Messages.TapForTimes"));
-                statusLabel.Click += (_, _) => MessageBox.Show(FindForm(), message.Details,
-                    Loc.T("Client.Messages.StatusTitle"), MessageBoxButtons.OK, MessageBoxIcon.Information);
-                head.Controls.Add(statusLabel);
-
-                if (message.Direction == MessageDirection.ParentToChild && message.Acknowledged)
-                {
-                    head.Controls.Add(new Label
-                    {
-                        Text = Loc.T("Client.Messages.Status.Ack"),
-                        Font = Theme.Mono(8f),
-                        ForeColor = Theme.Brand,
-                        AutoSize = true,
-                        BackColor = Color.Transparent
-                    });
-                }
-
-                var body = new Label
-                {
-                    Text = message.Text,
-                    Font = Theme.Sans(10.5f),
-                    ForeColor = Theme.Text,
-                    AutoSize = true,
-                    MaximumSize = new Size(Math.Max(160, width - 28), 0),
-                    BackColor = Color.Transparent,
-                    Margin = new Padding(0)
-                };
-                inner.Controls.Add(head, 0, 0);
-                inner.Controls.Add(body, 0, 1);
-
-                if (message.Local?.State == LocalState.Failed)
-                {
-                    var retry = new Button
-                    {
-                        Text = Loc.T("Client.Messages.Retry"),
-                        AutoSize = true,
-                        MinimumSize = new Size(96, 32),
-                        Margin = new Padding(0, 6, 0, 0)
-                    };
-                    Theme.StyleButton(retry, danger: true);
-                    var local = message.Local;
-                    retry.Click += async (_, _) => await RetryAsync(local);
-                    inner.Controls.Add(retry, 0, 2);
-                }
-
-                bubble.Controls.Add(inner);
-                _thread.Controls.Add(bubble);
-            }
+                _thread.Controls.Add(BuildBubbleRow(message, rowWidth, maxBubble));
         }
         finally
         {
             _thread.ResumeLayout(true);
         }
 
-        if (_thread.Controls.Count > 0)
-            _thread.ScrollControlIntoView(_thread.Controls[^1]);
+        if (wasAtBottom)
+            ScrollToBottom();
+    }
+
+    private Control BuildBubbleRow(DisplayMessage message, int rowWidth, int maxBubble)
+    {
+        var own = message.Direction == MessageDirection.ChildToParent;
+        var row = new TableLayoutPanel
+        {
+            ColumnCount = 2,
+            RowCount = 1,
+            Width = rowWidth,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0, 0, 0, 8),
+            Padding = new Padding(0)
+        };
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, own ? 38f : 62f));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, own ? 62f : 38f));
+
+        var highlight = _highlightId is { } id && id == message.Id && DateTime.UtcNow < _highlightUntil;
+        var bubble = new CardPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            MaximumSize = new Size(maxBubble, 0),
+            Padding = new Padding(11, 9, 11, 9),
+            BackColor = highlight ? Theme.Highlight : own ? Theme.OwnBubble : Theme.ParentBubble,
+            BorderColor = own ? Theme.Line2 : Theme.Line,
+            Anchor = own ? AnchorStyles.Right | AnchorStyles.Top : AnchorStyles.Left | AnchorStyles.Top,
+            Margin = new Padding(0)
+        };
+
+        var inner = new TableLayoutPanel
+        {
+            ColumnCount = 1,
+            RowCount = 3,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = Color.Transparent,
+            Dock = DockStyle.Fill
+        };
+
+        var head = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0, 0, 0, 3)
+        };
+        head.Controls.Add(new Label
+        {
+            Text = message.Sender,
+            Font = Theme.Mono(8.5f),
+            ForeColor = own ? Theme.Value : Theme.Label,
+            AutoSize = true,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0, 0, 6, 0)
+        });
+        head.Controls.Add(new Label
+        {
+            Text = MessageDisplay.Time(message.CreatedUtc),
+            Font = Theme.Mono(8.5f),
+            ForeColor = Theme.Muted,
+            AutoSize = true,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0, 0, 0, 0)
+        });
+
+        if (own)
+        {
+            var statusLabel = new Label
+            {
+                Text = $"{MessageStatusRules.Icon(message.Status)} {StatusText(message.Status)}",
+                Font = Theme.Mono(8.5f, FontStyle.Bold),
+                ForeColor = StatusColor(message.Status),
+                AutoSize = true,
+                BackColor = Color.Transparent,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(8, 0, 0, 0)
+            };
+            _toolTip.SetToolTip(statusLabel, message.Details + Environment.NewLine + Loc.T("Client.Messages.TapForTimes"));
+            statusLabel.Click += (_, _) => MessageBox.Show(FindForm(), message.Details,
+                Loc.T("Client.Messages.StatusTitle"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+            head.Controls.Add(statusLabel);
+        }
+
+        var body = new Label
+        {
+            Text = message.Text,
+            Font = Theme.Sans(10.5f),
+            ForeColor = Theme.Text,
+            AutoSize = true,
+            MaximumSize = new Size(Math.Max(150, maxBubble - 24), 0),
+            BackColor = Color.Transparent,
+            Margin = new Padding(0)
+        };
+        inner.Controls.Add(head, 0, 0);
+        inner.Controls.Add(body, 0, 1);
+
+        if (!own && message.RequireAck)
+        {
+            var ack = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoSize = true,
+                WrapContents = false,
+                BackColor = Color.Transparent,
+                Margin = new Padding(0, 6, 0, 0)
+            };
+            if (message.Acknowledged)
+            {
+                ack.Controls.Add(new Label
+                {
+                    Text = "✓ " + Loc.T("Client.Messages.Status.Ack"),
+                    Font = Theme.Mono(8.5f, FontStyle.Bold),
+                    ForeColor = Theme.Brand,
+                    AutoSize = true,
+                    BackColor = Color.Transparent
+                });
+            }
+            else
+            {
+                var button = new Button
+                {
+                    Text = Loc.T("Client.Messages.GotIt"),
+                    AutoSize = true,
+                    MinimumSize = new Size(100, 32),
+                    Margin = new Padding(0)
+                };
+                Theme.StyleButton(button, primary: true);
+                button.Font = Theme.Mono(8.5f, FontStyle.Bold);
+                button.Click += async (_, _) => await AckAsync(message.Id);
+                ack.Controls.Add(button);
+            }
+            inner.Controls.Add(ack, 0, 2);
+        }
+        else if (message.Local?.State == LocalState.Failed)
+        {
+            var retry = new Button
+            {
+                Text = Loc.T("Client.Messages.Retry"),
+                AutoSize = true,
+                MinimumSize = new Size(96, 32),
+                Margin = new Padding(0, 6, 0, 0)
+            };
+            Theme.StyleButton(retry, danger: true);
+            var local = message.Local;
+            retry.Click += async (_, _) => await RetryAsync(local);
+            inner.Controls.Add(retry, 0, 2);
+        }
+
+        bubble.Controls.Add(inner);
+        row.Controls.Add(bubble, own ? 1 : 0, 0);
+        return row;
+    }
+
+    private async Task AckAsync(Guid messageId)
+    {
+        try
+        {
+            var response = await PinPipeClient.MarkAcknowledgedAsync(messageId, CancellationToken.None);
+            if (!response.Ok) HelperPaths.LogEvent($"message-ack-failed {messageId} {response.Error}");
+        }
+        catch { }
+        await RefreshThreadAsync(showStatus: false);
+    }
+
+    private bool AtBottom()
+    {
+        try
+        {
+            return _thread.VerticalScroll.Value + _thread.ClientSize.Height >= _thread.VerticalScroll.Maximum - 16;
+        }
+        catch { return true; }
+    }
+
+    private void ScrollToBottom()
+    {
+        if (_thread.Controls.Count == 0) return;
+        _thread.ScrollControlIntoView(_thread.Controls[^1]);
     }
 
     private static string StatusText(MessageUiStatus status) => Loc.T(status switch
@@ -547,7 +728,7 @@ public sealed class ChildMessagingPanel : UserControl
         _count.Text = "0/500";
         _sending = true;
         _send.Enabled = false;
-        ShowStatus(Loc.T("Client.Messages.Sending"), error: false);
+        ShowStatus(Loc.T("Client.Messages.Sending"), error: false, clearAfter: TimeSpan.Zero);
         BuildFromCache();
         try
         {
@@ -557,7 +738,7 @@ public sealed class ChildMessagingPanel : UserControl
             if (response.Ok)
             {
                 _local.Remove(local);
-                ShowStatus(Loc.T("Client.Messages.Status.Sent"), error: false);
+                ShowStatus(Loc.T("Client.Messages.Status.Sent"), error: false, clearAfter: TimeSpan.FromSeconds(4));
                 BuildFromCache();
                 await RefreshThreadAsync(showStatus: false);
             }
@@ -598,10 +779,13 @@ public sealed class ChildMessagingPanel : UserControl
         await SendAsync();
     }
 
-    private void ShowStatus(string text, bool error)
+    private void ShowStatus(string text, bool error, TimeSpan? clearAfter = null)
     {
         _status.Text = text;
         _status.ForeColor = error ? Theme.Danger : Theme.Value;
+        _clearStatusAt = clearAfter is { } span
+            ? DateTime.UtcNow.Add(span)
+            : error ? DateTime.MaxValue : DateTime.MaxValue;
     }
 
     protected override void Dispose(bool disposing)
@@ -609,6 +793,8 @@ public sealed class ChildMessagingPanel : UserControl
         if (disposing)
         {
             _timer.Dispose();
+            _statusTimer.Dispose();
+            _highlightTimer.Dispose();
             _toolTip.Dispose();
             if (_watcher is not null)
             {

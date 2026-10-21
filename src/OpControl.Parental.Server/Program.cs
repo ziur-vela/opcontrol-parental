@@ -147,6 +147,7 @@ builder.Services.AddScoped<RuleService>();
 builder.Services.AddScoped<UsageService>();
 builder.Services.AddScoped<AlertService>();
 builder.Services.AddScoped<MessageService>();
+builder.Services.AddScoped<ChildSummaryService>();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<DashboardEventBus>();
 builder.Services.AddSingleton<ReleaseCatalog>();
@@ -882,6 +883,13 @@ app.MapGet("/api/messages/unread", async (FamilyScope family, MessageService mes
     await family.RequireAsync(ParentPermissions.Messaging, ct);
     return Results.Ok(new { count = await messages.UnreadCountAsync(family.FamilyId, ct) });
 }).RequireAuthorization();
+
+app.MapGet("/api/device/child-summary", async (ClaimsPrincipal user, ParentalDbContext db, ChildSummaryService summaries, CancellationToken ct) =>
+{
+    var device = await DeviceFromClaimsAsync(user, db, ct);
+    if (device is null) return Results.Unauthorized();
+    return Results.Ok(await summaries.BuildAsync(device, ct));
+}).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
 
 app.MapGet("/api/device/messages", async (ClaimsPrincipal user, ParentalDbContext db, MessageService messages, CancellationToken ct) =>
 {

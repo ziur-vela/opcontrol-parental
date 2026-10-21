@@ -13,7 +13,7 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <AssemblyName>OpControl.Parental.Helper</AssemblyName>
     <RootNamespace>OpControl.Parental.Helper</RootNamespace>
-    <Version>0.12.1</Version>
+    <Version>0.13.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="OpenCvSharp4" Version="4.10.0.20241108" />
@@ -24,6 +24,7 @@
     <Compile Include="..\OpControl.Parental.Client.Windows\AppIdentity.cs" Link="AppIdentity.cs" />
     <EmbeddedResource Include="brand\lockup-ondark-300h.png" />
     <EmbeddedResource Include="brand\icon-color-128.png" />
+    <EmbeddedResource Include="brand\icon-ondark-64.png" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="fonts\*.ttf" />

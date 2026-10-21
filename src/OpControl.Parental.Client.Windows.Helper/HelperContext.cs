@@ -18,9 +18,12 @@ public sealed class HelperContext : ApplicationContext
     private PinDialog? _pinDialog;
     private NotificationForm? _notification;
     private MessagePopupForm? _messagePopup;
-    private ChildMessageForm? _childMessageForm;
+    private MyOpControlForm? _myOpControl;
     private NotifyIcon? _tray;
+    private ToolStripMenuItem? _trayTimeItem;
+    private ToolStripMenuItem? _trayOpenItem;
     private ToolStripMenuItem? _trayMessageItem;
+    private ToolStripMenuItem? _trayLunaItem;
     private Icon? _trayIcon;
     private Bitmap? _trayBitmap;
     private string _trayLanguage = Loc.Language;
@@ -37,7 +40,7 @@ public sealed class HelperContext : ApplicationContext
         _monitored = monitored;
         _overlays = new LockOverlayManager();
         _overlays.OverrideClicked += ShowPinDialog;
-        _overlays.MessageClicked += ShowChildMessageWindow;
+        _overlays.MessageClicked += () => ShowMyOpControl(MyOpControlTab.Messages);
         _countdown = new CountdownForm();
         _ = _marshal.Handle;
         _remote = new RemoteCaptureHost(monitored);
@@ -60,6 +63,7 @@ public sealed class HelperContext : ApplicationContext
         if (state is { IsLocked: true } && !_overlays.Visible)
             _overlays.Update(state);
         CheckMessagePopups();
+        CheckUiCommand();
         UpdateTrayLanguage();
         _usage.Sample(state);
         if (state is null)
@@ -74,9 +78,17 @@ public sealed class HelperContext : ApplicationContext
         if (state.IsLocked)
         {
             _countdown.HideBanner();
+            if (!_wasLocked)
+            {
+                if (_myOpControl is { IsDisposed: false } open)
+                {
+                    open.Close();
+                    _myOpControl = null;
+                }
+                if (state.Reason == "daily-limit")
+                    HelperPaths.LogEvent("daily-limit-lock");
+            }
             _overlays.Update(state);
-            if (state.Reason == "daily-limit" && !_wasLocked)
-                HelperPaths.LogEvent("daily-limit-lock");
             _wasLocked = true;
             if (!_hookInstalled && _hook.Install())
             {
@@ -88,6 +100,11 @@ public sealed class HelperContext : ApplicationContext
             return;
         }
 
+        if (_wasLocked && _myOpControl is { IsDisposed: false } restart)
+        {
+            restart.SetMessagesOnly(false);
+            restart.TopMost = false;
+        }
         _wasLocked = false;
         _overlays.Hide();
         _hook.Uninstall();
@@ -163,11 +180,32 @@ public sealed class HelperContext : ApplicationContext
             }
             _trayIcon ??= SystemIcons.Shield;
 
+            _trayTimeItem = new ToolStripMenuItem("TIME LEFT TODAY")
+            {
+                Enabled = false,
+                Font = Theme.Mono(8.5f, FontStyle.Bold),
+                ForeColor = Theme.Value
+            };
+            _trayOpenItem = new ToolStripMenuItem(Loc.T("Client.Kid.Open"))
+            {
+                Font = Theme.Mono(9.5f, FontStyle.Bold)
+            };
+            _trayOpenItem.Click += (_, _) => ShowMyOpControl(MyOpControlTab.Home);
             _trayMessageItem = new ToolStripMenuItem(Loc.T("Client.Messages.Open"));
-            _trayMessageItem.Click += (_, _) => ShowChildMessageWindow();
+            _trayMessageItem.Click += (_, _) => ShowMyOpControl(MyOpControlTab.Messages);
+            _trayLunaItem = new ToolStripMenuItem(Loc.T("Client.Kid.LunaSoon"))
+            {
+                Enabled = false,
+                ForeColor = Theme.Faint
+            };
 
             var menu = new ContextMenuStrip();
+            menu.Items.Add(_trayTimeItem);
+            menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add(_trayOpenItem);
             menu.Items.Add(_trayMessageItem);
+            menu.Items.Add(_trayLunaItem);
+            menu.Opening += (_, _) => UpdateTrayMenu();
             _tray = new NotifyIcon
             {
                 Icon = _trayIcon,
@@ -175,7 +213,12 @@ public sealed class HelperContext : ApplicationContext
                 Visible = true,
                 ContextMenuStrip = menu
             };
-            _tray.DoubleClick += (_, _) => ShowChildMessageWindow();
+            _tray.MouseClick += (_, e) =>
+            {
+                if (e.Button == MouseButtons.Left) ShowMyOpControl(MyOpControlTab.Home);
+            };
+            _tray.DoubleClick += (_, _) => ShowMyOpControl(MyOpControlTab.Home);
+            UpdateTrayMenu();
         }
         catch (Exception ex)
         {
@@ -187,7 +230,38 @@ public sealed class HelperContext : ApplicationContext
     {
         if (_trayMessageItem is null || _trayLanguage == Loc.Language) return;
         _trayLanguage = Loc.Language;
-        _trayMessageItem.Text = Loc.T("Client.Messages.Open");
+        UpdateTrayMenu();
+    }
+
+    private void UpdateTrayMenu()
+    {
+        if (_trayTimeItem is null || _trayOpenItem is null || _trayMessageItem is null || _trayLunaItem is null) return;
+        var state = HelperPaths.ReadState();
+        var left = CountdownText(state);
+        _trayTimeItem.Text = Loc.T("Client.Kid.TrayTime", left ?? Loc.T("Client.Kid.NoLimit"));
+        _trayOpenItem.Text = Loc.T("Client.Kid.Open");
+        _trayOpenItem.Font = Theme.Mono(9.5f, FontStyle.Bold);
+        var unread = UnreadCount();
+        _trayMessageItem.Text = unread > 0
+            ? Loc.T("Client.Kid.TrayMessagesUnread", unread)
+            : Loc.T("Client.Messages.Open");
+        _trayLunaItem.Text = Loc.T("Client.Kid.LunaSoon");
+        _trayLunaItem.Enabled = false;
+    }
+
+    private static int UnreadCount()
+    {
+        var thread = ChildMessagingPanel.ReadCache() ?? [];
+        return thread.Count(m => m.Direction == MessageDirection.ParentToChild && m.SeenUtc is null && !m.Deleted);
+    }
+
+    private static string? CountdownText(RuntimeLockStateDto? state)
+    {
+        var now = DateTime.UtcNow;
+        if (state?.BonusUntilUtc is { } bonus && bonus > now) return Format(bonus - now);
+        if (state?.NextLockUtc is { } next && next > now) return Format(next - now);
+        if (state?.DailyLimitRemainingSeconds is { } left && left > 0) return Format(TimeSpan.FromSeconds(left));
+        return null;
     }
 
     private void CheckMessagePopups()
@@ -199,8 +273,7 @@ public sealed class HelperContext : ApplicationContext
             var files = Directory.GetFiles(HelperPaths.MessagePopupDirectory, "*.json");
             if (files.Length == 0) return;
 
-            ChildMessageDto? next = null;
-            string? nextPath = null;
+            var pending = new List<(ChildMessageDto Message, string Path)>();
             foreach (var file in files)
             {
                 ChildMessageDto? message = null;
@@ -210,26 +283,28 @@ public sealed class HelperContext : ApplicationContext
                         File.ReadAllText(file), HelperPaths.JsonOptions);
                 }
                 catch { }
-                if (message is null)
+                if (message is null || DateTime.UtcNow - message.CreatedUtc > TimeSpan.FromHours(24))
                 {
                     try { File.Delete(file); } catch { }
                     continue;
                 }
-                if (DateTime.UtcNow - message.CreatedUtc > TimeSpan.FromHours(24))
-                {
-                    try { File.Delete(file); } catch { }
-                    continue;
-                }
-                if (next is null || message.CreatedUtc < next.CreatedUtc)
-                {
-                    next = message;
-                    nextPath = file;
-                }
+                pending.Add((message, file));
             }
 
-            if (next is null || nextPath is null) return;
-            try { File.Delete(nextPath); } catch { }
-            ShowMessagePopup(next);
+            var windowPresent = _myOpControl is { IsDisposed: false } form
+                && form.Visible && form.WindowState != FormWindowState.Minimized;
+            foreach (var (message, path) in pending.OrderBy(p => p.Message.CreatedUtc))
+            {
+                if (windowPresent && _myOpControl is { IsDisposed: false } window && window.IsOpenVisible)
+                {
+                    try { File.Delete(path); } catch { }
+                    window.NotifyNewMessage(message);
+                    continue;
+                }
+                try { File.Delete(path); } catch { }
+                ShowMessagePopup(message);
+                break;
+            }
         }
         catch (Exception ex)
         {
@@ -264,34 +339,73 @@ public sealed class HelperContext : ApplicationContext
     private void OpenChildMessagesFromPopup()
     {
         _messagePopup = null;
-        ShowChildMessageWindow();
+        ShowMyOpControl(MyOpControlTab.Messages);
     }
 
-    private void ShowChildMessageWindow()
+    private void CheckUiCommand()
     {
         try
         {
-            if (_childMessageForm is { IsDisposed: false })
-            {
-                _childMessageForm.BringToFront();
-                _childMessageForm.Activate();
-                return;
-            }
-
-            var aboveLock = _overlays.Visible;
-            var form = new ChildMessageForm(aboveLock);
-            form.FormClosed += (_, _) => _childMessageForm = null;
-            _childMessageForm = form;
-            var owner = aboveLock ? _overlays.Owner : null;
-            if (owner is { IsDisposed: false }) form.Show(owner);
-            else form.Show();
-            form.BringToFront();
-            form.Activate();
-            HelperPaths.LogEvent("message-window-opened");
+            if (!File.Exists(HelperPaths.UiCommandFile)) return;
+            var json = File.ReadAllText(HelperPaths.UiCommandFile);
+            try { File.Delete(HelperPaths.UiCommandFile); } catch { }
+            using var document = System.Text.Json.JsonDocument.Parse(json);
+            var root = document.RootElement;
+            var tab = root.TryGetProperty("tab", out var tabValue)
+                ? tabValue.GetString() switch
+                {
+                    "schedule" => MyOpControlTab.Schedule,
+                    "rules" => MyOpControlTab.Rules,
+                    "activity" => MyOpControlTab.Activity,
+                    "messages" => MyOpControlTab.Messages,
+                    _ => MyOpControlTab.Home
+                }
+                : MyOpControlTab.Home;
+            var theme = root.TryGetProperty("theme", out var themeValue) ? themeValue.GetString() : null;
+            var language = root.TryGetProperty("language", out var langValue) ? langValue.GetString() : null;
+            var messagesOnly = root.TryGetProperty("messagesOnly", out var onlyValue) && onlyValue.ValueKind == System.Text.Json.JsonValueKind.True;
+            ShowMyOpControl(tab, theme, language, messagesOnly);
         }
         catch (Exception ex)
         {
-            HelperPaths.LogEvent($"message-window-failed {ex.Message}");
+            HelperPaths.LogEvent($"ui-command-failed {ex.Message}");
+        }
+    }
+
+    private void ShowMyOpControl(MyOpControlTab tab, string? theme = null, string? language = null, bool? messagesOnly = null)
+    {
+        try
+        {
+            var aboveLock = _overlays.Visible;
+            var onlyMessages = messagesOnly ?? aboveLock;
+            if (_myOpControl is { IsDisposed: false } existing)
+            {
+                if ((aboveLock && !existing.TopMost) || theme is not null || language is not null)
+                {
+                    existing.Close();
+                    _myOpControl = null;
+                }
+                else
+                {
+                    existing.RestoreAndShow();
+                    existing.ShowTab(tab);
+                    return;
+                }
+            }
+
+            var form = new MyOpControlForm(aboveLock, tab, messagesOnly: onlyMessages, themeOverride: theme, languageOverride: language);
+            form.FormClosed += (_, _) => _myOpControl = null;
+            form.UnreadChanged += _ => UpdateTrayMenu();
+            _myOpControl = form;
+            var owner = aboveLock ? _overlays.Owner : null;
+            if (owner is { IsDisposed: false }) form.Show(owner);
+            else form.Show();
+            form.RestoreAndShow();
+            HelperPaths.LogEvent("my-opcontrol-opened");
+        }
+        catch (Exception ex)
+        {
+            HelperPaths.LogEvent($"my-opcontrol-failed {ex.Message}");
         }
     }
 
@@ -469,7 +583,7 @@ public sealed class HelperContext : ApplicationContext
             _pinDialog?.Dispose();
             _notification?.Dispose();
             _messagePopup?.Dispose();
-            _childMessageForm?.Dispose();
+            _myOpControl?.Dispose();
             if (_tray is not null) { _tray.Visible = false; _tray.Dispose(); }
             _trayIcon?.Dispose();
             _trayBitmap?.Dispose();
