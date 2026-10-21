@@ -7,6 +7,7 @@ namespace OpControl.Parental.Helper;
 internal abstract class KidView : UserControl
 {
     protected ChildSummaryDto? Summary;
+    public ChildSummaryDto? CachedSummary => Summary;
     private bool _rebuilding;
     private int _lastWidth;
 
@@ -408,12 +409,12 @@ internal sealed class HomeView : KidView
             row.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             var name = new Label
             {
-                Text = app.DisplayName,
+                Text = ShortAppName(app.DisplayName),
                 AutoSize = false,
                 AutoEllipsis = true,
                 Dock = DockStyle.Fill,
                 Height = 20,
-                Font = Theme.Sans(9f),
+                Font = Theme.Sans(8.5f),
                 ForeColor = Theme.Text,
                 BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -430,6 +431,24 @@ internal sealed class HomeView : KidView
             stack.Controls.Add(row);
         }
         return card;
+    }
+
+    private static string ShortAppName(string name)
+    {
+        var value = (name ?? "").Trim();
+        var slash = value.LastIndexOf('\\');
+        if (slash >= 0) value = value[(slash + 1)..];
+        if (!value.Contains(' '))
+        {
+            var dot = value.IndexOf('.');
+            if (dot > 0) value = value[..dot];
+        }
+        else
+        {
+            var dot = value.LastIndexOf('.');
+            if (dot > 0 && value.Length - dot <= 5) value = value[..dot];
+        }
+        return string.IsNullOrWhiteSpace(value) ? name : value;
     }
 
     private CardPanel BuildRulesCard()

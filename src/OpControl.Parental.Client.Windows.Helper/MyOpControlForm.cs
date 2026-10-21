@@ -56,6 +56,7 @@ public sealed class MyOpControlForm : Form
     private readonly System.Windows.Forms.Timer _cacheTimer = new() { Interval = 3000 };
     private DateTime _summaryStamp = DateTime.MinValue;
     private bool _hasSummary;
+    private ChildSummaryDto? _summary;
     private bool _scaled;
     private MyOpControlTab _activeTab = MyOpControlTab.Home;
     private bool _online;
@@ -89,6 +90,7 @@ public sealed class MyOpControlForm : Form
         KeyPreview = true;
         Padding = new Padding(4);
         Size = new Size(1040, 700);
+        _activeTab = messagesOnly ? MyOpControlTab.Messages : tab;
 
         HelperPaths.LogEvent("my-opcontrol-build-start");
         BuildShell();
@@ -491,13 +493,16 @@ public sealed class MyOpControlForm : Form
             }
             else
             {
-                _content.Controls.Add(_activeTab switch
+                KidView view = _activeTab switch
                 {
                     MyOpControlTab.Schedule => _schedule,
                     MyOpControlTab.Rules => _rules,
                     MyOpControlTab.Activity => _activity,
                     _ => _home
-                });
+                };
+                if (_summary is not null && !ReferenceEquals(view.CachedSummary, _summary))
+                    view.SetSummary(_summary);
+                _content.Controls.Add(view);
             }
         }
         finally
@@ -538,6 +543,7 @@ public sealed class MyOpControlForm : Form
         }
         catch { _summaryStamp = DateTime.MinValue; }
 
+        _summary = summary;
         if (summary is null)
         {
             _hasSummary = false;
@@ -552,10 +558,6 @@ public sealed class MyOpControlForm : Form
         _childLabel.Text = summary.ChildName;
         _deviceLabel.Text = summary.DeviceName;
         _updatedLabel.Text = Loc.T("Client.Kid.Updated", summary.GeneratedUtc.ToLocalTime().ToString("t", System.Globalization.CultureInfo.CurrentCulture));
-        _home.SetSummary(summary);
-        _schedule.SetSummary(summary);
-        _rules.SetSummary(summary);
-        _activity.SetSummary(summary);
         if (_activeTab != MyOpControlTab.Messages) ShowContent();
     }
 
