@@ -58,7 +58,7 @@ public static class Formats
             : Math.Max(1, span.Minutes) + " min";
     }
 
-    public static string DateTimeLocal(DateTime value) => value.ToString("d MMM yyyy, t", CultureInfo.CurrentCulture);
+    public static string DateTimeLocal(DateTime value) => value.ToString("d MMM yyyy", CultureInfo.CurrentCulture) + ", " + CompactTime(value);
 
     public static string CompactTime(DateTime value) =>
         value.ToString(CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern.Contains('H') ? "HH:mm" : "h:mm tt", CultureInfo.CurrentCulture);

@@ -36,7 +36,7 @@ else
             <a class="ghost-btn" href="/downloads/msi">@L["Downloads.DownloadMsi"]</a>
         </div>
         <p class="muted tiny">@L["Downloads.Sha", _current.Sha256]</p>
-        <p class="muted tiny">@L["Downloads.Published", _current.PublishedUtc.ToLocalTime().ToString("d MMM yyyy, t", System.Globalization.CultureInfo.CurrentCulture)]</p>
+        <p class="muted tiny">@L["Downloads.Published", Formats.DateTimeLocal(_current.PublishedUtc.ToLocalTime())]</p>
     </div>
 }
 

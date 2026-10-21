@@ -6,10 +6,6 @@
 }
 
 <div class="auth-card install-card" data-token="@Model.Token">
-    <div class="auth-brand">
-        <img src="/brand/lockup-color.svg" alt="Parental OpControl" />
-    </div>
-
     @if (Model.Status.Status == "connected")
     {
         <div class="status-mark ok">✓</div>
@@ -45,7 +41,8 @@
         {
             <div class="alert danger">@L["Install.NoInstaller"]</div>
         }
-        <p class="muted tiny">@L["Install.Expires", Model.Status.ExpiresUtc.ToLocalTime().ToString("d MMM, t", System.Globalization.CultureInfo.CurrentCulture)]</p>
+        var expiresUtc = DateTime.SpecifyKind(Model.Status.ExpiresUtc, DateTimeKind.Utc);
+        <p class="muted tiny" id="install-expires" data-utc="@expiresUtc.ToString("o")" data-template="@L["Install.Expires", "{0}"]">@L["Install.Expires", OpControl.Parental.Server.Services.Formats.CompactDateTime(expiresUtc) + " UTC"]</p>
         <details class="install-fallback">
             <summary>@L["Install.CodeHelp"]</summary>
             <p class="muted small">@L["Install.CodeHelpBody"]</p>
@@ -54,6 +51,18 @@
 </div>
 
 <script>
+    (function () {
+        // Show the expiry in this computer's own time zone and the page language.
+        const el = document.getElementById('install-expires');
+        if (el) {
+            try {
+                const when = new Date(el.dataset.utc);
+                const text = new Intl.DateTimeFormat(document.documentElement.lang || undefined,
+                    { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }).format(when);
+                el.textContent = el.dataset.template.replace('{0}', text);
+            } catch { }
+        }
+    })();
     (function () {
         const token = @System.Text.Json.JsonSerializer.Serialize(Model.Token);
         if (@System.Text.Json.JsonSerializer.Serialize(Model.Status.Status) !== 'pending') return;
