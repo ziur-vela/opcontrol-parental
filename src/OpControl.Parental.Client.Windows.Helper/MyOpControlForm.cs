@@ -22,9 +22,12 @@ public enum MyOpControlTab
 public sealed class MyOpControlForm : Form
 {
     private const int WmNcHitTest = 0x84;
+    private const int WmNcLButtonDown = 0xA1;
     private const int WmSetRedraw = 0x000B;
     private const int WsExComposited = 0x02000000;
     private const int WsThickFrame = 0x00040000;
+    private const int WsSysMenu = 0x00080000;
+    private const int WsMinimizeBox = 0x00020000;
     private const int HtCaption = 2;
     private const int HtLeft = 10;
     private const int HtRight = 11;
@@ -34,6 +37,9 @@ public sealed class MyOpControlForm : Form
     private const int HtBottom = 15;
     private const int HtBottomLeft = 16;
     private const int HtBottomRight = 17;
+
+    [DllImport("user32.dll")]
+    private static extern bool ReleaseCapture();
 
     [DllImport("user32.dll")]
     private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
@@ -64,6 +70,7 @@ public sealed class MyOpControlForm : Form
     private MyOpControlTab _activeTab = MyOpControlTab.Home;
     private bool _online;
     private float _scaleFactor = 1f;
+    private bool _messagesStarted;
 
     public event Action<int>? UnreadChanged;
 
@@ -130,7 +137,6 @@ public sealed class MyOpControlForm : Form
             UpdateBadge(count);
             UnreadChanged?.Invoke(count);
         };
-        _messages.Start();
         HelperPaths.LogEvent("my-opcontrol-started");
 
         KeyDown += (_, e) =>
@@ -307,6 +313,7 @@ public sealed class MyOpControlForm : Form
         layout.Controls.Add(new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent }, 1, 0);
         layout.Controls.Add(right, 2, 0);
         header.Controls.Add(layout);
+        EnableTitleDrag(header);
         return header;
     }
 
@@ -648,6 +655,11 @@ public sealed class MyOpControlForm : Form
     protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
+        if (!_messagesStarted)
+        {
+            _messagesStarted = true;
+            _messages.Start();
+        }
         HelperPaths.LogEvent($"my-opcontrol-shown {Width}x{Height} at {Left},{Top} dpi={_scaleFactor:0.##}");
     }
 
@@ -665,7 +677,7 @@ public sealed class MyOpControlForm : Form
             cp.ExStyle |= WsExComposited;
             // WS_THICKFRAME is what enables Aero Snap, resize borders and the drop shadow.
             // The window still paints its own title bar and borders.
-            cp.Style |= WsThickFrame;
+            cp.Style |= WsThickFrame | WsSysMenu | WsMinimizeBox;
             return cp;
         }
     }
@@ -761,6 +773,7 @@ public sealed class MyOpControlForm : Form
         width = Math.Clamp(width, minWidth, maxWidth);
         height = Math.Clamp(height, minHeight, maxHeight);
         MinimumSize = new Size(minWidth, minHeight);
+        MaximizedBounds = target.WorkingArea;
         Bounds = new Rectangle(
             Math.Clamp(x, target.WorkingArea.Left, target.WorkingArea.Right - width),
             Math.Clamp(y, target.WorkingArea.Top, target.WorkingArea.Bottom - height),
@@ -783,6 +796,31 @@ public sealed class MyOpControlForm : Form
             Math.Clamp(rect.Top, area.Top, area.Bottom - height),
             width,
             height);
+    }
+
+    private void EnableTitleDrag(Control parent)
+    {
+        foreach (Control child in parent.Controls)
+        {
+            if (child is Button) continue;
+            child.MouseDown += TitleMouseDown;
+            EnableTitleDrag(child);
+        }
+    }
+
+    private void TitleMouseDown(object? sender, MouseEventArgs e)
+    {
+        if (e.Button != MouseButtons.Left) return;
+        if (e.Clicks >= 2)
+        {
+            MaximizedBounds = Screen.FromHandle(Handle).WorkingArea;
+            WindowState = WindowState == FormWindowState.Maximized
+                ? FormWindowState.Normal
+                : FormWindowState.Maximized;
+            return;
+        }
+        ReleaseCapture();
+        SendMessage(Handle, WmNcLButtonDown, (IntPtr)HtCaption, IntPtr.Zero);
     }
 
     private static bool IsOverButton(Control parent, Point screen)
