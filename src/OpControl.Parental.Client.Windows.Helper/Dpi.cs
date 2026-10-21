@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 namespace OpControl.Parental.Helper;
 
 /// <summary>
@@ -7,7 +9,23 @@ namespace OpControl.Parental.Helper;
 /// </summary>
 internal static class Dpi
 {
-    public static float Factor(Control c) => c.DeviceDpi / 96f;
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr hwnd);
+
+    public static float Factor(Control c)
+    {
+        var dpi = c.DeviceDpi;
+        try
+        {
+            if (c.IsHandleCreated)
+            {
+                var actual = (int)GetDpiForWindow(c.Handle);
+                if (actual > 0) dpi = actual;
+            }
+        }
+        catch { }
+        return dpi / 96f;
+    }
 
     public static int S(Control c, int value) => (int)Math.Round(value * Factor(c));
 
