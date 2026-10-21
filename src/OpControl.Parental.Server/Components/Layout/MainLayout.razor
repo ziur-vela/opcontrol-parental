@@ -49,6 +49,13 @@
             {
                 <NavLink class="nav-link" href="/schedules"><span class="nav-ico">◷</span> @L["Nav.Schedules"]</NavLink>
             }
+            @if (Can(PermissionFlags.Messaging))
+            {
+                <NavLink class="nav-link" href="/messages">
+                    <span class="nav-ico">✉</span> @L["Nav.Messages"]
+                    @if (_messageUnread > 0) { <span class="nav-count">@_messageUnread</span> }
+                </NavLink>
+            }
             @if (Can(PermissionFlags.ViewReports))
             {
                 <NavLink class="nav-link" href="/alerts">
@@ -111,6 +118,7 @@
 
 @code {
     private int _unread;
+    private int _messageUnread;
     private bool _isOwner;
     private bool _isServerAdmin;
     private ParentPermissions _permissions;
@@ -126,7 +134,8 @@
         ViewReports = 16,
         ManageDevices = 32,
         ManagePin = 64,
-        RemoteView = 128
+        RemoteView = 128,
+        Messaging = 256
     }
 
     private bool IsSpanish => System.Globalization.CultureInfo.CurrentUICulture.Name.StartsWith("es", StringComparison.OrdinalIgnoreCase);
@@ -151,10 +160,14 @@
         _isServerAdmin = string.Equals(auth.User.FindFirst("server_admin")?.Value, "true", StringComparison.OrdinalIgnoreCase);
         _permissions = int.TryParse(auth.User.FindFirst("permissions")?.Value, out var value) ? (ParentPermissions)value : ParentPermissions.None;
         Events.AlertChanged += OnAlertChanged;
+        Events.MessageChanged += OnMessageChanged;
         await RefreshAsync();
     }
 
     private void OnAlertChanged(OpControl.Parental.Server.Data.Alert alert) =>
+        _ = InvokeAsync(async () => { await RefreshAsync(); StateHasChanged(); });
+
+    private void OnMessageChanged(OpControl.Parental.Contracts.ChildMessageDto message) =>
         _ = InvokeAsync(async () => { await RefreshAsync(); StateHasChanged(); });
 
     private async Task RefreshAsync()
@@ -172,9 +185,15 @@
                 .FirstOrDefaultAsync();
             if (child is not { } childId) return;
             _unread = await db.Alerts.AsNoTracking().CountAsync(a => a.FamilyId == familyId && a.ChildId == childId && a.ReadUtc == null);
+            _messageUnread = await db.ChildMessages.AsNoTracking().CountAsync(m => m.FamilyId == familyId
+                && m.Direction == MessageDirection.ChildToParent && m.ParentReadUtc == null && m.DeletedUtc == null);
         }
         catch { }
     }
 
-    public void Dispose() => Events.AlertChanged -= OnAlertChanged;
+    public void Dispose()
+    {
+        Events.AlertChanged -= OnAlertChanged;
+        Events.MessageChanged -= OnMessageChanged;
+    }
 }

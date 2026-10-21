@@ -241,9 +241,13 @@ public sealed class InvitationService
             .Where(u => u.Id == invitation.CreatedByParentId)
             .Select(u => u.DisplayName)
             .FirstOrDefaultAsync(ct);
+        var timeZoneId = invitation.FamilyId is { } familyId
+            ? await _db.Devices.AsNoTracking().Where(d => d.FamilyId == familyId)
+                .Select(d => d.TimeZoneId).FirstOrDefaultAsync(ct)
+            : null;
         var rendered = invitation.Kind == InvitationKind.NewFamily
-            ? _renderer.RenderInviteNewFamily(language, link, invitation.FamilyName, inviterName, invitation.ExpiresUtc)
-            : _renderer.RenderInviteCoParent(language, link, invitation.FamilyName ?? "", inviterName, invitation.ExpiresUtc);
+            ? _renderer.RenderInviteNewFamily(language, link, invitation.FamilyName, inviterName, invitation.ExpiresUtc, timeZoneId)
+            : _renderer.RenderInviteCoParent(language, link, invitation.FamilyName ?? "", inviterName, invitation.ExpiresUtc, timeZoneId);
         var (sent, _) = await _email.SendAsync(new EmailOutgoing(invitation.Email, rendered), null, ct);
         return sent;
     }

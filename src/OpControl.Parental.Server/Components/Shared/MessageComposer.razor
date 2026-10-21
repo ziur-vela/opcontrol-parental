@@ -1,0 +1,114 @@
+@using OpControl.Parental.Server.Auth
+@using OpControl.Parental.Contracts
+@using OpControl.Parental.Server.Data
+@using OpControl.Parental.Server.Services
+@inject AuthenticationStateProvider AuthState
+@inject IServiceScopeFactory Scopes
+@inject IStringLocalizer<AppStrings> L
+
+<div class="msg-composer @(Compact ? "compact" : "")">
+    <div class="chip-row">
+        @foreach (var key in Presets)
+        {
+            <button type="button" class="chip @(_preset == key ? "active" : "")" @onclick="() => PickPreset(key)">@L["Messages.Preset." + PresetLabel(key)]</button>
+        }
+    </div>
+    <textarea class="msg-input" maxlength="500" rows="@(Compact ? 2 : 3)" @bind="_text"
+              placeholder="@L["Messages.Placeholder"]" aria-label="@L["Messages.Placeholder"]"></textarea>
+    <div class="msg-composer-foot">
+        <div class="check-row">
+            <label class="check"><input type="checkbox" @bind="_speak" /> @L["Messages.ReadAloud"]</label>
+            <label class="check"><input type="checkbox" @bind="_ack" /> @L["Messages.RequireAck"]</label>
+        </div>
+        <div class="button-row">
+            <span class="muted tiny">@((_text ?? "").Length)/500</span>
+            <button type="button" class="btn btn-primary" disabled="@_busy" @onclick="SendAsync">@L["Messages.Send"]</button>
+        </div>
+    </div>
+    @if (_error is not null)
+    {
+        <div class="alert danger">@_error</div>
+    }
+</div>
+
+@code {
+    private static readonly string[] Presets = ["dinner", "wrap-up", "come-find-me"];
+
+    [Parameter, EditorRequired] public Guid ChildId { get; set; }
+    [Parameter] public Guid? DeviceId { get; set; }
+    [Parameter] public bool Compact { get; set; }
+    [Parameter] public EventCallback OnSent { get; set; }
+
+    private Guid _familyId;
+    private Guid _parentId;
+    private string _text = "";
+    private string? _preset;
+    private string? _presetText;
+    private bool _speak;
+    private bool _ack;
+    private bool _busy;
+    private string? _error;
+
+    private static string PresetLabel(string key) => key switch
+    {
+        "dinner" => "Dinner",
+        "wrap-up" => "WrapUp",
+        _ => "ComeFindMe"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        Guid.TryParse(auth.User.FindFirst("family_id")?.Value, out _familyId);
+        Guid.TryParse(auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out _parentId);
+    }
+
+    private void PickPreset(string key)
+    {
+        _preset = key;
+        _presetText = L["Messages.Preset." + PresetLabel(key)];
+        _text = _presetText;
+        _error = null;
+    }
+
+    private async Task SendAsync()
+    {
+        if (_busy) return;
+        var text = (_text ?? "").Trim();
+        if (text.Length == 0)
+        {
+            _error = L["Error.Messages.Empty"];
+            return;
+        }
+        if (text.Length > 500)
+        {
+            _error = L["Messages.TooLong"];
+            return;
+        }
+
+        _busy = true;
+        _error = null;
+        try
+        {
+            var preset = _preset is not null && string.Equals(text, _presetText, StringComparison.Ordinal) ? _preset : null;
+            using var scope = Scopes.CreateScope();
+            var messages = scope.ServiceProvider.GetRequiredService<MessageService>();
+            await messages.SendFromParentAsync(_familyId, _parentId, ChildId,
+                new ParentMessageRequest(text, preset, _speak, _ack, DeviceId));
+            _text = "";
+            _preset = null;
+            _presetText = null;
+            _speak = false;
+            _ack = false;
+            if (OnSent.HasDelegate) await OnSent.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

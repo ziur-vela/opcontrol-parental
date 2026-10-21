@@ -16,6 +16,9 @@ public static class HelperPaths
     public static string UsageQueueFile => Path.Combine(UserDirectory, "usage-queue.jsonl");
     public static string WebsiteUsageQueueFile => Path.Combine(UserDirectory, "website-usage-queue.jsonl");
     public static string LastVisitFile => Path.Combine(PublicDirectory, "last-visit.json");
+    public static string MessageDirectory => Path.Combine(UserDirectory, "messages");
+    public static string MessageThreadFile => Path.Combine(MessageDirectory, "thread.json");
+    public static string MessagePopupDirectory => Path.Combine(MessageDirectory, "popup");
 
     public static readonly JsonSerializerOptions JsonOptions = new()
     {

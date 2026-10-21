@@ -416,3 +416,52 @@ code { font-family: var(--mono); background: var(--panel-2); padding: 2px 5px; f
 
 /* OpControl logo in "Created by" footers (smaller than the HPB dashboard, 36px there) */
 .opc-logo { height: 24px; width: auto; opacity: .8; display: block; }
+
+/* Job 11: parent and child messaging */
+.msg-composer { display: flex; flex-direction: column; gap: 10px; }
+.msg-input {
+    width: 100%; min-height: 78px; resize: vertical; padding: 10px;
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--line-2);
+    font-family: var(--sans); font-size: 14px; line-height: 1.45; border-radius: 0;
+}
+.msg-input:focus { outline: 2px solid var(--value); outline-offset: 0; }
+.msg-composer-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.check-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.msg-composer.compact .msg-input { min-height: 58px; }
+.message-thread { display: flex; flex-direction: column; gap: 10px; max-height: 58vh; overflow-y: auto; padding: 4px 2px; }
+.msg-row { display: flex; }
+.msg-row.from-child { justify-content: flex-start; }
+.msg-row.from-parent { justify-content: flex-end; }
+.msg-bubble {
+    max-width: 76%; min-width: 120px; padding: 9px 11px;
+    display: flex; flex-direction: column; gap: 5px;
+    background: var(--panel-2); border: 1px solid var(--line);
+}
+.msg-row.from-parent .msg-bubble { border-color: color-mix(in srgb, var(--value) 38%, var(--line)); }
+.msg-head {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+}
+.msg-sender { color: var(--label); font-weight: 500; }
+.msg-time { color: var(--faint); letter-spacing: .02em; }
+.msg-status { color: var(--muted); letter-spacing: 0; }
+.msg-status.seen { color: var(--value); }
+.msg-status.ack { color: var(--brand); }
+.ack-pill { color: var(--brand); border-color: color-mix(in srgb, var(--brand) 55%, var(--line)); }
+.msg-text { font-family: var(--sans); font-size: 14px; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg-delete { margin-left: auto; border: 0; background: transparent; color: var(--faint); cursor: pointer; font-size: 15px; line-height: 1; padding: 0 2px; }
+.msg-delete:hover { color: var(--danger); }
+.msg-target { display: flex; align-items: center; gap: 7px; }
+.msg-target > span { margin-right: 3px; }
+.msg-target select { height: 34px; font-size: 12px; max-width: 13rem; }
+.message-children { margin-top: -4px; }
+.inline-message { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 9px; }
+.inline-message summary { display: inline-flex; list-style: none; cursor: pointer; }
+.inline-message summary::-webkit-details-marker { display: none; }
+.inline-message[open] summary { margin-bottom: 9px; }
+@media (max-width: 620px) {
+    .msg-bubble { max-width: 94%; }
+    .message-thread { max-height: none; }
+    .msg-composer-foot { align-items: stretch; }
+    .msg-composer-foot .button-row { justify-content: flex-end; }
+}

@@ -6,6 +6,7 @@
 @using OpControl.Parental.Contracts
 @using OpControl.Parental.Server.Data
 @using OpControl.Parental.Server.Services
+@using OpControl.Parental.Server.Components.Shared
 @inject AuthenticationStateProvider AuthState
 @inject IServiceScopeFactory Scopes
 @inject DevicePresenceService Presence
@@ -109,6 +110,14 @@ else
                 <span>@StateHeadline</span>
                 <span class="muted tiny">@ReasonText</span>
             </div>
+
+            @if (_canMessage)
+            {
+                <details class="inline-message">
+                    <summary class="ghost-btn">@L["Home.MessageChild"]</summary>
+                    <MessageComposer ChildId="_childId" Compact="true" OnSent="RefreshAsync" />
+                </details>
+            }
 
             @if (_canLock)
             {
@@ -252,6 +261,7 @@ else
     private bool _loading = true;
     private bool _canLock;
     private bool _canView;
+    private bool _canMessage;
     private bool _busy;
     private bool _hasPin;
     private int _usedTodaySeconds;
@@ -282,6 +292,8 @@ else
             && (permissions & (int)OpControl.Parental.Contracts.ParentPermissions.LockUnlockBonus) != 0);
         _canView = isOwner || (int.TryParse(auth.User.FindFirst("permissions")?.Value, out var reportPermissions)
             && (reportPermissions & (int)OpControl.Parental.Contracts.ParentPermissions.ViewReports) != 0);
+        _canMessage = isOwner || (int.TryParse(auth.User.FindFirst("permissions")?.Value, out var messagePermissions)
+            && (messagePermissions & (int)OpControl.Parental.Contracts.ParentPermissions.Messaging) != 0);
 
         Events.DeviceStatusChanged += OnDeviceStatus;
         Events.LockStateChanged += OnLockState;
@@ -552,13 +564,14 @@ else
     private static string Icon(string type) => type switch
     {
         "new-app" => "＋", "repeated-blocked-site" => "⊘", "pin-override" => "✦",
-        "daily-limit" or "app-limit" => "◔", "device-offline" => "⇄", "tampering" => "!", _ => "◉"
+        "daily-limit" or "app-limit" => "◔", "device-offline" => "⇄", "tampering" => "!", "child-message" => "✉", _ => "◉"
     };
 
     private static string Tone(string type) => type switch
     {
         "repeated-blocked-site" or "daily-limit" or "app-limit" => "danger",
         "device-offline" or "tampering" => "warn",
+        "child-message" => "accent",
         _ => "accent"
     };
 

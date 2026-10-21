@@ -15,13 +15,15 @@ public sealed class ParentalHub : Hub
     private readonly ParentalDbContext _db;
     private readonly DevicePresenceService _presence;
     private readonly LockService _locks;
+    private readonly MessageService _messages;
     private readonly ILogger<ParentalHub> _logger;
 
-    public ParentalHub(ParentalDbContext db, DevicePresenceService presence, LockService locks, ILogger<ParentalHub> logger)
+    public ParentalHub(ParentalDbContext db, DevicePresenceService presence, LockService locks, MessageService messages, ILogger<ParentalHub> logger)
     {
         _db = db;
         _presence = presence;
         _locks = locks;
+        _messages = messages;
         _logger = logger;
     }
 
@@ -40,6 +42,9 @@ public sealed class ParentalHub : Hub
 
         var state = await _locks.GetDeviceStateForDeviceAsync(device);
         await Clients.Caller.SendAsync(DeviceHubMethods.DeviceStateChanged, state);
+
+        foreach (var message in await _messages.GetPendingForDeviceAsync(device, 100, Context.ConnectionAborted))
+            await Clients.Caller.SendAsync(DeviceHubMethods.MessageReceived, message, Context.ConnectionAborted);
 
         _logger.LogInformation("Device {DeviceId} ({DeviceName}) connected on {ConnectionId}", device.Id, device.Name, Context.ConnectionId);
         await base.OnConnectedAsync();

@@ -17,16 +17,18 @@ public sealed class PinPipeServer : BackgroundService
     private readonly OverrideSync _overrides;
     private readonly ClientSettings _settings;
     private readonly DataSyncService _sync;
+    private readonly MessageSyncService _messages;
     private readonly ILogger<PinPipeServer> _logger;
     private readonly ConcurrentDictionary<string, DateTime> _tickets = new();
 
-    public PinPipeServer(LockRuntime runtime, LockoutStore lockout, OverrideSync overrides, ClientSettings settings, DataSyncService sync, ILogger<PinPipeServer> logger)
+    public PinPipeServer(LockRuntime runtime, LockoutStore lockout, OverrideSync overrides, ClientSettings settings, DataSyncService sync, MessageSyncService messages, ILogger<PinPipeServer> logger)
     {
         _runtime = runtime;
         _lockout = lockout;
         _overrides = overrides;
         _settings = settings;
         _sync = sync;
+        _messages = messages;
         _logger = logger;
     }
 
@@ -127,6 +129,21 @@ public sealed class PinPipeServer : BackgroundService
                 return await ApplyOverrideAsync(request, ct);
             case "state":
                 return new PinPipeResponse(true, State: _runtime.Current);
+            case "messages-thread":
+                return new PinPipeResponse(true, Messages: await _messages.GetThreadAsync(ct));
+            case "message-send":
+                if (string.IsNullOrWhiteSpace(request.Text))
+                    return new PinPipeResponse(false, Loc.T("Client.Messages.Placeholder"));
+                var result = await _messages.SendAsync(request.Text, ct);
+                return new PinPipeResponse(result.Ok, result.Error, Message: result.Message, Queued: result.Queued);
+            case "message-seen":
+                if (request.MessageId is not { } seenId) return new PinPipeResponse(false, Loc.T("Client.Pipe.InvalidRequest"));
+                await _messages.MarkSeenAsync(seenId, ct);
+                return new PinPipeResponse(true);
+            case "message-ack":
+                if (request.MessageId is not { } ackId) return new PinPipeResponse(false, Loc.T("Client.Pipe.InvalidRequest"));
+                await _messages.MarkAcknowledgedAsync(ackId, ct);
+                return new PinPipeResponse(true);
             default:
                 return new PinPipeResponse(false, Loc.T("Client.Pipe.UnknownRequest"));
         }

@@ -872,4 +872,53 @@ If you were not expecting this, ignore this email.</value></data>
   <data name="ServerAdmin.OpenEmailPreview" xml:space="preserve"><value>Open email preview</value></data>
   <data name="Settings.SendTestEmail" xml:space="preserve"><value>Send test email</value></data>
   <data name="Settings.TestEmailSent" xml:space="preserve"><value>Test email sent to {0}.</value></data>
+  <data name="Nav.Messages" xml:space="preserve"><value>Messages</value></data>
+  <data name="Messages.PageTitle" xml:space="preserve"><value>Messages</value></data>
+  <data name="Messages.Subtitle" xml:space="preserve"><value>Short messages between you and your child. They never go to an AI model.</value></data>
+  <data name="Messages.Empty" xml:space="preserve"><value>No messages yet. Send the first one below.</value></data>
+  <data name="Messages.NoChild" xml:space="preserve"><value>No child yet. Add a child before sending messages.</value></data>
+  <data name="Messages.Placeholder" xml:space="preserve"><value>Write a message (500 characters max)</value></data>
+  <data name="Messages.Send" xml:space="preserve"><value>Send</value></data>
+  <data name="Messages.Preset" xml:space="preserve"><value>Quick message</value></data>
+  <data name="Messages.Preset.Dinner" xml:space="preserve"><value>Dinner's ready</value></data>
+  <data name="Messages.Preset.WrapUp" xml:space="preserve"><value>Time to wrap up</value></data>
+  <data name="Messages.Preset.ComeFindMe" xml:space="preserve"><value>Come find me</value></data>
+  <data name="Messages.ReadAloud" xml:space="preserve"><value>Read it aloud</value></data>
+  <data name="Messages.RequireAck" xml:space="preserve"><value>Ask for "Got it"</value></data>
+  <data name="Messages.Status.Sent" xml:space="preserve"><value>Sent</value></data>
+  <data name="Messages.Status.Delivered" xml:space="preserve"><value>Delivered</value></data>
+  <data name="Messages.Status.Seen" xml:space="preserve"><value>Seen</value></data>
+  <data name="Messages.Status.Ack" xml:space="preserve"><value>Got it</value></data>
+  <data name="Messages.Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Messages.ClearThread" xml:space="preserve"><value>Clear thread</value></data>
+  <data name="Messages.ClearConfirm" xml:space="preserve"><value>Clear this whole thread? Messages will be hidden from everyone.</value></data>
+  <data name="Messages.DeleteConfirm" xml:space="preserve"><value>Delete this message?</value></data>
+  <data name="Messages.Unread" xml:space="preserve"><value>{0} unread</value></data>
+  <data name="Messages.AllDevices" xml:space="preserve"><value>All devices</value></data>
+  <data name="Messages.ToDevice" xml:space="preserve"><value>To {0}</value></data>
+  <data name="Messages.SentOk" xml:space="preserve"><value>Message sent.</value></data>
+  <data name="Messages.From" xml:space="preserve"><value>From {0}</value></data>
+  <data name="Messages.ThreadTitle" xml:space="preserve"><value>Conversation with {0}</value></data>
+  <data name="Messages.DeleteHint" xml:space="preserve"><value>Delete</value></data>
+  <data name="Messages.StatusTitle" xml:space="preserve"><value>Status</value></data>
+  <data name="Error.Messages.Empty" xml:space="preserve"><value>Write a message first.</value></data>
+  <data name="Error.Messages.RateLimited" xml:space="preserve"><value>Too many messages. Try again in {0} minute(s).</value></data>
+  <data name="Error.MessageNotFound" xml:space="preserve"><value>Message not found.</value></data>
+  <data name="Error.MessageNotForDevice" xml:space="preserve"><value>This message is for another device.</value></data>
+  <data name="Team.Perm.Messages" xml:space="preserve"><value>messages</value></data>
+  <data name="Settings.MuteChildMessage" xml:space="preserve"><value>Child sent a message</value></data>
+  <data name="Alert.ChildMessage.Title" xml:space="preserve"><value>{0} sent a message</value></data>
+  <data name="Alert.ChildMessage.Detail" xml:space="preserve"><value>“{1}”</value></data>
+  <data name="Email.MessageSubject" xml:space="preserve"><value>New message from {0}</value></data>
+  <data name="Email.Message.Preheader" xml:space="preserve"><value>{0} sent you a message.</value></data>
+  <data name="Email.Message.Headline" xml:space="preserve"><value>New message from {0}</value></data>
+  <data name="Email.Message.Button" xml:space="preserve"><value>Open messages</value></data>
+  <data name="Email.Message.Sample" xml:space="preserve"><value>Can you come home at six?</value></data>
+  <data name="Email.Digest.MessageCountOne" xml:space="preserve"><value>{0} message from your child</value></data>
+  <data name="Email.Digest.MessageCountMany" xml:space="preserve"><value>{0} messages from your child</value></data>
+  <data name="Home.MessageChild" xml:space="preserve"><value>Message</value></data>
+  <data name="Devices.Message" xml:space="preserve"><value>Message</value></data>
+  <data name="Messages.Target" xml:space="preserve"><value>Send to</value></data>
+  <data name="Email.Error.MessageFailed" xml:space="preserve"><value>The message email could not be sent.</value></data>
+  <data name="Messages.TooLong" xml:space="preserve"><value>Messages can be up to 500 characters.</value></data>
 </root>

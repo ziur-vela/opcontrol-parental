@@ -20,6 +20,18 @@ public static class PinPipeClient
         return await SendAsync(new PinPipeRequest("override", Option: option, Minutes: minutes, Ticket: ticket), ct);
     }
 
+    public static async Task<PinPipeResponse> GetThreadAsync(CancellationToken ct) =>
+        await SendAsync(new PinPipeRequest("messages-thread"), ct);
+
+    public static async Task<PinPipeResponse> SendMessageAsync(string text, CancellationToken ct) =>
+        await SendAsync(new PinPipeRequest("message-send", Text: text), ct);
+
+    public static async Task<PinPipeResponse> MarkSeenAsync(Guid messageId, CancellationToken ct) =>
+        await SendAsync(new PinPipeRequest("message-seen", MessageId: messageId), ct);
+
+    public static async Task<PinPipeResponse> MarkAcknowledgedAsync(Guid messageId, CancellationToken ct) =>
+        await SendAsync(new PinPipeRequest("message-ack", MessageId: messageId), ct);
+
     private static async Task<PinPipeResponse> SendAsync(PinPipeRequest request, CancellationToken ct)
     {
         try

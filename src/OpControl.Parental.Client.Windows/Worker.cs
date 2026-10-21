@@ -17,9 +17,10 @@ public sealed class Worker : BackgroundService
     private readonly UpdateService _updates;
     private readonly TaskManagerPolicy _policy;
     private readonly RemoteRelayService _remote;
+    private readonly MessageSyncService _messages;
     private DeviceCredential? _credential;
     private ClientOptions _options = new();
-    private string ClientVersion => typeof(Worker).Assembly.GetName().Version?.ToString(3) ?? "0.9.1";
+    private string ClientVersion => typeof(Worker).Assembly.GetName().Version?.ToString(3) ?? "0.12.0";
 
     private readonly IServiceProvider _serviceProvider;
 
@@ -35,6 +36,7 @@ public sealed class Worker : BackgroundService
         UpdateService updates,
         TaskManagerPolicy policy,
         RemoteRelayService remote,
+        MessageSyncService messages,
         IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
@@ -49,6 +51,7 @@ public sealed class Worker : BackgroundService
         _updates = updates;
         _policy = policy;
         _remote = remote;
+        _messages = messages;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -198,6 +201,7 @@ public sealed class Worker : BackgroundService
 
         connection.On<RemoteSessionRequest>(DeviceHubMethods.RemoteSessionRequested, request => _remote.Start(request));
         connection.On<RemoteSessionStopRequest>(DeviceHubMethods.RemoteSessionStopped, request => _remote.Stop(request.SessionId));
+        connection.On<ChildMessageDto>(DeviceHubMethods.MessageReceived, message => _ = _messages.HandleIncomingAsync(message, CancellationToken.None));
 
         connection.On<DeviceStateDto>(DeviceHubMethods.DeviceStateChanged, state =>
         {
@@ -219,6 +223,8 @@ public sealed class Worker : BackgroundService
         connection.Reconnected += connectionId =>
         {
             _logger.LogInformation("Hub reconnected as {ConnectionId}", connectionId);
+            _ = _messages.PullAsync(CancellationToken.None);
+            _ = _messages.FlushOutboxAsync(CancellationToken.None);
             return Task.CompletedTask;
         };
         connection.Closed += error =>
@@ -231,6 +237,8 @@ public sealed class Worker : BackgroundService
         {
             await connection.StartAsync(stoppingToken);
             _logger.LogInformation("Connected to hub as device {DeviceId}", credential.DeviceId);
+            await _messages.PullAsync(stoppingToken);
+            await _messages.FlushOutboxAsync(stoppingToken);
         }
         catch (Exception ex)
         {
@@ -252,6 +260,8 @@ public sealed class Worker : BackgroundService
                         await connection.InvokeAsync("Heartbeat", DateTime.UtcNow, TimeZoneInfo.Local.Id, ClientVersion, stoppingToken);
                         if (_overrides.HasPending)
                             await _overrides.SyncPendingAsync(_options, stoppingToken);
+                        if (_messages.HasPendingOutbox)
+                            await _messages.FlushOutboxAsync(stoppingToken);
                     }
                     catch (Exception ex)
                     {

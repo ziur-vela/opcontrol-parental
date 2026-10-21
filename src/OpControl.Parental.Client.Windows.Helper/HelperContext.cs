@@ -1,3 +1,4 @@
+using System.Reflection;
 using OpControl.Parental.Contracts;
 using OpControl.Parental.Localization;
 
@@ -16,6 +17,13 @@ public sealed class HelperContext : ApplicationContext
     private RemoteNoticeForm? _notice;
     private PinDialog? _pinDialog;
     private NotificationForm? _notification;
+    private MessagePopupForm? _messagePopup;
+    private ChildMessageForm? _childMessageForm;
+    private NotifyIcon? _tray;
+    private ToolStripMenuItem? _trayMessageItem;
+    private Icon? _trayIcon;
+    private Bitmap? _trayBitmap;
+    private string _trayLanguage = Loc.Language;
     private readonly DateTime _helperStartedUtc = DateTime.UtcNow;
     private DateTime _lastNotificationUtc = DateTime.MinValue;
     private bool _lastVisible;
@@ -29,11 +37,13 @@ public sealed class HelperContext : ApplicationContext
         _monitored = monitored;
         _overlays = new LockOverlayManager();
         _overlays.OverrideClicked += ShowPinDialog;
+        _overlays.MessageClicked += ShowChildMessageWindow;
         _countdown = new CountdownForm();
         _ = _marshal.Handle;
         _remote = new RemoteCaptureHost(monitored);
         _remote.NoticeChanged += OnRemoteNoticeChanged;
         _remote.Start();
+        CreateTrayIcon();
         _timer = new System.Windows.Forms.Timer { Interval = 500 };
         _timer.Tick += (_, _) => Tick();
         _timer.Start();
@@ -43,10 +53,14 @@ public sealed class HelperContext : ApplicationContext
 
     private void Tick()
     {
-        UpdateRemoteNotice();
-        CheckNotification();
         var state = HelperPaths.ReadState();
         Loc.SetLanguage(state?.Language);
+        UpdateRemoteNotice();
+        CheckNotification();
+        if (state is { IsLocked: true } && !_overlays.Visible)
+            _overlays.Update(state);
+        CheckMessagePopups();
+        UpdateTrayLanguage();
         _usage.Sample(state);
         if (state is null)
         {
@@ -134,6 +148,171 @@ public sealed class HelperContext : ApplicationContext
         {
             _notice?.HideNotice();
         }
+    }
+
+    private void CreateTrayIcon()
+    {
+        try
+        {
+            using var stream = Assembly.GetExecutingAssembly()
+                .GetManifestResourceStream("OpControl.Parental.Helper.brand.icon-color-128.png");
+            if (stream is not null)
+            {
+                _trayBitmap = new Bitmap(stream);
+                _trayIcon = Icon.FromHandle(_trayBitmap.GetHicon());
+            }
+            _trayIcon ??= SystemIcons.Shield;
+
+            _trayMessageItem = new ToolStripMenuItem(Loc.T("Client.Messages.Open"));
+            _trayMessageItem.Click += (_, _) => ShowChildMessageWindow();
+
+            var menu = new ContextMenuStrip();
+            menu.Items.Add(_trayMessageItem);
+            _tray = new NotifyIcon
+            {
+                Icon = _trayIcon,
+                Text = "Parental OpControl",
+                Visible = true,
+                ContextMenuStrip = menu
+            };
+            _tray.DoubleClick += (_, _) => ShowChildMessageWindow();
+        }
+        catch (Exception ex)
+        {
+            HelperPaths.LogEvent($"tray-icon-failed {ex.Message}");
+        }
+    }
+
+    private void UpdateTrayLanguage()
+    {
+        if (_trayMessageItem is null || _trayLanguage == Loc.Language) return;
+        _trayLanguage = Loc.Language;
+        _trayMessageItem.Text = Loc.T("Client.Messages.Open");
+    }
+
+    private void CheckMessagePopups()
+    {
+        if (_messagePopup is { IsDisposed: false }) return;
+        try
+        {
+            if (!Directory.Exists(HelperPaths.MessagePopupDirectory)) return;
+            var files = Directory.GetFiles(HelperPaths.MessagePopupDirectory, "*.json");
+            if (files.Length == 0) return;
+
+            ChildMessageDto? next = null;
+            string? nextPath = null;
+            foreach (var file in files)
+            {
+                ChildMessageDto? message = null;
+                try
+                {
+                    message = System.Text.Json.JsonSerializer.Deserialize<ChildMessageDto>(
+                        File.ReadAllText(file), HelperPaths.JsonOptions);
+                }
+                catch { }
+                if (message is null)
+                {
+                    try { File.Delete(file); } catch { }
+                    continue;
+                }
+                if (DateTime.UtcNow - message.CreatedUtc > TimeSpan.FromHours(24))
+                {
+                    try { File.Delete(file); } catch { }
+                    continue;
+                }
+                if (next is null || message.CreatedUtc < next.CreatedUtc)
+                {
+                    next = message;
+                    nextPath = file;
+                }
+            }
+
+            if (next is null || nextPath is null) return;
+            try { File.Delete(nextPath); } catch { }
+            ShowMessagePopup(next);
+        }
+        catch (Exception ex)
+        {
+            HelperPaths.LogEvent($"message-popup-failed {ex.Message}");
+        }
+    }
+
+    private void ShowMessagePopup(ChildMessageDto message)
+    {
+        try
+        {
+            var popup = new MessagePopupForm(message);
+            popup.Seen += m => _ = ReportSeenAsync(m.Id);
+            popup.Acknowledged += m => _ = ReportAcknowledgedAsync(m.Id);
+            popup.ReplyClicked += OpenChildMessagesFromPopup;
+            popup.FormClosed += (_, _) => _messagePopup = null;
+            _messagePopup = popup;
+
+            var owner = _overlays.Visible ? _overlays.Owner : null;
+            if (owner is { IsDisposed: false }) popup.Show(owner);
+            else popup.Show();
+            popup.BringToFront();
+            popup.Activate();
+            HelperPaths.LogEvent($"message-popup-shown id={message.Id}");
+        }
+        catch (Exception ex)
+        {
+            HelperPaths.LogEvent($"message-popup-show-failed {ex.Message}");
+        }
+    }
+
+    private void OpenChildMessagesFromPopup()
+    {
+        _messagePopup = null;
+        ShowChildMessageWindow();
+    }
+
+    private void ShowChildMessageWindow()
+    {
+        try
+        {
+            if (_childMessageForm is { IsDisposed: false })
+            {
+                _childMessageForm.BringToFront();
+                _childMessageForm.Activate();
+                return;
+            }
+
+            var aboveLock = _overlays.Visible;
+            var form = new ChildMessageForm(aboveLock);
+            form.FormClosed += (_, _) => _childMessageForm = null;
+            _childMessageForm = form;
+            var owner = aboveLock ? _overlays.Owner : null;
+            if (owner is { IsDisposed: false }) form.Show(owner);
+            else form.Show();
+            form.BringToFront();
+            form.Activate();
+            HelperPaths.LogEvent("message-window-opened");
+        }
+        catch (Exception ex)
+        {
+            HelperPaths.LogEvent($"message-window-failed {ex.Message}");
+        }
+    }
+
+    private static async Task ReportSeenAsync(Guid messageId)
+    {
+        try
+        {
+            var response = await PinPipeClient.MarkSeenAsync(messageId, CancellationToken.None);
+            if (!response.Ok) HelperPaths.LogEvent($"message-seen-failed {messageId} {response.Error}");
+        }
+        catch { }
+    }
+
+    private static async Task ReportAcknowledgedAsync(Guid messageId)
+    {
+        try
+        {
+            var response = await PinPipeClient.MarkAcknowledgedAsync(messageId, CancellationToken.None);
+            if (!response.Ok) HelperPaths.LogEvent($"message-ack-failed {messageId} {response.Error}");
+        }
+        catch { }
     }
 
     private void CheckDailyWarnings(RuntimeLockStateDto state)
@@ -289,6 +468,11 @@ public sealed class HelperContext : ApplicationContext
             _countdown.Dispose();
             _pinDialog?.Dispose();
             _notification?.Dispose();
+            _messagePopup?.Dispose();
+            _childMessageForm?.Dispose();
+            if (_tray is not null) { _tray.Visible = false; _tray.Dispose(); }
+            _trayIcon?.Dispose();
+            _trayBitmap?.Dispose();
             _usage.FlushAll();
         }
         base.Dispose(disposing);

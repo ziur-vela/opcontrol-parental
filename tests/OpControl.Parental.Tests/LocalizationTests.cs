@@ -43,6 +43,14 @@ public class LocalizationTests
     private const string AppStringsMarker = "OpControl.Parental.Server.Resources.AppStrings";
 
     [Fact]
+    public void Spanish_family_invite_uses_inclusive_child_wording()
+    {
+        var spanish = ReadResx("AppStrings.es-MX.resx");
+        Assert.Contains("tu hijo o hija", spanish["Email.InviteNewFamily.Intro"]);
+        Assert.DoesNotContain("tu hijo.", spanish["Email.InviteNewFamily.Intro"]);
+    }
+
+    [Fact]
     public void Client_resource_files_match()
     {
         using var english = System.Text.Json.JsonDocument.Parse(File.ReadAllText(

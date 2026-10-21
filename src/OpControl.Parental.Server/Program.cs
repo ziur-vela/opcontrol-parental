@@ -101,6 +101,12 @@ builder.Services.AddRateLimiter(options =>
         limiter.Window = TimeSpan.FromMinutes(1);
         limiter.QueueLimit = 0;
     });
+    options.AddFixedWindowLimiter("messages", limiter =>
+    {
+        limiter.PermitLimit = 30;
+        limiter.Window = TimeSpan.FromMinutes(1);
+        limiter.QueueLimit = 0;
+    });
 });
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
@@ -140,6 +146,7 @@ builder.Services.AddScoped<LockService>();
 builder.Services.AddScoped<RuleService>();
 builder.Services.AddScoped<UsageService>();
 builder.Services.AddScoped<AlertService>();
+builder.Services.AddScoped<MessageService>();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<DashboardEventBus>();
 builder.Services.AddSingleton<ReleaseCatalog>();
@@ -812,6 +819,104 @@ app.MapPost("/api/device/uninstall", async (UninstallReportRequest request, Clai
     return Results.Ok(new { ok = true });
 }).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
 
+
+app.MapGet("/api/children/{childId:guid}/messages", async (Guid childId, FamilyScope family, MessageService messages, CancellationToken ct) =>
+{
+    await family.RequireAsync(ParentPermissions.Messaging, ct);
+    return Results.Ok(await messages.GetThreadAsync(family.FamilyId, childId, 300, ct));
+}).RequireAuthorization();
+
+app.MapPost("/api/children/{childId:guid}/messages", async (Guid childId, ParentMessageRequest request, HttpContext context, IAntiforgery antiforgery, FamilyScope family, MessageService messages, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    await family.RequireAsync(ParentPermissions.Messaging, ct);
+    try
+    {
+        var created = await messages.SendFromParentAsync(family.FamilyId, family.ParentId, childId, request, ct);
+        return Results.Ok(created);
+    }
+    catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/children/{childId:guid}/messages/read", async (Guid childId, HttpContext context, IAntiforgery antiforgery, FamilyScope family, MessageService messages, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    await family.RequireAsync(ParentPermissions.Messaging, ct);
+    await messages.MarkParentReadAsync(family.FamilyId, childId, ct);
+    return Results.Ok(new { ok = true });
+}).RequireAuthorization();
+
+app.MapPost("/api/children/{childId:guid}/messages/clear", async (Guid childId, HttpContext context, IAntiforgery antiforgery, FamilyScope family, MessageService messages, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    await family.RequireAsync(ParentPermissions.Messaging, ct);
+    await messages.ClearThreadAsync(family.FamilyId, childId, ct);
+    return Results.Ok(new { ok = true });
+}).RequireAuthorization();
+
+app.MapPost("/api/messages/{messageId:guid}/delete", async (Guid messageId, HttpContext context, IAntiforgery antiforgery, FamilyScope family, MessageService messages, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    await family.RequireAsync(ParentPermissions.Messaging, ct);
+    await messages.DeleteAsync(family.FamilyId, messageId, ct);
+    return Results.Ok(new { ok = true });
+}).RequireAuthorization();
+
+app.MapGet("/api/messages/unread", async (FamilyScope family, MessageService messages, CancellationToken ct) =>
+{
+    await family.RequireAsync(ParentPermissions.Messaging, ct);
+    return Results.Ok(new { count = await messages.UnreadCountAsync(family.FamilyId, ct) });
+}).RequireAuthorization();
+
+app.MapGet("/api/device/messages", async (ClaimsPrincipal user, ParentalDbContext db, MessageService messages, CancellationToken ct) =>
+{
+    var device = await DeviceFromClaimsAsync(user, db, ct);
+    if (device is null) return Results.Unauthorized();
+    return Results.Ok(await messages.GetThreadForDeviceAsync(device, 300, ct));
+}).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
+
+app.MapGet("/api/device/messages/pending", async (ClaimsPrincipal user, ParentalDbContext db, MessageService messages, CancellationToken ct) =>
+{
+    var device = await DeviceFromClaimsAsync(user, db, ct);
+    if (device is null) return Results.Unauthorized();
+    return Results.Ok(await messages.GetPendingForDeviceAsync(device, 100, ct));
+}).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
+
+app.MapPost("/api/device/messages", async (DeviceMessageRequest request, ClaimsPrincipal user, ParentalDbContext db, MessageService messages, CancellationToken ct) =>
+{
+    var device = await DeviceFromClaimsAsync(user, db, ct);
+    if (device is null) return Results.Unauthorized();
+    try
+    {
+        var created = await messages.SendFromChildAsync(device, request, ct);
+        return Results.Ok(created);
+    }
+    catch (MessageRateLimitException ex)
+    {
+        return Results.Json(new { error = ex.Message, retryAfterSeconds = ex.RetryAfterSeconds }, statusCode: StatusCodes.Status429TooManyRequests);
+    }
+}).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName }).RequireRateLimiting("messages");
+
+app.MapPost("/api/device/messages/{messageId:guid}/delivered", async (Guid messageId, ClaimsPrincipal user, ParentalDbContext db, MessageService messages, CancellationToken ct) =>
+{
+    var device = await DeviceFromClaimsAsync(user, db, ct);
+    if (device is null) return Results.Unauthorized();
+    return Results.Ok(await messages.MarkDeliveredAsync(device, messageId, ct));
+}).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
+
+app.MapPost("/api/device/messages/{messageId:guid}/seen", async (Guid messageId, ClaimsPrincipal user, ParentalDbContext db, MessageService messages, CancellationToken ct) =>
+{
+    var device = await DeviceFromClaimsAsync(user, db, ct);
+    if (device is null) return Results.Unauthorized();
+    return Results.Ok(await messages.MarkSeenAsync(device, messageId, ct));
+}).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
+
+app.MapPost("/api/device/messages/{messageId:guid}/ack", async (Guid messageId, ClaimsPrincipal user, ParentalDbContext db, MessageService messages, CancellationToken ct) =>
+{
+    var device = await DeviceFromClaimsAsync(user, db, ct);
+    if (device is null) return Results.Unauthorized();
+    return Results.Ok(await messages.MarkAcknowledgedAsync(device, messageId, ct));
+}).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
 
 app.MapGet("/api/alert-preferences", async (FamilyScope family, AlertService alerts, CancellationToken ct) =>
 {

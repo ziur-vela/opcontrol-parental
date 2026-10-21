@@ -6,6 +6,7 @@ public enum EmailTemplateKind
     InviteCoParent,
     Alert,
     Digest,
+    Message,
     Test
 }
 

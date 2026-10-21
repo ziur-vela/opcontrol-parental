@@ -44,6 +44,7 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
     public DbSet<ServerAdminAudit> ServerAdminAudits => Set<ServerAdminAudit>();
     public DbSet<RemoteSession> RemoteSessions => Set<RemoteSession>();
     public DbSet<CameraConsent> CameraConsents => Set<CameraConsent>();
+    public DbSet<ChildMessage> ChildMessages => Set<ChildMessage>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -398,6 +399,18 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
             e.HasIndex(x => new { x.FamilyId, x.CreatedUtc });
             e.HasIndex(x => new { x.DeviceId, x.Status });
             e.HasIndex(x => new { x.ChildId, x.CreatedUtc });
+        });
+
+        builder.Entity<ChildMessage>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Direction).HasConversion<string>().HasMaxLength(16);
+            e.Property(x => x.Text).HasMaxLength(500).IsRequired();
+            e.Property(x => x.Preset).HasMaxLength(40);
+            e.HasIndex(x => new { x.FamilyId, x.ChildId, x.CreatedUtc });
+            e.HasIndex(x => new { x.ChildId, x.Direction, x.CreatedUtc });
+            e.HasIndex(x => new { x.ChildId, x.ParentReadUtc });
+            e.HasIndex(x => new { x.DeviceId, x.Direction, x.DeliveredUtc });
         });
     }
 }

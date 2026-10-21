@@ -467,6 +467,7 @@ public class AlertPreference
     public bool MutedLimit { get; set; }
     public bool MutedOffline { get; set; }
     public bool MutedTampering { get; set; }
+    public bool MutedChildMessage { get; set; }
     public int QuietStartMinutes { get; set; }
     public int QuietEndMinutes { get; set; }
     public bool DailyDigest { get; set; }
@@ -502,6 +503,29 @@ public class RemoteSession
     public bool NoticeShown { get; set; }
 }
 
+
+public class ChildMessage
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid FamilyId { get; set; }
+    public Guid ChildId { get; set; }
+    public Guid? DeviceId { get; set; }
+    public MessageDirection Direction { get; set; }
+    public Guid? SenderParentId { get; set; }
+    public string Text { get; set; } = "";
+    public string? Preset { get; set; }
+    public bool SpeakAloud { get; set; }
+    public bool RequireAck { get; set; }
+    public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
+    public DateTime? DeliveredUtc { get; set; }
+    public Guid? DeliveredByDeviceId { get; set; }
+    public DateTime? SeenUtc { get; set; }
+    public Guid? SeenByDeviceId { get; set; }
+    public DateTime? AcknowledgedUtc { get; set; }
+    public Guid? AcknowledgedByDeviceId { get; set; }
+    public DateTime? ParentReadUtc { get; set; }
+    public DateTime? DeletedUtc { get; set; }
+}
 
 public class CameraConsent
 {

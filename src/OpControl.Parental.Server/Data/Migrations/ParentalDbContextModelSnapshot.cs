@@ -239,6 +239,9 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.Property<int>("DigestHour")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("MutedChildMessage")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("MutedLimit")
                         .HasColumnType("boolean");
 
@@ -561,6 +564,84 @@ namespace OpControl.Parental.Server.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("ChildCategories");
+                });
+
+            modelBuilder.Entity("OpControl.Parental.Server.Data.ChildMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AcknowledgedByDeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AcknowledgedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ChildId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeliveredByDeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeliveredUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ParentReadUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Preset")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<bool>("RequireAck")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("SeenByDeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("SeenUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("SenderParentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("SpeakAloud")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChildId", "ParentReadUtc");
+
+                    b.HasIndex("ChildId", "Direction", "CreatedUtc");
+
+                    b.HasIndex("DeviceId", "Direction", "DeliveredUtc");
+
+                    b.HasIndex("FamilyId", "ChildId", "CreatedUtc");
+
+                    b.ToTable("ChildMessages");
                 });
 
             modelBuilder.Entity("OpControl.Parental.Server.Data.ClientTamperEvent", b =>

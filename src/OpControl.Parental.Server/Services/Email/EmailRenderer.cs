@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using Microsoft.Extensions.Options;
+using OpControl.Parental.Contracts;
 
 namespace OpControl.Parental.Server.Services;
 
@@ -43,6 +44,8 @@ public sealed class EmailRenderer
 
     public string AlertsUrl => Link("/alerts");
 
+    public string MessagesUrl => Link("/messages");
+
     public string DashboardUrl => Link("/");
 
     public (bool Ok, string? Error) ValidateConfiguration()
@@ -63,7 +66,7 @@ public sealed class EmailRenderer
         return (true, null);
     }
 
-    public RenderedEmail RenderInviteNewFamily(string? language, string link, string? familyName, string? inviterName, DateTime expiresUtc)
+    public RenderedEmail RenderInviteNewFamily(string? language, string link, string? familyName, string? inviterName, DateTime expiresUtc, string? timeZoneId = null)
     {
         var lang = AppCulture.Normalize(language);
         var subject = AppText.Get("Email.InviteNewFamilySubject", lang);
@@ -75,14 +78,14 @@ public sealed class EmailRenderer
             details.Add(new EmailDetail(AppText.Get("Email.Invite.Detail.Family", lang), familyName));
         if (!string.IsNullOrWhiteSpace(inviterName))
             details.Add(new EmailDetail(AppText.Get("Email.Invite.Detail.InvitedBy", lang), inviterName));
-        details.Add(new EmailDetail(AppText.Get("Email.Invite.Detail.Expires", lang), FormatUtc(expiresUtc, lang)));
+        details.Add(new EmailDetail(AppText.Get("Email.Invite.Detail.Expires", lang), FormatTime(expiresUtc, timeZoneId, lang)));
 
         return Build(lang, EmailTemplateKind.InviteNewFamily, subject, preheader, headline, paragraphs,
             AppText.Get("Email.InviteNewFamily.Button", lang), link, details,
             AppText.Get("Email.Layout.Footer.Invite", lang), false, null);
     }
 
-    public RenderedEmail RenderInviteCoParent(string? language, string link, string familyName, string? inviterName, DateTime expiresUtc)
+    public RenderedEmail RenderInviteCoParent(string? language, string link, string familyName, string? inviterName, DateTime expiresUtc, string? timeZoneId = null)
     {
         var lang = AppCulture.Normalize(language);
         var subject = AppText.Get("Email.InviteCoParentSubject", lang);
@@ -95,7 +98,7 @@ public sealed class EmailRenderer
         };
         if (!string.IsNullOrWhiteSpace(inviterName))
             details.Add(new EmailDetail(AppText.Get("Email.Invite.Detail.InvitedBy", lang), inviterName));
-        details.Add(new EmailDetail(AppText.Get("Email.Invite.Detail.Expires", lang), FormatUtc(expiresUtc, lang)));
+        details.Add(new EmailDetail(AppText.Get("Email.Invite.Detail.Expires", lang), FormatTime(expiresUtc, timeZoneId, lang)));
 
         return Build(lang, EmailTemplateKind.InviteCoParent, subject, preheader, headline, paragraphs,
             AppText.Get("Email.InviteCoParent.Button", lang), link, details,
@@ -120,6 +123,23 @@ public sealed class EmailRenderer
         return Build(lang, EmailTemplateKind.Alert, subject, preheader, title, paragraphs,
             AppText.Get("Email.Alert.Button", lang), dashboardUrl, details,
             AppText.Get("Email.Layout.Footer.Alert", lang), true, SettingsUrl);
+    }
+
+    public RenderedEmail RenderMessage(string? language, string childName, string messageText, string time, string messagesUrl)
+    {
+        var lang = AppCulture.Normalize(language);
+        var subject = AppText.Get("Email.MessageSubject", lang, childName);
+        var preheader = AppText.Get("Email.Message.Preheader", lang, childName);
+        var headline = AppText.Get("Email.Message.Headline", lang, childName);
+        var paragraphs = new List<string> { messageText };
+        var details = new List<EmailDetail>
+        {
+            new(AppText.Get("Email.Alert.Detail.Child", lang), childName),
+            new(AppText.Get("Email.Alert.Detail.Time", lang), time)
+        };
+        return Build(lang, EmailTemplateKind.Message, subject, preheader, headline, paragraphs,
+            AppText.Get("Email.Message.Button", lang), messagesUrl, details,
+            AppText.Get("Email.Layout.Footer.Alert", lang), true, null);
     }
 
     public RenderedEmail RenderDigest(string? language, int totalCount, IReadOnlyList<EmailDigestChild> groups, string dashboardUrl)
@@ -214,6 +234,8 @@ public sealed class EmailRenderer
                 "Familia Ruiz", "Hendry", now.AddHours(72)),
             EmailTemplateKind.Alert => RenderSampleAlert(lang, now),
             EmailTemplateKind.Digest => RenderSampleDigest(lang, now),
+            EmailTemplateKind.Message => RenderMessage(lang, "Emma",
+                AppText.Get("Email.Message.Sample", lang), FormatUtc(now, lang), MessagesUrl),
             EmailTemplateKind.Test => RenderTest(lang, "Hendry", now),
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
         };
@@ -404,6 +426,14 @@ public sealed class EmailRenderer
     private static string FormatUtc(DateTime value, string language) =>
         DateTime.SpecifyKind(value.ToUniversalTime(), DateTimeKind.Utc)
             .ToString("d MMM yyyy, HH:mm 'UTC'", AppCulture.Culture(language));
+
+    private static string FormatTime(DateTime value, string? timeZoneId, string language)
+    {
+        var timeZone = TimeZoneResolver.Resolve(timeZoneId);
+        var local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(value, DateTimeKind.Utc), timeZone);
+        var suffix = string.IsNullOrWhiteSpace(timeZoneId) || timeZone.Id == "UTC" ? " 'UTC'" : "";
+        return local.ToString("d MMM yyyy, HH:mm" + suffix, AppCulture.Culture(language));
+    }
 
     private static string Html(string? value) => WebUtility.HtmlEncode(value ?? "");
 }

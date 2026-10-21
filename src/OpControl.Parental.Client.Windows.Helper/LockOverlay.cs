@@ -8,6 +8,7 @@ public sealed class LockOverlayManager : IDisposable
 {
     private readonly List<LockForm> _forms = [];
     public event Action? OverrideClicked;
+    public event Action? MessageClicked;
 
     public bool Visible => _forms.Any(f => f.Visible);
 
@@ -24,6 +25,7 @@ public sealed class LockOverlayManager : IDisposable
             {
                 var form = new LockForm(screen);
                 form.OverrideClicked += () => OverrideClicked?.Invoke();
+                form.MessageClicked += () => MessageClicked?.Invoke();
                 _forms.Add(form);
             }
         }
@@ -72,6 +74,7 @@ public sealed class LockForm : Form
     private readonly Label _reason;
     private readonly Label _end;
     public event Action? OverrideClicked;
+    public event Action? MessageClicked;
 
     public bool IsPrimary { get; }
 
@@ -160,6 +163,36 @@ public sealed class LockForm : Form
         overrideLink.FlatAppearance.BorderSize = 0;
         overrideLink.Click += (_, _) => OverrideClicked?.Invoke();
 
+        var messageLink = new Button
+        {
+            Text = Loc.T("Client.Messages.Open"),
+            Font = Theme.Mono(12f, FontStyle.Bold),
+            ForeColor = Theme.Value,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Padding = new Padding(Dpi.S(this, 16), Dpi.S(this, 6), Dpi.S(this, 16), Dpi.S(this, 6)),
+            TextAlign = ContentAlignment.MiddleCenter,
+            BackColor = Theme.Bg,
+            FlatStyle = FlatStyle.Flat,
+            Cursor = Cursors.Hand,
+            Margin = new Padding(0, 0, 0, 0)
+        };
+        messageLink.FlatAppearance.BorderSize = 0;
+        messageLink.Click += (_, _) => MessageClicked?.Invoke();
+
+        var linkRow = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Anchor = AnchorStyles.None,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0)
+        };
+        linkRow.Controls.Add(overrideLink);
+        linkRow.Controls.Add(messageLink);
+
         var footer = new Label
         {
             Text = Loc.T("Client.Lock.ManagedBy"),
@@ -176,7 +209,7 @@ public sealed class LockForm : Form
         layout.Controls.Add(_reason, 0, 3);
         layout.Controls.Add(_end, 0, 4);
         layout.Controls.Add(new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent }, 0, 5);
-        layout.Controls.Add(overrideLink, 0, 6);
+        layout.Controls.Add(linkRow, 0, 6);
         layout.Controls.Add(footer, 0, 7);
         Controls.Add(layout);
 

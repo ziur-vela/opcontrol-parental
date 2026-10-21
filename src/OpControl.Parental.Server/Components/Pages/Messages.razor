@@ -1,0 +1,273 @@
+@page "/messages"
+@attribute [Authorize(Policy = ParentalPolicies.Messaging)]
+@rendermode InteractiveServer
+@using OpControl.Parental.Server.Auth
+@using Microsoft.EntityFrameworkCore
+@using OpControl.Parental.Contracts
+@using OpControl.Parental.Server.Data
+@using OpControl.Parental.Server.Services
+@using OpControl.Parental.Server.Components.Shared
+@inject AuthenticationStateProvider AuthState
+@inject IServiceScopeFactory Scopes
+@inject DashboardEventBus Events
+@inject IStringLocalizer<AppStrings> L
+@inject IJSRuntime JS
+@implements IDisposable
+
+<PageTitle>@L["Messages.PageTitle"]</PageTitle>
+
+<div class="page-head">
+    <div>
+        <div class="eyebrow">@L["Messages.PageTitle"]</div>
+        <h1>@(_childId == Guid.Empty ? L["Messages.PageTitle"] : L["Messages.ThreadTitle", _childName])</h1>
+        <p class="muted">@L["Messages.Subtitle"]</p>
+    </div>
+    @if (_childId != Guid.Empty && _messages.Count > 0)
+    {
+        <button type="button" class="btn btn-danger" @onclick="ClearThreadAsync">@L["Messages.ClearThread"]</button>
+    }
+</div>
+
+@if (_error is not null)
+{
+    <div class="alert danger">@_error</div>
+}
+
+@if (_childId == Guid.Empty)
+{
+    <div class="card"><p class="muted">@L["Messages.NoChild"]</p></div>
+}
+else
+{
+    @if (_children.Count > 1)
+    {
+        <nav class="chip-row message-children" aria-label="@L["Messages.PageTitle"]">
+            @foreach (var child in _children)
+            {
+                <button type="button" class="chip @(child.Id == _childId ? "active" : "")"
+                        @onclick="() => SelectChildAsync(child.Id)">@child.Name</button>
+            }
+        </nav>
+    }
+
+    <section class="card message-card">
+        <div class="card-title-row">
+            <h2>@L["Messages.ThreadTitle", _childName]</h2>
+            <span class="pill-soft">@_messages.Count</span>
+        </div>
+        @if (_messages.Count == 0)
+        {
+            <p class="muted">@L["Messages.Empty"]</p>
+        }
+        else
+        {
+            <div class="message-thread" aria-live="polite">
+                @foreach (var message in _messages)
+                {
+                    var fromChild = message.Direction == MessageDirection.ChildToParent;
+                    <div class="msg-row @(fromChild ? "from-child" : "from-parent")">
+                        <div class="msg-bubble">
+                            <div class="msg-head">
+                                <span class="msg-sender">@message.SenderName</span>
+                                <span class="msg-time">@FormatTime(message.CreatedUtc)</span>
+                                @if (!fromChild)
+                                {
+                                    <span class="msg-status @StatusClass(message.Status)" title="@StatusLabel(message.Status)" aria-label="@StatusLabel(message.Status)">
+                                        @StatusTick(message.Status)
+                                    </span>
+                                    @if (message.Status == MessageStatus.Acknowledged)
+                                    {
+                                        <span class="state-pill ack-pill">@L["Messages.Status.Ack"]</span>
+                                    }
+                                }
+                                <button type="button" class="msg-delete" title="@L["Messages.Delete"]"
+                                        aria-label="@L["Messages.Delete"]" @onclick="() => DeleteAsync(message)">
+                                    ×
+                                </button>
+                            </div>
+                            <div class="msg-text">@message.Text</div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="card">
+        <div class="card-title-row">
+            <h2>@L["Messages.Preset"]</h2>
+            @if (_devices.Count > 0)
+            {
+                <label class="msg-target">
+                    <span class="muted tiny">@L["Messages.Target"]</span>
+                    <select @bind="_targetDeviceId">
+                        <option value="">@L["Messages.AllDevices"]</option>
+                        @foreach (var device in _devices)
+                        {
+                            <option value="@device.Id">@device.Name</option>
+                        }
+                    </select>
+                </label>
+            }
+        </div>
+        <MessageComposer @key="_childId" ChildId="_childId" DeviceId="TargetDevice" OnSent="ReloadAsync" />
+    </section>
+}
+
+@code {
+    private sealed record ChildRow(Guid Id, string Name);
+    private sealed record DeviceRow(Guid Id, string Name);
+
+    [SupplyParameterFromQuery(Name = "child")]
+    public Guid? ChildQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "device")]
+    public Guid? DeviceQuery { get; set; }
+
+    private Guid _familyId;
+    private Guid _childId;
+    private string _childName = "";
+    private string _timeZoneId = "UTC";
+    private List<ChildRow> _children = [];
+    private List<DeviceRow> _devices = [];
+    private List<ChildMessageDto> _messages = [];
+    private string? _targetDeviceId;
+    private string? _error;
+
+    private Guid? TargetDevice => Guid.TryParse(_targetDeviceId, out var id) ? id : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        Guid.TryParse(auth.User.FindFirst("family_id")?.Value, out _familyId);
+        Events.MessageChanged += OnMessageChanged;
+        await LoadChildrenAsync();
+        if (ChildQuery is { } requested && _children.Any(c => c.Id == requested))
+            _childId = requested;
+        else if (_children.Count > 0)
+            _childId = _children[0].Id;
+        if (DeviceQuery is { } requestedDevice)
+            _targetDeviceId = requestedDevice.ToString();
+        await ReloadAsync();
+    }
+
+    private async Task LoadChildrenAsync()
+    {
+        using var scope = Scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
+        _children = await db.Children.AsNoTracking()
+            .Where(c => c.FamilyId == _familyId)
+            .OrderBy(c => c.CreatedUtc)
+            .Select(c => new ChildRow(c.Id, c.Name))
+            .ToListAsync();
+    }
+
+    private async Task SelectChildAsync(Guid childId)
+    {
+        if (_childId == childId) return;
+        _childId = childId;
+        _targetDeviceId = null;
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        if (_childId == Guid.Empty) return;
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
+            var messages = scope.ServiceProvider.GetRequiredService<MessageService>();
+
+            _childName = await db.Children.AsNoTracking()
+                .Where(c => c.Id == _childId && c.FamilyId == _familyId)
+                .Select(c => c.Name)
+                .FirstOrDefaultAsync() ?? "";
+            _timeZoneId = await db.Devices.AsNoTracking()
+                .Where(d => d.FamilyId == _familyId && d.ChildId == _childId)
+                .OrderBy(d => d.EnrolledUtc)
+                .Select(d => d.TimeZoneId)
+                .FirstOrDefaultAsync() ?? "UTC";
+            _devices = await db.Devices.AsNoTracking()
+                .Where(d => d.FamilyId == _familyId && d.ChildId == _childId && !d.IsRevoked)
+                .OrderBy(d => d.Name)
+                .Select(d => new DeviceRow(d.Id, d.Name))
+                .ToListAsync();
+            if (_targetDeviceId is not null && !_devices.Any(d => d.Id.ToString() == _targetDeviceId))
+                _targetDeviceId = null;
+            _messages = await messages.GetThreadAsync(_familyId, _childId, 300);
+            await messages.MarkParentReadAsync(_familyId, _childId);
+            _error = null;
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private string FormatTime(DateTime utc) =>
+        TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeZoneResolver.Resolve(_timeZoneId))
+            .ToString("d MMM, HH:mm", System.Globalization.CultureInfo.CurrentCulture);
+
+    private string StatusLabel(MessageStatus status) => status switch
+    {
+        MessageStatus.Delivered => L["Messages.Status.Delivered"],
+        MessageStatus.Seen => L["Messages.Status.Seen"],
+        MessageStatus.Acknowledged => L["Messages.Status.Ack"],
+        _ => L["Messages.Status.Sent"]
+    };
+
+    private static string StatusTick(MessageStatus status) => status switch
+    {
+        MessageStatus.Sent => "✓",
+        MessageStatus.Delivered => "✓✓",
+        MessageStatus.Seen => "✓✓",
+        MessageStatus.Acknowledged => "✓✓",
+        _ => "✓"
+    };
+
+    private static string StatusClass(MessageStatus status) => status switch
+    {
+        MessageStatus.Seen => "seen",
+        MessageStatus.Acknowledged => "ack",
+        _ => ""
+    };
+
+    private async Task DeleteAsync(ChildMessageDto message)
+    {
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var messages = scope.ServiceProvider.GetRequiredService<MessageService>();
+            await messages.DeleteAsync(_familyId, message.Id);
+            await ReloadAsync();
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private async Task ClearThreadAsync()
+    {
+        try
+        {
+            var confirmed = await JS.InvokeAsync<bool>("confirm", L["Messages.ClearConfirm"].Value);
+            if (!confirmed) return;
+            using var scope = Scopes.CreateScope();
+            var messages = scope.ServiceProvider.GetRequiredService<MessageService>();
+            await messages.ClearThreadAsync(_familyId, _childId);
+            await ReloadAsync();
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private void OnMessageChanged(ChildMessageDto message)
+    {
+        if (message.ChildId != _childId) return;
+        _ = InvokeAsync(async () =>
+        {
+            await ReloadAsync();
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose() => Events.MessageChanged -= OnMessageChanged;
+}

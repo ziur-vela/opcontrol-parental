@@ -67,6 +67,7 @@ Host.CreateDefaultBuilder(args)
         services.AddSingleton<RuntimeLoopService>();
         services.AddSingleton<PinPipeServer>();
         services.AddSingleton<RemoteRelayService>();
+        services.AddSingleton<MessageSyncService>();
         services.AddHostedService(sp => sp.GetRequiredService<HelperSupervisor>());
         services.AddHostedService(sp => sp.GetRequiredService<RuntimeLoopService>());
         services.AddHostedService(sp => sp.GetRequiredService<PinPipeServer>());

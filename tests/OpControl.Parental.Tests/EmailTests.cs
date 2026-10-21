@@ -44,6 +44,28 @@ public class EmailTests
     }
 
     [Fact]
+    public void Message_email_shows_the_text_and_links_to_the_messages_page()
+    {
+        var renderer = Renderer();
+        foreach (var language in new[] { "en", "es-MX" })
+        {
+            var email = renderer.RenderSample(EmailTemplateKind.Message, language);
+            Assert.Contains("https://parental.opcontrol.net/messages", email.HtmlBody);
+            Assert.Contains("https://parental.opcontrol.net/messages", email.TextBody);
+            Assert.Contains(language == "en" ? "Can you come home at six?" : "¿Puedes venir a casa a las seis?", email.TextBody);
+        }
+    }
+
+    [Fact]
+    public void Invitation_expiry_uses_the_family_time_zone()
+    {
+        var email = Renderer().RenderInviteCoParent("en", "https://parental.opcontrol.net/invite/token",
+            "Familia Ruiz", "Hendry", new DateTime(2026, 10, 21, 0, 0, 0, DateTimeKind.Utc), "America/Los_Angeles");
+        Assert.Contains("20 Oct 2026, 17:00", email.TextBody);
+        Assert.DoesNotContain("21 Oct 2026, 00:00", email.TextBody);
+    }
+
+    [Fact]
     public void Production_rejects_a_non_https_base_url()
     {
         var (ok, error) = Renderer("http://100.116.211.100:8097").ValidateConfiguration();

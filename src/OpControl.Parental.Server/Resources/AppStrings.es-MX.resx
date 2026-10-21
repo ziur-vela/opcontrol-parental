@@ -831,7 +831,7 @@ Si no esperabas este correo, ignóralo.</value></data>
   <data name="Email.InviteCoParent.Preheader" xml:space="preserve"><value>Te invitaron a unirte a {0} como otro padre o madre en Parental OpControl.</value></data>
   <data name="Email.InviteNewFamily.Button" xml:space="preserve"><value>Crear mi familia</value></data>
   <data name="Email.InviteNewFamily.Headline" xml:space="preserve"><value>Crea tu familia en Parental OpControl</value></data>
-  <data name="Email.InviteNewFamily.Intro" xml:space="preserve"><value>Te invitaron a crear una familia en Parental OpControl. Usa el botón de abajo para elegir el nombre de tu familia, tu cuenta y el nombre de tu hijo.</value></data>
+  <data name="Email.InviteNewFamily.Intro" xml:space="preserve"><value>Te invitaron a crear una familia en Parental OpControl. Usa el botón de abajo para elegir el nombre de tu familia, tu cuenta y el nombre de tu hijo o hija.</value></data>
   <data name="Email.InviteNewFamily.Preheader" xml:space="preserve"><value>Te invitaron a crear tu familia en Parental OpControl.</value></data>
   <data name="Email.Layout.ButtonFallback" xml:space="preserve"><value>Si el botón no funciona, copia y pega este enlace en tu navegador:</value></data>
   <data name="Email.Layout.Details" xml:space="preserve"><value>Detalles</value></data>
@@ -872,4 +872,53 @@ Si no esperabas este correo, ignóralo.</value></data>
   <data name="ServerAdmin.OpenEmailPreview" xml:space="preserve"><value>Abrir vista previa de correos</value></data>
   <data name="Settings.SendTestEmail" xml:space="preserve"><value>Enviar correo de prueba</value></data>
   <data name="Settings.TestEmailSent" xml:space="preserve"><value>Correo de prueba enviado a {0}.</value></data>
+  <data name="Nav.Messages" xml:space="preserve"><value>Mensajes</value></data>
+  <data name="Messages.PageTitle" xml:space="preserve"><value>Mensajes</value></data>
+  <data name="Messages.Subtitle" xml:space="preserve"><value>Mensajes cortos entre tú y tu hijo o hija. Nunca se envían a un modelo de IA.</value></data>
+  <data name="Messages.Empty" xml:space="preserve"><value>Aún no hay mensajes. Envía el primero abajo.</value></data>
+  <data name="Messages.NoChild" xml:space="preserve"><value>Aún no hay ningún hijo o hija. Agrega uno antes de enviar mensajes.</value></data>
+  <data name="Messages.Placeholder" xml:space="preserve"><value>Escribe un mensaje (máximo 500 caracteres)</value></data>
+  <data name="Messages.Send" xml:space="preserve"><value>Enviar</value></data>
+  <data name="Messages.Preset" xml:space="preserve"><value>Mensaje rápido</value></data>
+  <data name="Messages.Preset.Dinner" xml:space="preserve"><value>La cena está lista</value></data>
+  <data name="Messages.Preset.WrapUp" xml:space="preserve"><value>Es hora de terminar</value></data>
+  <data name="Messages.Preset.ComeFindMe" xml:space="preserve"><value>Ven a buscarme</value></data>
+  <data name="Messages.ReadAloud" xml:space="preserve"><value>Leerlo en voz alta</value></data>
+  <data name="Messages.RequireAck" xml:space="preserve"><value>Pedir "Entendido"</value></data>
+  <data name="Messages.Status.Sent" xml:space="preserve"><value>Enviado</value></data>
+  <data name="Messages.Status.Delivered" xml:space="preserve"><value>Entregado</value></data>
+  <data name="Messages.Status.Seen" xml:space="preserve"><value>Visto</value></data>
+  <data name="Messages.Status.Ack" xml:space="preserve"><value>Entendido</value></data>
+  <data name="Messages.Delete" xml:space="preserve"><value>Eliminar</value></data>
+  <data name="Messages.ClearThread" xml:space="preserve"><value>Borrar conversación</value></data>
+  <data name="Messages.ClearConfirm" xml:space="preserve"><value>¿Borrar toda la conversación? Los mensajes se ocultarán para todos.</value></data>
+  <data name="Messages.DeleteConfirm" xml:space="preserve"><value>¿Eliminar este mensaje?</value></data>
+  <data name="Messages.Unread" xml:space="preserve"><value>{0} sin leer</value></data>
+  <data name="Messages.AllDevices" xml:space="preserve"><value>Todos los dispositivos</value></data>
+  <data name="Messages.ToDevice" xml:space="preserve"><value>Para {0}</value></data>
+  <data name="Messages.SentOk" xml:space="preserve"><value>Mensaje enviado.</value></data>
+  <data name="Messages.From" xml:space="preserve"><value>De {0}</value></data>
+  <data name="Messages.ThreadTitle" xml:space="preserve"><value>Conversación con {0}</value></data>
+  <data name="Messages.DeleteHint" xml:space="preserve"><value>Eliminar</value></data>
+  <data name="Messages.StatusTitle" xml:space="preserve"><value>Estado</value></data>
+  <data name="Error.Messages.Empty" xml:space="preserve"><value>Escribe un mensaje primero.</value></data>
+  <data name="Error.Messages.RateLimited" xml:space="preserve"><value>Demasiados mensajes. Intenta de nuevo en {0} minuto(s).</value></data>
+  <data name="Error.MessageNotFound" xml:space="preserve"><value>Mensaje no encontrado.</value></data>
+  <data name="Error.MessageNotForDevice" xml:space="preserve"><value>Este mensaje es para otro dispositivo.</value></data>
+  <data name="Team.Perm.Messages" xml:space="preserve"><value>mensajes</value></data>
+  <data name="Settings.MuteChildMessage" xml:space="preserve"><value>El hijo o hija envió un mensaje</value></data>
+  <data name="Alert.ChildMessage.Title" xml:space="preserve"><value>{0} envió un mensaje</value></data>
+  <data name="Alert.ChildMessage.Detail" xml:space="preserve"><value>«{1}»</value></data>
+  <data name="Email.MessageSubject" xml:space="preserve"><value>Nuevo mensaje de {0}</value></data>
+  <data name="Email.Message.Preheader" xml:space="preserve"><value>{0} te envió un mensaje.</value></data>
+  <data name="Email.Message.Headline" xml:space="preserve"><value>Nuevo mensaje de {0}</value></data>
+  <data name="Email.Message.Button" xml:space="preserve"><value>Abrir mensajes</value></data>
+  <data name="Email.Message.Sample" xml:space="preserve"><value>¿Puedes venir a casa a las seis?</value></data>
+  <data name="Email.Digest.MessageCountOne" xml:space="preserve"><value>{0} mensaje de tu hijo o hija</value></data>
+  <data name="Email.Digest.MessageCountMany" xml:space="preserve"><value>{0} mensajes de tu hijo o hija</value></data>
+  <data name="Home.MessageChild" xml:space="preserve"><value>Mensaje</value></data>
+  <data name="Devices.Message" xml:space="preserve"><value>Mensaje</value></data>
+  <data name="Messages.Target" xml:space="preserve"><value>Enviar a</value></data>
+  <data name="Email.Error.MessageFailed" xml:space="preserve"><value>No se pudo enviar el correo del mensaje.</value></data>
+  <data name="Messages.TooLong" xml:space="preserve"><value>Los mensajes pueden tener hasta 500 caracteres.</value></data>
 </root>

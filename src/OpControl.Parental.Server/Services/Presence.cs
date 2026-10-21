@@ -10,10 +10,12 @@ public sealed class DashboardEventBus
     public event Action<DeviceStatusDto>? DeviceStatusChanged;
     public event Action<LockStateDto>? LockStateChanged;
     public event Action<Data.Alert>? AlertChanged;
+    public event Action<Contracts.ChildMessageDto>? MessageChanged;
 
     public void PublishDeviceStatus(DeviceStatusDto status) => DeviceStatusChanged?.Invoke(status);
     public void PublishLockState(LockStateDto state) => LockStateChanged?.Invoke(state);
     public void PublishAlert(Data.Alert alert) => AlertChanged?.Invoke(alert);
+    public void PublishMessage(Contracts.ChildMessageDto message) => MessageChanged?.Invoke(message);
 }
 
 public sealed class DevicePresenceService

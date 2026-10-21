@@ -148,6 +148,7 @@
         <label class="check"><input type="checkbox" @bind="_muteLimit" disabled="@(!_isOwner)" /> @L["Settings.MuteLimit"]</label>
         <label class="check"><input type="checkbox" @bind="_muteOffline" disabled="@(!_isOwner)" /> @L["Settings.MuteOffline"]</label>
         <label class="check"><input type="checkbox" @bind="_muteTamper" disabled="@(!_isOwner)" /> @L["Settings.MuteTamper"]</label>
+        <label class="check"><input type="checkbox" @bind="_muteChildMessage" disabled="@(!_isOwner)" /> @L["Settings.MuteChildMessage"]</label>
         <label class="field"><span>@L["Settings.QuietStart"]</span><input type="text" placeholder="22:00" @bind="_quietStart" disabled="@(!_isOwner)" /></label>
         <label class="field"><span>@L["Settings.QuietEnd"]</span><input type="text" placeholder="07:00" @bind="_quietEnd" disabled="@(!_isOwner)" /></label>
         <label class="check"><input type="checkbox" @bind="_digest" disabled="@(!_isOwner)" /> @L["Settings.Digest"]</label>
@@ -194,6 +195,7 @@
     private bool _muteLimit;
     private bool _muteOffline;
     private bool _muteTamper;
+    private bool _muteChildMessage;
     private string _quietStart = "22:00";
     private string _quietEnd = "07:00";
     private bool _digest;
@@ -243,6 +245,7 @@
         _muteLimit = preference.MutedLimit;
         _muteOffline = preference.MutedOffline;
         _muteTamper = preference.MutedTampering;
+        _muteChildMessage = preference.MutedChildMessage;
         _quietStart = FormatMinutes(preference.QuietStartMinutes);
         _quietEnd = FormatMinutes(preference.QuietEndMinutes);
         _digest = preference.DailyDigest;
@@ -334,7 +337,7 @@
             using var scope = Scopes.CreateScope();
             var alerts = scope.ServiceProvider.GetRequiredService<AlertService>();
             await alerts.SavePreferenceAsync(_familyId, new OpControl.Parental.Contracts.AlertPreferencesDto(
-                _muteNewApp, _muteRepeated, _mutePin, _muteLimit, _muteOffline, _muteTamper,
+                _muteNewApp, _muteRepeated, _mutePin, _muteLimit, _muteOffline, _muteTamper, _muteChildMessage,
                 ParseMinutes(_quietStart), ParseMinutes(_quietEnd), _digest, _digestHour));
             _saved = true;
         }

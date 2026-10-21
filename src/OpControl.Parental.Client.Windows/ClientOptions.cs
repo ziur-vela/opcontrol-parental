@@ -89,6 +89,12 @@ public static class ClientPaths
     public static string NotificationFile => Path.Combine(UserDirectory, "notification.json");
     public static string StateFile => Path.Combine(PublicDirectory, "state.json");
     public static string LogFile => Path.Combine(PublicDirectory, "service.log");
+    public static string MessageDirectory => Path.Combine(UserDirectory, "messages");
+    public static string MessageThreadFile => Path.Combine(MessageDirectory, "thread.json");
+    public static string MessageOutboxFile => Path.Combine(MessageDirectory, "outbox.jsonl");
+    public static string MessageSendTimesFile => Path.Combine(MessageDirectory, "send-times.json");
+    public static string MessageQueuedFile => Path.Combine(MessageDirectory, "queued-popups.json");
+    public static string MessagePopupDirectory => Path.Combine(MessageDirectory, "popup");
     public static string HelperStatusFile => Path.Combine(UserDirectory, "helper-status.json");
     public static string HelperEventsFile => Path.Combine(UserDirectory, "helper-events.log");
 

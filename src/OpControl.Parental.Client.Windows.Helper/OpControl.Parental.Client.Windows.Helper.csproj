@@ -13,7 +13,7 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <AssemblyName>OpControl.Parental.Helper</AssemblyName>
     <RootNamespace>OpControl.Parental.Helper</RootNamespace>
-    <Version>0.10.0</Version>
+    <Version>0.12.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="OpenCvSharp4" Version="4.10.0.20241108" />

@@ -31,7 +31,22 @@ public enum ParentPermissions
     ManageDevices = 32,
     ManagePin = 64,
     RemoteView = 128,
-    All = LockUnlockBonus | WebsiteRules | AppRules | SchedulesLimits | ViewReports | ManageDevices | ManagePin | RemoteView
+    Messaging = 256,
+    All = LockUnlockBonus | WebsiteRules | AppRules | SchedulesLimits | ViewReports | ManageDevices | ManagePin | RemoteView | Messaging
+}
+
+public enum MessageDirection
+{
+    ParentToChild = 0,
+    ChildToParent = 1
+}
+
+public enum MessageStatus
+{
+    Sent = 0,
+    Delivered = 1,
+    Seen = 2,
+    Acknowledged = 3
 }
 
 public enum InvitationKind
@@ -379,14 +394,49 @@ public static class DeviceHubMethods
     public const string UpdateRequested = "UpdateRequested";
     public const string RemoteSessionRequested = "RemoteSessionRequested";
     public const string RemoteSessionStopped = "RemoteSessionStopped";
+    public const string MessageReceived = "MessageReceived";
 }
+
+public sealed record ChildMessageDto(
+    Guid Id,
+    Guid ChildId,
+    Guid? DeviceId,
+    MessageDirection Direction,
+    Guid? SenderParentId,
+    string SenderName,
+    string Text,
+    string? Preset,
+    bool SpeakAloud,
+    bool RequireAck,
+    DateTime CreatedUtc,
+    DateTime? DeliveredUtc,
+    DateTime? SeenUtc,
+    DateTime? AcknowledgedUtc,
+    DateTime? ParentReadUtc,
+    MessageStatus Status,
+    bool Deleted);
+
+public sealed record ParentMessageRequest(
+    string Text,
+    string? Preset,
+    bool SpeakAloud,
+    bool RequireAck,
+    Guid? DeviceId);
+
+public sealed record DeviceMessageRequest(
+    string Text,
+    string? Preset = null);
+
+public sealed record MessageReadRequest(Guid ChildId);
 
 public sealed record PinPipeRequest(
     string Type,
     string? Pin = null,
     string? Option = null,
     int? Minutes = null,
-    string? Ticket = null);
+    string? Ticket = null,
+    string? Text = null,
+    Guid? MessageId = null);
 
 public sealed record PinPipeResponse(
     bool Ok,
@@ -395,7 +445,11 @@ public sealed record PinPipeResponse(
     int? RemainingSeconds = null,
     int? AttemptsRemaining = null,
     string? Ticket = null,
-    RuntimeLockStateDto? State = null);
+    RuntimeLockStateDto? State = null,
+    IReadOnlyList<ChildMessageDto>? Messages = null,
+    ChildMessageDto? Message = null,
+    int? RetryAfterSeconds = null,
+    bool Queued = false);
 
 public sealed record InvitationCreatedDto(
     Guid Id,
@@ -444,6 +498,7 @@ public sealed record AlertPreferencesDto(
     bool MutedLimit,
     bool MutedOffline,
     bool MutedTampering,
+    bool MutedChildMessage,
     int QuietStartMinutes,
     int QuietEndMinutes,
     bool DailyDigest,

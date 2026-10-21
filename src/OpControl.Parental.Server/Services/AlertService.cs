@@ -25,7 +25,7 @@ public sealed class AlertService
         _logger = logger;
     }
 
-    public async Task<Alert?> AddAsync(Guid familyId, Guid childId, Guid? deviceId, string type, AlertContent content, TimeSpan? dedupeWindow = null, CancellationToken ct = default)
+    public async Task<Alert?> AddAsync(Guid familyId, Guid childId, Guid? deviceId, string type, AlertContent content, TimeSpan? dedupeWindow = null, CancellationToken ct = default, bool immediateEmail = false)
     {
         var now = DateTime.UtcNow;
         var argsJson = AlertText.SerializeArgs(content.Args);
@@ -62,7 +62,7 @@ public sealed class AlertService
         }
         else
         {
-            alert.NextEmailAttemptUtc = await NextEmailDueAsync(preferences, now, ct);
+            alert.NextEmailAttemptUtc = immediateEmail ? now : await NextEmailDueAsync(preferences, now, ct);
         }
 
         _db.Alerts.Add(alert);
@@ -163,6 +163,7 @@ public sealed class AlertService
         preference.MutedLimit = dto.MutedLimit;
         preference.MutedOffline = dto.MutedOffline;
         preference.MutedTampering = dto.MutedTampering;
+        preference.MutedChildMessage = dto.MutedChildMessage;
         preference.QuietStartMinutes = Math.Clamp(dto.QuietStartMinutes, 0, 1439);
         preference.QuietEndMinutes = Math.Clamp(dto.QuietEndMinutes, 0, 1439);
         preference.DailyDigest = dto.DailyDigest;
@@ -172,7 +173,7 @@ public sealed class AlertService
     }
 
     public static AlertPreferencesDto ToDto(AlertPreference p) =>
-        new(p.MutedNewApp, p.MutedRepeatedBlock, p.MutedPinOverride, p.MutedLimit, p.MutedOffline, p.MutedTampering,
+        new(p.MutedNewApp, p.MutedRepeatedBlock, p.MutedPinOverride, p.MutedLimit, p.MutedOffline, p.MutedTampering, p.MutedChildMessage,
             p.QuietStartMinutes, p.QuietEndMinutes, p.DailyDigest, p.DigestHour);
 
     public static bool IsMuted(AlertPreference p, string type) => type switch
@@ -183,6 +184,7 @@ public sealed class AlertService
         "daily-limit" or "app-limit" => p.MutedLimit,
         "device-offline" => p.MutedOffline,
         "tampering" => p.MutedTampering,
+        "child-message" => p.MutedChildMessage,
         _ => false
     };
 
@@ -252,7 +254,14 @@ public sealed class AlertService
     private async Task<int> SendDigestAsync(Guid familyId, FamilySettings settings, List<Alert> alerts, List<string> recipients,
         Func<string?, string> languageFor, CancellationToken ct)
     {
-        var childIds = alerts.Select(a => a.ChildId).Distinct().ToList();
+        var since = DateTime.UtcNow.AddHours(-24);
+        var messageCounts = await _db.ChildMessages.AsNoTracking()
+            .Where(m => m.FamilyId == familyId && m.Direction == MessageDirection.ChildToParent
+                && m.DeletedUtc == null && m.CreatedUtc >= since)
+            .GroupBy(m => m.ChildId)
+            .Select(g => new { ChildId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.ChildId, x => x.Count, ct);
+        var childIds = alerts.Select(a => a.ChildId).Concat(messageCounts.Keys).Distinct().ToList();
         var children = await _db.Children.AsNoTracking()
             .Where(c => childIds.Contains(c.Id))
             .Select(c => new { c.Id, c.Name })
@@ -272,27 +281,39 @@ public sealed class AlertService
         {
             var language = languageFor(recipient);
             var groups = new List<EmailDigestChild>();
-            foreach (var group in alerts.GroupBy(a => a.ChildId).OrderBy(g => children.GetValueOrDefault(g.Key, "")))
+            var byChild = alerts.GroupBy(a => a.ChildId).ToDictionary(g => g.Key, g => g.ToList());
+            foreach (var childId in byChild.Keys.Concat(messageCounts.Keys).Distinct()
+                .OrderBy(id => children.GetValueOrDefault(id, "")))
             {
-                var items = group.OrderByDescending(a => a.CreatedUtc)
-                    .Select(a =>
-                    {
-                        var (title, detail) = AlertText.Render(a, language);
-                        var timeZone = a.DeviceId is { } deviceId && devices.TryGetValue(deviceId, out var device)
-                            ? device.TimeZoneId
-                            : familyTimeZone;
-                        return new EmailAlertEntry(title, detail, FormatTime(a.CreatedUtc, timeZone, language));
-                    })
-                    .ToList();
+                var items = new List<EmailAlertEntry>();
+                if (messageCounts.TryGetValue(childId, out var messageCount) && messageCount > 0)
+                {
+                    items.Add(new EmailAlertEntry(
+                        AppText.Get(messageCount == 1 ? "Email.Digest.MessageCountOne" : "Email.Digest.MessageCountMany", language, messageCount.ToString(AppCulture.Culture(language))),
+                        "", ""));
+                }
+                if (byChild.TryGetValue(childId, out var childAlerts))
+                {
+                    items.AddRange(childAlerts.OrderByDescending(a => a.CreatedUtc)
+                        .Select(a =>
+                        {
+                            var (title, detail) = AlertText.Render(a, language);
+                            var timeZone = a.DeviceId is { } deviceId && devices.TryGetValue(deviceId, out var device)
+                                ? device.TimeZoneId
+                                : familyTimeZone;
+                            return new EmailAlertEntry(title, detail, FormatTime(a.CreatedUtc, timeZone, language));
+                        }));
+                }
                 var top = items.Take(5).ToList();
                 groups.Add(new EmailDigestChild(
-                    children.GetValueOrDefault(group.Key, ""),
+                    children.GetValueOrDefault(childId, ""),
                     items.Count,
                     top,
                     Math.Max(0, items.Count - top.Count)));
             }
 
-            var rendered = _renderer.RenderDigest(language, alerts.Count, groups, _renderer.AlertsUrl);
+            var total = groups.Sum(g => g.Count);
+            var rendered = _renderer.RenderDigest(language, total, groups, _renderer.AlertsUrl);
             var (ok, error) = await SendMessageAsync(settings, rendered, [recipient], ct);
             if (!ok) lastError = error;
         }

@@ -5,6 +5,7 @@
 @using Microsoft.EntityFrameworkCore
 @using OpControl.Parental.Server.Data
 @using OpControl.Parental.Server.Services
+@using OpControl.Parental.Server.Components.Shared
 @inject AuthenticationStateProvider AuthState
 @inject IServiceScopeFactory Scopes
 @inject DevicePresenceService Presence
@@ -81,6 +82,13 @@
                         {
                             <div class="muted tiny">@L["Devices.UpdateStatus", UpdateStatusText(updateStatus)]</div>
                         }
+                        @if (_canMessage)
+                        {
+                            <details class="inline-message">
+                                <summary class="ghost-btn">@L["Devices.Message"]</summary>
+                                <MessageComposer ChildId="device.ChildId" DeviceId="device.DeviceId" Compact="true" />
+                            </details>
+                        }
                     </div>
                     <div class="device-meta">
                         <div class="small">@(device.Online ? L["Common.Online"] : L["Common.Offline"])</div>
@@ -136,6 +144,7 @@
         catch (Exception ex) { _error = ex.Message; }
     }
     private bool _isOwner;
+    private bool _canMessage;
     private sealed record NoticeSettings(bool Screen, bool Camera, bool Light);
     private static readonly IReadOnlyList<TimeZoneInfo> TimeZones = TimeZoneInfo.GetSystemTimeZones();
 
@@ -168,6 +177,8 @@
         var auth = await AuthState.GetAuthenticationStateAsync();
         Guid.TryParse(auth.User.FindFirst("family_id")?.Value, out _familyId);
         _isOwner = string.Equals(auth.User.FindFirst("family_role")?.Value, "Owner", StringComparison.OrdinalIgnoreCase);
+        _canMessage = _isOwner || (int.TryParse(auth.User.FindFirst("permissions")?.Value, out var messagePermissions)
+            && (messagePermissions & (int)OpControl.Parental.Contracts.ParentPermissions.Messaging) != 0);
         Events.DeviceStatusChanged += OnStatus;
         await RefreshAsync();
     }
