@@ -10,6 +10,8 @@ internal abstract class KidView : UserControl
     private bool _rebuilding;
     private int _lastWidth;
 
+    public static bool Scaling { get; set; }
+
     public event Action<string>? Navigate;
 
     protected int ContentWidth => Math.Max(320, (Width > 40 ? Width : 820) - 28);
@@ -26,7 +28,7 @@ internal abstract class KidView : UserControl
     protected override void OnSizeChanged(EventArgs e)
     {
         base.OnSizeChanged(e);
-        if (_rebuilding || Summary is null || Width <= 0) return;
+        if (Scaling || _rebuilding || Summary is null || Width <= 0) return;
         if (Math.Abs(Width - _lastWidth) < 24) return;
         _lastWidth = Width;
         Rebuild();
@@ -392,17 +394,39 @@ internal sealed class HomeView : KidView
         var max = Math.Max(1, apps.Max(a => a.Seconds));
         foreach (var app in apps)
         {
-            var row = KidUi.Stack();
-            row.Margin = new Padding(0, 0, 0, 7);
-            var line = KidUi.Row();
-            var name = KidUi.Body(app.DisplayName, size: 9.5f);
-            name.MaximumSize = new Size(150, 0);
-            line.Controls.Add(name);
+            var row = new TableLayoutPanel
+            {
+                ColumnCount = 2,
+                RowCount = 2,
+                Width = 210,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                BackColor = Color.Transparent,
+                Margin = new Padding(0, 0, 0, 7)
+            };
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            var name = new Label
+            {
+                Text = app.DisplayName,
+                AutoSize = false,
+                AutoEllipsis = true,
+                Dock = DockStyle.Fill,
+                Height = 20,
+                Font = Theme.Sans(9f),
+                ForeColor = Theme.Text,
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0)
+            };
             var value = KidUi.Mono(KidUi.Duration(app.Seconds), 8.5f, false, Theme.Value);
+            value.Anchor = AnchorStyles.Right;
             value.Margin = new Padding(6, 1, 0, 0);
-            line.Controls.Add(value);
-            row.Controls.Add(line);
-            row.Controls.Add(new BarPanel { Fraction = (double)app.Seconds / max, Thickness = 6, Width = 190 });
+            row.Controls.Add(name, 0, 0);
+            row.Controls.Add(value, 1, 0);
+            var bar = new BarPanel { Fraction = (double)app.Seconds / max, Thickness = 6, Dock = DockStyle.Fill, Margin = new Padding(0, 3, 0, 0) };
+            row.Controls.Add(bar, 0, 1);
+            row.SetColumnSpan(bar, 2);
             stack.Controls.Add(row);
         }
         return card;
@@ -469,12 +493,13 @@ internal sealed class HomeView : KidView
         var button = new Button
         {
             Text = Loc.T("Client.Kid.MessageParents"),
-            AutoSize = true,
-            MinimumSize = new Size(196, 38),
+            AutoSize = false,
+            Width = 220,
+            Height = 38,
             Margin = new Padding(0, 10, 0, 0)
         };
         Theme.StyleButton(button, primary: true);
-        button.Font = Theme.Mono(9f, FontStyle.Bold);
+        button.Font = Theme.Mono(8.5f, FontStyle.Bold);
         button.Click += (_, _) => Raise("messages");
         stack.Controls.Add(button);
         return card;

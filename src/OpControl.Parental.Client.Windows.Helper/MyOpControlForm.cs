@@ -602,12 +602,25 @@ public sealed class MyOpControlForm : Form
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
+        HelperPaths.LogEvent("my-opcontrol-handle-created");
+    }
+
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
         if (_scaled) return;
         _scaled = true;
-        HelperPaths.LogEvent("my-opcontrol-handle-created");
-        Dpi.ScaleForm(this);
-        HelperPaths.LogEvent("my-opcontrol-scaled");
+        KidView.Scaling = true;
+        try
+        {
+            Dpi.ScaleForm(this);
+        }
+        finally
+        {
+            KidView.Scaling = false;
+        }
         MinimumSize = new Size(Dpi.S(this, 820), Dpi.S(this, 600));
+        HelperPaths.LogEvent($"my-opcontrol-shown {Width}x{Height}");
     }
 
     protected override void WndProc(ref Message m)
