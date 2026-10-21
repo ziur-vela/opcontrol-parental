@@ -149,7 +149,7 @@
                 if (!response.ok) return;
                 const status = await response.json();
                 if (status.status === 'connected') {
-                    label.innerHTML = '<span class="status-dot online"></span> ' + (@System.Text.Json.JsonSerializer.Serialize(L["AddDevice.ConnectedLabel"].Value)) + ': ' + (status.deviceName || @System.Text.Json.JsonSerializer.Serialize(L["AddDevice.DeviceFallback"].Value));
+                    label.innerHTML = '<span class="status-dot online"></span> ' + (@Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["AddDevice.ConnectedLabel"].Value))) + ': ' + (status.deviceName || @Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["AddDevice.DeviceFallback"].Value)));
                     clearInterval(timer);
                 }
             } catch { }

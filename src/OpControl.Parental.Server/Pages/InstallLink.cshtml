@@ -64,8 +64,8 @@
         }
     })();
     (function () {
-        const token = @System.Text.Json.JsonSerializer.Serialize(Model.Token);
-        if (@System.Text.Json.JsonSerializer.Serialize(Model.Status.Status) !== 'pending') return;
+        const token = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Token));
+        if (@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Status.Status)) !== 'pending') return;
         const timer = setInterval(async () => {
             try {
                 const response = await fetch('/i/' + encodeURIComponent(token) + '/status', { cache: 'no-store' });
