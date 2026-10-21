@@ -61,7 +61,7 @@ internal abstract class KidView : UserControl
         };
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
         if (trailing is not null) header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        header.Controls.Add(KidUi.Eyebrow(eyebrow), 0, 0);
+        header.Controls.Add(KidUi.Eyebrow(Loc.T(eyebrow)), 0, 0);
         header.Controls.Add(KidUi.Title(title), 0, 1);
         if (trailing is not null)
         {
@@ -79,7 +79,7 @@ internal abstract class KidView : UserControl
         var stack = KidUi.Stack();
         stack.Dock = DockStyle.Top;
         stack.AutoSize = true;
-        if (!string.IsNullOrWhiteSpace(eyebrow)) stack.Controls.Add(KidUi.Eyebrow(eyebrow));
+        if (!string.IsNullOrWhiteSpace(eyebrow)) stack.Controls.Add(KidUi.Eyebrow(Loc.T(eyebrow)));
         if (!string.IsNullOrWhiteSpace(title)) stack.Controls.Add(KidUi.Body(title, size: 12.5f));
         card.Controls.Add(stack);
         card.Tag = stack;
@@ -257,11 +257,13 @@ internal sealed class HomeView : KidView
         titles.Controls.Add(_greeting);
         _statusChip = new Label
         {
-            AutoSize = true,
+            AutoSize = false,
+            Width = 300,
+            Height = 32,
+            TextAlign = ContentAlignment.MiddleCenter,
             Font = Theme.Mono(9f, FontStyle.Bold),
             BackColor = Theme.Panel2,
             ForeColor = Theme.Value,
-            Padding = new Padding(10, 6, 10, 6),
             Margin = new Padding(0, 10, 0, 0),
             Anchor = AnchorStyles.Right | AnchorStyles.Top
         };
@@ -277,7 +279,7 @@ internal sealed class HomeView : KidView
             BackColor = Color.Transparent
         };
         for (var i = 0; i < 3; i++) grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / 3f));
-        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 286));
+        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 260));
         grid.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
         var timeCard = BuildTimeCard();
@@ -431,9 +433,9 @@ internal sealed class HomeView : KidView
         for (var i = 0; i < items.Length; i++)
         {
             var cell = KidUi.Stack();
-            cell.Margin = new Padding(0, 0, 6, 8);
-            cell.Controls.Add(KidUi.Mono(items[i].Text, 18f, true, Theme.Text));
-            cell.Controls.Add(KidUi.Mono(items[i].Label, 8f, false, Theme.Muted));
+            cell.Margin = new Padding(0, 0, 6, 5);
+            cell.Controls.Add(KidUi.Mono(items[i].Text, 16f, true, Theme.Text));
+            cell.Controls.Add(KidUi.Mono(items[i].Label, 7.5f, false, Theme.Muted));
             table.Controls.Add(cell, i % 2, i / 2);
         }
         stack.Controls.Add(table);
@@ -467,9 +469,8 @@ internal sealed class HomeView : KidView
         var button = new Button
         {
             Text = Loc.T("Client.Kid.MessageParents"),
-            AutoSize = false,
-            Height = 38,
-            Width = 196,
+            AutoSize = true,
+            MinimumSize = new Size(196, 38),
             Margin = new Padding(0, 10, 0, 0)
         };
         Theme.StyleButton(button, primary: true);
@@ -503,8 +504,9 @@ internal sealed class ScheduleView : KidView
     private CardPanel BuildWeekCard()
     {
         var card = Card("Client.Kid.Schedule.Daily");
-        card.Height = 292;
-        card.Dock = DockStyle.Top;
+        card.AutoScroll = false;
+        card.AutoSize = true;
+        card.AutoSizeMode = AutoSizeMode.GrowAndShrink;
         card.Margin = new Padding(0, 0, 0, 12);
         var stack = Stack(card);
         for (var day = 0; day < 7; day++)
@@ -520,7 +522,7 @@ internal sealed class ScheduleView : KidView
                 BackColor = Color.Transparent,
                 Margin = new Padding(0, 1, 0, 1)
             };
-            row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 74));
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 104));
             row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 80));
             row.Controls.Add(KidUi.Mono(WeekdayLabel(day), 9f, isToday, isToday ? Theme.Value : Theme.Muted), 0, 0);

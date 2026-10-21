@@ -256,6 +256,7 @@ public sealed class ChildMessagingPanel : UserControl
     {
         if (!_timer.Enabled) _timer.Start();
         StartWatcher();
+        BuildFromCache();
         _ = RefreshThreadAsync(showStatus: true);
     }
 

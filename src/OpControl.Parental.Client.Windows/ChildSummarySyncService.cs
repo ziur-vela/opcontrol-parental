@@ -51,12 +51,12 @@ public sealed class ChildSummarySyncService : BackgroundService
         if (!await _gate.WaitAsync(0, ct)) return;
         try
         {
+            _lastRefreshUtc = DateTime.UtcNow;
             var credential = _credentials.Load();
             if (credential is null || !credential.IsUsable) return;
             var summary = await FetchAsync(credential, ct);
             if (summary is null) return;
             ChildSummaryCache.Write(ClientPaths.SummaryFile, summary);
-            _lastRefreshUtc = DateTime.UtcNow;
         }
         catch (Exception ex)
         {

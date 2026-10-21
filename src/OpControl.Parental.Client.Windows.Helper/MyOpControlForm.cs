@@ -87,11 +87,17 @@ public sealed class MyOpControlForm : Form
         BackColor = Theme.Bg;
         ForeColor = Theme.Text;
         KeyPreview = true;
+        Padding = new Padding(4);
         Size = new Size(1040, 700);
 
+        HelperPaths.LogEvent("my-opcontrol-build-start");
         BuildShell();
+        HelperPaths.LogEvent("my-opcontrol-shell-built");
         LoadSummary(force: true);
+        HelperPaths.LogEvent("my-opcontrol-summary-loaded");
         ShowTab(messagesOnly ? MyOpControlTab.Messages : tab);
+        HelperPaths.LogEvent("my-opcontrol-tab-shown");
+        UpdateLive();
 
         _liveTimer.Tick += (_, _) => UpdateLive();
         _liveTimer.Start();
@@ -103,6 +109,7 @@ public sealed class MyOpControlForm : Form
             UnreadChanged?.Invoke(count);
         };
         _messages.Start();
+        HelperPaths.LogEvent("my-opcontrol-started");
 
         KeyDown += (_, e) =>
         {
@@ -394,7 +401,7 @@ public sealed class MyOpControlForm : Form
             WrapContents = false,
             AutoScroll = false,
             BackColor = Color.Transparent,
-            Padding = new Padding(12, 16, 12, 12)
+            Padding = new Padding(0, 16, 0, 12)
         };
         AddNav(stack, MyOpControlTab.Home, Loc.T("Client.Kid.Nav.Home"), MyOpControlTab.Home);
         AddNav(stack, MyOpControlTab.Schedule, Loc.T("Client.Kid.Nav.Schedule"), MyOpControlTab.Schedule);
@@ -437,7 +444,7 @@ public sealed class MyOpControlForm : Form
     {
         if (_messagesOnly && target != MyOpControlTab.Messages) return;
         var item = new NavItem(text, () => ShowTab(target));
-        item.Width = 164;
+        item.Width = 188;
         item.Height = 44;
         item.Margin = new Padding(0, 0, 0, 4);
         _nav[tab] = item;
@@ -597,7 +604,9 @@ public sealed class MyOpControlForm : Form
         base.OnHandleCreated(e);
         if (_scaled) return;
         _scaled = true;
+        HelperPaths.LogEvent("my-opcontrol-handle-created");
         Dpi.ScaleForm(this);
+        HelperPaths.LogEvent("my-opcontrol-scaled");
         MinimumSize = new Size(Dpi.S(this, 820), Dpi.S(this, 600));
     }
 
@@ -645,11 +654,11 @@ public sealed class MyOpControlForm : Form
     {
         private readonly Button _button;
         private readonly Panel _bar;
-        private readonly Label _badge;
+        private readonly Label? _badge;
+        private bool _ready;
 
         public NavItem(string text, Action click)
         {
-            Height = 44;
             BackColor = Color.Transparent;
             Cursor = Cursors.Hand;
             _bar = new Panel { Dock = DockStyle.Left, Width = 3, BackColor = Theme.Brand, Visible = false };
@@ -687,11 +696,14 @@ public sealed class MyOpControlForm : Form
             Controls.Add(_badge);
             _bar.BringToFront();
             _badge.BringToFront();
+            Height = 44;
+            _ready = true;
         }
 
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
+            if (!_ready || _badge is null) return;
             _badge.Left = Width - _badge.Width - 10;
             _badge.Top = (Height - _badge.Height) / 2;
         }
@@ -706,6 +718,7 @@ public sealed class MyOpControlForm : Form
 
         public void SetUnread(int count)
         {
+            if (_badge is null) return;
             _badge.Text = count > 99 ? "99+" : count.ToString(System.Globalization.CultureInfo.InvariantCulture);
             _badge.Visible = count > 0;
         }

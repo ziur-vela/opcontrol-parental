@@ -17,6 +17,37 @@ internal static class Program
             return;
         }
 
+        if (args.Any(a => string.Equals(a, "--kid-window", StringComparison.OrdinalIgnoreCase)))
+        {
+            var tab = GetArgument(args, "--tab") ?? "home";
+            var theme = GetArgument(args, "--theme");
+            var language = GetArgument(args, "--language");
+            var messagesOnly = args.Any(a => string.Equals(a, "--messages-only", StringComparison.OrdinalIgnoreCase));
+            var target = tab switch
+            {
+                "schedule" => MyOpControlTab.Schedule,
+                "rules" => MyOpControlTab.Rules,
+                "activity" => MyOpControlTab.Activity,
+                "messages" => MyOpControlTab.Messages,
+                _ => MyOpControlTab.Home
+            };
+            HelperPaths.LogEvent($"kid-window-start tab={tab} theme={theme} language={language}");
+            try
+            {
+                ApplicationConfiguration.Initialize();
+                HelperPaths.LogEvent("kid-window-initialized");
+                using var form = new MyOpControlForm(false, target, messagesOnly, theme, language);
+                HelperPaths.LogEvent("kid-window-created");
+                Application.Run(form);
+                HelperPaths.LogEvent("kid-window-closed");
+            }
+            catch (Exception ex)
+            {
+                HelperPaths.LogEvent($"kid-window-failed {ex}");
+            }
+            return;
+        }
+
         var monitored = GetArgument(args, "--monitored");
         if (string.IsNullOrWhiteSpace(monitored))
         {

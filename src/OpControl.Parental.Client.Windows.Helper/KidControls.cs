@@ -59,6 +59,7 @@ internal sealed class BarPanel : Control
     public BarPanel()
     {
         DoubleBuffered = true;
+        SetStyle(ControlStyles.SupportsTransparentBackColor, true);
         BackColor = Color.Transparent;
         Height = 8;
         Margin = new Padding(0, 4, 0, 4);
@@ -90,6 +91,7 @@ internal sealed class RingPanel : Control
     public RingPanel()
     {
         DoubleBuffered = true;
+        SetStyle(ControlStyles.SupportsTransparentBackColor, true);
         BackColor = Color.Transparent;
         Size = new Size(124, 124);
         Margin = new Padding(0);
