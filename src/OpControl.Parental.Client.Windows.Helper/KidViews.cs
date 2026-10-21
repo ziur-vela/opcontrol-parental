@@ -399,14 +399,16 @@ internal sealed class HomeView : KidView
             {
                 ColumnCount = 2,
                 RowCount = 2,
-                Width = 210,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Width = 230,
+                Height = 42,
+                AutoSize = false,
                 BackColor = Color.Transparent,
-                Margin = new Padding(0, 0, 0, 7)
+                Margin = new Padding(0, 0, 0, 6)
             };
             row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             row.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            row.RowStyles.Add(new RowStyle(SizeType.Absolute, 26));
+            row.RowStyles.Add(new RowStyle(SizeType.Absolute, 12));
             var name = new Label
             {
                 Text = ShortAppName(app.DisplayName),
