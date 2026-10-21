@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using System.Drawing;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using Microsoft.Win32;
 using OpControl.Parental.Contracts;
 using OpControl.Parental.Localization;
@@ -20,7 +22,9 @@ public enum MyOpControlTab
 public sealed class MyOpControlForm : Form
 {
     private const int WmNcHitTest = 0x84;
-    private const int WmNcLButtonDown = 0xA1;
+    private const int WmSetRedraw = 0x000B;
+    private const int WsExComposited = 0x02000000;
+    private const int WsThickFrame = 0x00040000;
     private const int HtCaption = 2;
     private const int HtLeft = 10;
     private const int HtRight = 11;
@@ -32,10 +36,10 @@ public sealed class MyOpControlForm : Form
     private const int HtBottomRight = 17;
 
     [DllImport("user32.dll")]
-    private static extern bool ReleaseCapture();
-
-    [DllImport("user32.dll")]
     private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
 
     private bool _messagesOnly;
     private readonly HomeView _home;
@@ -57,9 +61,9 @@ public sealed class MyOpControlForm : Form
     private DateTime _summaryStamp = DateTime.MinValue;
     private bool _hasSummary;
     private ChildSummaryDto? _summary;
-    private bool _scaled;
     private MyOpControlTab _activeTab = MyOpControlTab.Home;
     private bool _online;
+    private float _scaleFactor = 1f;
 
     public event Action<int>? UnreadChanged;
 
@@ -80,26 +84,42 @@ public sealed class MyOpControlForm : Form
         Text = "My OpControl";
         AutoScaleMode = AutoScaleMode.None;
         FormBorderStyle = FormBorderStyle.None;
-        StartPosition = FormStartPosition.CenterScreen;
+        StartPosition = FormStartPosition.Manual;
         ShowInTaskbar = true;
         TopMost = aboveLock;
-        MaximizeBox = false;
+        MaximizeBox = true;
         MinimizeBox = true;
         BackColor = Theme.Bg;
         ForeColor = Theme.Text;
         KeyPreview = true;
         Padding = new Padding(4);
+        DoubleBuffered = true;
         Size = new Size(1040, 700);
         _activeTab = messagesOnly ? MyOpControlTab.Messages : tab;
 
+        var build = Stopwatch.StartNew();
         HelperPaths.LogEvent("my-opcontrol-build-start");
+        SuspendLayout();
         BuildShell();
         HelperPaths.LogEvent("my-opcontrol-shell-built");
+        ResumeLayout(false);
+
+        // Create the handle while hidden, apply the DPI geometry and place the window,
+        // then load the summary so every view is built at its final size. Nothing paints
+        // half-built and there is no scaling pass after Show.
+        _ = Handle;
+        PlaceWindow();
+        PerformLayout();
+        HelperPaths.LogEvent($"my-opcontrol-placed {Width}x{Height} at {Left},{Top} dpi={_scaleFactor:0.##}");
+
         LoadSummary(force: true);
         HelperPaths.LogEvent("my-opcontrol-summary-loaded");
         ShowTab(messagesOnly ? MyOpControlTab.Messages : tab);
         HelperPaths.LogEvent("my-opcontrol-tab-shown");
         UpdateLive();
+        EnableDoubleBuffering(this);
+        PerformLayout();
+        HelperPaths.LogEvent($"my-opcontrol-built-ms {build.ElapsedMilliseconds}");
 
         _liveTimer.Tick += (_, _) => UpdateLive();
         _liveTimer.Start();
@@ -115,7 +135,7 @@ public sealed class MyOpControlForm : Form
 
         KeyDown += (_, e) =>
         {
-            if (e.KeyCode == Keys.Escape) Close();
+            if (e.KeyCode == Keys.Escape) HideWindow();
         };
     }
 
@@ -153,12 +173,23 @@ public sealed class MyOpControlForm : Form
         if (_messagesOnly) ShowTab(MyOpControlTab.Messages);
     }
 
-    public void RestoreAndShow()
+    public void RestoreAndShow(IWin32Window? owner = null)
     {
+        ClampToVisibleScreen();
         if (WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal;
-        Show();
+        if (!Visible)
+        {
+            if (owner is not null) Show(owner);
+            else Show();
+        }
         BringToFront();
         Activate();
+    }
+
+    public void HideWindow()
+    {
+        SaveBounds();
+        Hide();
     }
 
     public void NotifyNewMessage(ChildMessageDto message)
@@ -268,7 +299,7 @@ public sealed class MyOpControlForm : Form
         var minimize = HeaderButton("–");
         minimize.Click += (_, _) => WindowState = FormWindowState.Minimized;
         var close = HeaderButton("×");
-        close.Click += (_, _) => Close();
+        close.Click += (_, _) => HideWindow();
         right.Controls.Add(minimize);
         right.Controls.Add(close);
 
@@ -276,16 +307,6 @@ public sealed class MyOpControlForm : Form
         layout.Controls.Add(new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent }, 1, 0);
         layout.Controls.Add(right, 2, 0);
         header.Controls.Add(layout);
-
-        void Drag(MouseEventArgs e)
-        {
-            if (e.Button != MouseButtons.Left) return;
-            ReleaseCapture();
-            SendMessage(Handle, WmNcLButtonDown, HtCaption, IntPtr.Zero);
-        }
-        header.MouseDown += (_, e) => Drag(e);
-        title.MouseDown += (_, e) => Drag(e);
-        brand.MouseDown += (_, e) => Drag(e);
         return header;
     }
 
@@ -479,7 +500,8 @@ public sealed class MyOpControlForm : Form
 
     private void ShowContent()
     {
-        _content.SuspendLayout();
+        var handle = _content.IsHandleCreated ? _content.Handle : IntPtr.Zero;
+        if (handle != IntPtr.Zero) SendMessage(handle, WmSetRedraw, IntPtr.Zero, IntPtr.Zero);
         try
         {
             _content.Controls.Clear();
@@ -500,14 +522,22 @@ public sealed class MyOpControlForm : Form
                     MyOpControlTab.Activity => _activity,
                     _ => _home
                 };
+                // Add first so the view has its final width, then build at that width.
+                // Building before parenting makes the view rebuild itself after Show.
+                _content.Controls.Add(view);
+                _content.PerformLayout();
                 if (_summary is not null && !ReferenceEquals(view.CachedSummary, _summary))
                     view.SetSummary(_summary);
-                _content.Controls.Add(view);
             }
+            _content.PerformLayout();
         }
         finally
         {
-            _content.ResumeLayout(true);
+            if (handle != IntPtr.Zero)
+            {
+                SendMessage(handle, WmSetRedraw, (IntPtr)1, IntPtr.Zero);
+                _content.Invalidate(true);
+            }
         }
     }
 
@@ -604,25 +634,40 @@ public sealed class MyOpControlForm : Form
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
+        try
+        {
+            // WS_THICKFRAME is needed for Snap/resize; paint its 1px DWM border in the
+            // window colour so the borderless window has no white outline.
+            var border = ColorTranslator.ToWin32(Theme.Bg);
+            DwmSetWindowAttribute(Handle, 34, ref border, sizeof(int)); // DWMWA_BORDER_COLOR
+        }
+        catch { }
         HelperPaths.LogEvent("my-opcontrol-handle-created");
     }
 
     protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
-        if (_scaled) return;
-        _scaled = true;
-        KidView.Scaling = true;
-        try
+        HelperPaths.LogEvent($"my-opcontrol-shown {Width}x{Height} at {Left},{Top} dpi={_scaleFactor:0.##}");
+    }
+
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        SaveBounds();
+        base.OnFormClosing(e);
+    }
+
+    protected override CreateParams CreateParams
+    {
+        get
         {
-            Dpi.ScaleForm(this);
+            var cp = base.CreateParams;
+            cp.ExStyle |= WsExComposited;
+            // WS_THICKFRAME is what enables Aero Snap, resize borders and the drop shadow.
+            // The window still paints its own title bar and borders.
+            cp.Style |= WsThickFrame;
+            return cp;
         }
-        finally
-        {
-            KidView.Scaling = false;
-        }
-        MinimumSize = new Size(Dpi.S(this, 820), Dpi.S(this, 600));
-        HelperPaths.LogEvent($"my-opcontrol-shown {Width}x{Height}");
     }
 
     protected override void WndProc(ref Message m)
@@ -631,33 +676,169 @@ public sealed class MyOpControlForm : Form
         {
             var screen = new Point((short)(m.LParam.ToInt64() & 0xFFFF), (short)((m.LParam.ToInt64() >> 16) & 0xFFFF));
             var point = PointToClient(screen);
-            var edge = Dpi.S(this, 6);
-            var left = point.X <= edge;
-            var right = point.X >= ClientSize.Width - edge;
-            var top = point.Y <= edge;
-            var bottom = point.Y >= ClientSize.Height - edge;
-            var hit = left && top ? HtTopLeft
-                : right && top ? HtTopRight
-                : left && bottom ? HtBottomLeft
-                : right && bottom ? HtBottomRight
-                : left ? HtLeft
-                : right ? HtRight
-                : top ? HtTop
-                : bottom ? HtBottom
-                : 0;
-            if (hit != 0)
+            var edge = Math.Max(6, Dpi.S(this, 6));
+            if (WindowState != FormWindowState.Maximized)
             {
-                m.Result = (IntPtr)hit;
+                var left = point.X <= edge;
+                var right = point.X >= ClientSize.Width - edge;
+                var top = point.Y <= edge;
+                var bottom = point.Y >= ClientSize.Height - edge;
+                var hit = left && top ? HtTopLeft
+                    : right && top ? HtTopRight
+                    : left && bottom ? HtBottomLeft
+                    : right && bottom ? HtBottomRight
+                    : left ? HtLeft
+                    : right ? HtRight
+                    : top ? HtTop
+                    : bottom ? HtBottom
+                    : 0;
+                if (hit != 0)
+                {
+                    m.Result = (IntPtr)hit;
+                    return;
+                }
+            }
+
+            var headerHeight = Dpi.S(this, 56);
+            if (point.Y >= 0 && point.Y < headerHeight && !IsOverButton(this, screen))
+            {
+                m.Result = (IntPtr)HtCaption;
                 return;
             }
         }
         base.WndProc(ref m);
     }
 
+    private void PlaceWindow()
+    {
+        var target = Screen.FromPoint(Cursor.Position);
+        _scaleFactor = Dpi.FactorFor(target);
+        KidView.Scaling = true;
+        try
+        {
+            Dpi.ScaleForm(this, _scaleFactor);
+        }
+        finally
+        {
+            KidView.Scaling = false;
+        }
+
+        var minWidth = Dpi.Scaled(820, _scaleFactor);
+        var minHeight = Dpi.Scaled(600, _scaleFactor);
+        var maxWidth = Math.Max(minWidth, (int)Math.Floor(target.WorkingArea.Width * 0.9));
+        var maxHeight = Math.Max(minHeight, (int)Math.Floor(target.WorkingArea.Height * 0.9));
+
+        var width = Dpi.Scaled(1040, _scaleFactor);
+        var height = Dpi.Scaled(700, _scaleFactor);
+        var x = target.WorkingArea.Left + (target.WorkingArea.Width - width) / 2;
+        var y = target.WorkingArea.Top + (target.WorkingArea.Height - height) / 2;
+
+        var saved = LoadBounds();
+        if (saved is { Width: > 0, Height: > 0 })
+        {
+            var scale = saved.Dpi > 0 ? _scaleFactor / saved.Dpi : 1f;
+            width = (int)Math.Round(saved.Width * scale);
+            height = (int)Math.Round(saved.Height * scale);
+            x = saved.X;
+            y = saved.Y;
+            var savedRect = new Rectangle(saved.X, saved.Y, saved.Width, saved.Height);
+            var monitor = Screen.AllScreens.FirstOrDefault(s => s.WorkingArea.IntersectsWith(savedRect));
+            if (monitor is not null)
+            {
+                target = monitor;
+                maxWidth = Math.Max(minWidth, (int)Math.Floor(target.WorkingArea.Width * 0.9));
+                maxHeight = Math.Max(minHeight, (int)Math.Floor(target.WorkingArea.Height * 0.9));
+            }
+            else
+            {
+                x = target.WorkingArea.Left + (target.WorkingArea.Width - width) / 2;
+                y = target.WorkingArea.Top + (target.WorkingArea.Height - height) / 2;
+            }
+        }
+
+        minWidth = Math.Min(minWidth, maxWidth);
+        minHeight = Math.Min(minHeight, maxHeight);
+        width = Math.Clamp(width, minWidth, maxWidth);
+        height = Math.Clamp(height, minHeight, maxHeight);
+        MinimumSize = new Size(minWidth, minHeight);
+        Bounds = new Rectangle(
+            Math.Clamp(x, target.WorkingArea.Left, target.WorkingArea.Right - width),
+            Math.Clamp(y, target.WorkingArea.Top, target.WorkingArea.Bottom - height),
+            width,
+            height);
+    }
+
+    private void ClampToVisibleScreen()
+    {
+        var rect = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
+        var screen = Screen.AllScreens.FirstOrDefault(s => s.WorkingArea.IntersectsWith(rect))
+            ?? Screen.FromPoint(Cursor.Position);
+        var area = screen.WorkingArea;
+        var width = Math.Min(Math.Max(rect.Width, MinimumSize.Width), Math.Max(MinimumSize.Width, (int)Math.Floor(area.Width * 0.9)));
+        var height = Math.Min(Math.Max(rect.Height, MinimumSize.Height), Math.Max(MinimumSize.Height, (int)Math.Floor(area.Height * 0.9)));
+        if (rect.Width == width && rect.Height == height
+            && area.Contains(rect)) return;
+        Bounds = new Rectangle(
+            Math.Clamp(rect.Left, area.Left, area.Right - width),
+            Math.Clamp(rect.Top, area.Top, area.Bottom - height),
+            width,
+            height);
+    }
+
+    private static bool IsOverButton(Control parent, Point screen)
+    {
+        foreach (Control child in parent.Controls)
+        {
+            if (!child.Visible || child.Width <= 0 || child.Height <= 0) continue;
+            if (!child.RectangleToScreen(child.ClientRectangle).Contains(screen)) continue;
+            if (child is Button) return true;
+            if (IsOverButton(child, screen)) return true;
+        }
+        return false;
+    }
+
+    private static void EnableDoubleBuffering(Control parent)
+    {
+        var property = typeof(Control).GetProperty("DoubleBuffered", BindingFlags.Instance | BindingFlags.NonPublic);
+        foreach (Control child in parent.Controls)
+        {
+            try { property?.SetValue(child, true); } catch { }
+            EnableDoubleBuffering(child);
+        }
+    }
+
+    private sealed record SavedBounds(int X, int Y, int Width, int Height, float Dpi);
+
+    private static SavedBounds? LoadBounds()
+    {
+        try
+        {
+            if (!File.Exists(HelperPaths.WindowBoundsFile)) return null;
+            return JsonSerializer.Deserialize<SavedBounds>(File.ReadAllText(HelperPaths.WindowBoundsFile));
+        }
+        catch { return null; }
+    }
+
+    private void SaveBounds()
+    {
+        try
+        {
+            var bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
+            if (bounds.Width <= 0 || bounds.Height <= 0) return;
+            Directory.CreateDirectory(HelperPaths.UserDirectory);
+            var temp = HelperPaths.WindowBoundsFile + ".tmp";
+            File.WriteAllText(temp, JsonSerializer.Serialize(
+                new SavedBounds(bounds.X, bounds.Y, bounds.Width, bounds.Height, _scaleFactor)));
+            File.Move(temp, HelperPaths.WindowBoundsFile, overwrite: true);
+        }
+        catch { }
+    }
+
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
+            SaveBounds();
             _liveTimer.Dispose();
             _cacheTimer.Dispose();
             _messages.Stop();

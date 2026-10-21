@@ -154,6 +154,7 @@
   "Client.Kid.NoLocks": "No locks scheduled today",
   "Client.Kid.MostUsed": "Most used today",
   "Client.Kid.NoUsage": "No apps used yet.",
+  "Client.Usage.FileExplorer": "File Explorer",
   "Client.Kid.MyRules": "My rules",
   "Client.Kid.BlockedSites": "blocked websites",
   "Client.Kid.BlockedApps": "blocked apps",

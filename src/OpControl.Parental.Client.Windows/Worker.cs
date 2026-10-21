@@ -21,7 +21,7 @@ public sealed class Worker : BackgroundService
     private readonly ChildSummarySyncService _summary;
     private DeviceCredential? _credential;
     private ClientOptions _options = new();
-    private string ClientVersion => typeof(Worker).Assembly.GetName().Version?.ToString(3) ?? "0.13.0";
+    private string ClientVersion => typeof(Worker).Assembly.GetName().Version?.ToString(3) ?? "0.13.1";
 
     private readonly IServiceProvider _serviceProvider;
 

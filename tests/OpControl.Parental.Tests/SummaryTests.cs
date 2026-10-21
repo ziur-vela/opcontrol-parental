@@ -175,6 +175,43 @@ public class SummaryTests
     }
 
     [Fact]
+    public async Task Summary_hides_shell_and_own_apps_but_keeps_file_explorer()
+    {
+        await using var db = NewDb();
+        var seed = await SeedAsync(db, "Usage");
+        var now = DateTime.UtcNow;
+        void Add(string identity, string display, int seconds) => db.UsageIntervals.Add(new UsageInterval
+        {
+            FamilyId = seed.Family.Id,
+            ChildId = seed.Child.Id,
+            DeviceId = seed.Device.Id,
+            AppIdentity = identity,
+            AppDisplayName = display,
+            StartUtc = now.AddMinutes(-10),
+            DurationSeconds = seconds,
+            Active = true
+        });
+
+        Add("win32:notepad.exe|microsoftcorporation", "Notepad", 300);
+        Add("win32:explorer.exe|microsoftcorporation", "File Explorer", 240);
+        Add("win32:explorer.exe|microsoftcorporation", "Windows Explorer", 3600);
+        Add("win32:shellexperiencehost.exe|microsoftcorporation", "Windows Shell Experience Host", 600);
+        Add("win32:opcontrol.parental.helper.exe|opcontrolitsolutions", "OpControl Parental Helper", 900);
+        Add("store:microsoft.windows.startmenuexperiencehost_cw5n1h2txyewy", "Start", 120);
+        await db.SaveChangesAsync();
+
+        var summary = await new ChildSummaryService(db).BuildAsync(seed.Device);
+        var apps = summary.AppsToday.Select(a => a.DisplayName).ToList();
+
+        Assert.Contains("Notepad", apps);
+        Assert.Contains("File Explorer", apps);
+        Assert.DoesNotContain("Windows Explorer", apps);
+        Assert.DoesNotContain(apps, name => name.Contains("Shell", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(apps, name => name.Contains("OpControl", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain("Start", apps);
+    }
+
+    [Fact]
     public void Cache_returns_null_when_missing_or_damaged_and_round_trips_when_present()
     {
         var path = Path.Combine(Path.GetTempPath(), "ocp-summary-" + Guid.NewGuid() + ".json");

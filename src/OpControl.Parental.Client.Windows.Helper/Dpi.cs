@@ -12,6 +12,19 @@ internal static class Dpi
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(IntPtr hwnd);
 
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromPoint(NativePoint point, uint flags);
+
+    [DllImport("shcore.dll")]
+    private static extern int GetDpiForMonitor(IntPtr monitor, int dpiType, out uint dpiX, out uint dpiY);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativePoint
+    {
+        public int X;
+        public int Y;
+    }
+
     public static float Factor(Control c)
     {
         var dpi = c.DeviceDpi;
@@ -29,9 +42,27 @@ internal static class Dpi
 
     public static int S(Control c, int value) => (int)Math.Round(value * Factor(c));
 
-    public static void ScaleForm(Form form)
+    public static int Scaled(int value, float factor) => (int)Math.Round(value * factor);
+
+    public static float FactorFor(Screen screen)
     {
-        var f = Factor(form);
+        try
+        {
+            var monitor = MonitorFromPoint(new NativePoint
+            {
+                X = screen.Bounds.Left + screen.Bounds.Width / 2,
+                Y = screen.Bounds.Top + screen.Bounds.Height / 2
+            }, 2);
+            if (monitor != IntPtr.Zero && GetDpiForMonitor(monitor, 0, out var dpiX, out _) == 0 && dpiX > 0)
+                return dpiX / 96f;
+        }
+        catch { }
+        return screen.Primary ? Graphics.FromHwnd(IntPtr.Zero).DpiX / 96f : 1f;
+    }
+
+    public static void ScaleForm(Form form, float? factor = null)
+    {
+        var f = factor ?? Factor(form);
         if (Math.Abs(f - 1f) < 0.01f) return;
         form.SuspendLayout();
         form.Size = Scale(form.Size, f);

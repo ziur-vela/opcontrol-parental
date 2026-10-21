@@ -200,6 +200,8 @@ public sealed class ChildSummaryService
             .GroupBy(r => r.AppIdentity.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First().DisplayName, StringComparer.OrdinalIgnoreCase);
         return intervals
+            .Where(i => !string.IsNullOrWhiteSpace(i.AppIdentity))
+            .Where(i => !AppUsageExclusions.IsExcluded(i.AppIdentity, i.AppDisplayName))
             .GroupBy(i => i.AppIdentity, StringComparer.OrdinalIgnoreCase)
             .Select(g =>
             {

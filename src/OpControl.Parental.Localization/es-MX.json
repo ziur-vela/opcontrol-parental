@@ -154,6 +154,7 @@
   "Client.Kid.NoLocks": "No hay bloqueos programados hoy",
   "Client.Kid.MostUsed": "Más usadas hoy",
   "Client.Kid.NoUsage": "Aún no usaste ninguna aplicación.",
+  "Client.Usage.FileExplorer": "Explorador de archivos",
   "Client.Kid.MyRules": "Mis reglas",
   "Client.Kid.BlockedSites": "sitios web bloqueados",
   "Client.Kid.BlockedApps": "aplicaciones bloqueadas",

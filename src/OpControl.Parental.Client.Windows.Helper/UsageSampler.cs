@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 using OpControl.Parental.Client;
 using OpControl.Parental.Contracts;
+using OpControl.Parental.Localization;
 
 namespace OpControl.Parental.Helper;
 
@@ -157,9 +159,27 @@ public sealed class UsageSampler
                 }
             }
             catch { }
+
+            if (string.Equals(process.ProcessName, "explorer", StringComparison.OrdinalIgnoreCase))
+            {
+                var shellClass = WindowClass(handle);
+                var isFileExplorer = string.Equals(shellClass, "CabinetWClass", StringComparison.Ordinal)
+                    || string.Equals(shellClass, "ExploreWClass", StringComparison.Ordinal);
+                // The desktop and taskbar are the Windows shell, not File Explorer usage.
+                if (!isFileExplorer) return ("", "", process.ProcessName);
+                display = Loc.T("Client.Usage.FileExplorer");
+            }
+
             return (identity, display, process.ProcessName);
         }
         catch { return ("", "", ""); }
+    }
+
+    private static string WindowClass(IntPtr handle)
+    {
+        if (handle == IntPtr.Zero) return "";
+        var buffer = new StringBuilder(256);
+        return GetClassName(handle, buffer, buffer.Capacity) > 0 ? buffer.ToString() : "";
     }
 
     private static int IdleSeconds()
@@ -199,6 +219,9 @@ public sealed class UsageSampler
 
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr OpenInputDesktop(uint flags, bool inherit, uint desiredAccess);

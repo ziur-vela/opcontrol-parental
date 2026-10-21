@@ -424,6 +424,7 @@ else
         var today = await usage.AppUsageTodayAsync(_familyId, childId, tz, now);
         var appRules = await db.AppRules.AsNoTracking().Where(r => r.FamilyId == _familyId && r.ChildId == childId).ToListAsync();
         _apps = intervals.Where(i => i.Active && !string.IsNullOrWhiteSpace(i.AppIdentity))
+            .Where(i => !AppUsageExclusions.IsExcluded(i.AppIdentity, i.AppDisplayName))
             .GroupBy(i => i.AppIdentity, StringComparer.OrdinalIgnoreCase)
             .Select(g =>
             {

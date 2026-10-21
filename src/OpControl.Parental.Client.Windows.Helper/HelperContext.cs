@@ -398,9 +398,7 @@ public sealed class HelperContext : ApplicationContext
             form.UnreadChanged += _ => UpdateTrayMenu();
             _myOpControl = form;
             var owner = aboveLock ? _overlays.Owner : null;
-            if (owner is { IsDisposed: false }) form.Show(owner);
-            else form.Show();
-            form.RestoreAndShow();
+            form.RestoreAndShow(owner is { IsDisposed: false } ? owner : null);
             HelperPaths.LogEvent("my-opcontrol-opened");
         }
         catch (Exception ex)

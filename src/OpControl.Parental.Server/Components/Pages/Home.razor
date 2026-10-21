@@ -370,7 +370,9 @@ else
             .Where(u => u.FamilyId == _familyId && u.ChildId == _childId && u.Active && u.StartUtc >= dayStart && u.StartUtc < dayEnd && u.AppIdentity != "")
             .Select(u => new { u.AppIdentity, u.AppDisplayName, u.DurationSeconds })
             .ToListAsync();
-        _topApps = intervals.GroupBy(i => i.AppIdentity, StringComparer.OrdinalIgnoreCase)
+        _topApps = intervals
+            .Where(i => !AppUsageExclusions.IsExcluded(i.AppIdentity, i.AppDisplayName))
+            .GroupBy(i => i.AppIdentity, StringComparer.OrdinalIgnoreCase)
             .Select(g => new AppRow(
                 g.Select(i => i.AppDisplayName).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n)) ?? g.Key,
                 g.Sum(i => i.DurationSeconds)))
