@@ -131,7 +131,7 @@ code { font-family: var(--mono); background: var(--panel-2); padding: 2px 5px; f
 .user-chip { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; color: var(--muted); text-transform: uppercase; }
 .inline-form { display: inline; margin: 0; }
 .content { padding: 24px; max-width: 1180px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; flex: 1; }
-.site-foot { margin-top: auto; text-align: center; font-family: var(--mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); padding: 22px 0 8px; }
+.site-foot { margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; font-family: var(--mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); padding: 22px 0 8px; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
 .page-head p { margin-top: 4px; color: var(--muted); font-family: var(--mono); font-size: 11px; letter-spacing: .04em; }
 .page-head h1 { font-size: 28px; }
@@ -228,7 +228,7 @@ code { font-family: var(--mono); background: var(--panel-2); padding: 2px 5px; f
 .auth-divider { display: flex; align-items: center; gap: 10px; color: var(--muted); font-family: var(--mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; }
 .auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .auth-note { text-align: center; color: var(--muted); }
-.auth-foot { padding-bottom: 8px; font-family: var(--mono); letter-spacing: .18em; text-transform: uppercase; font-size: 10px; }
+.auth-foot { display: flex; align-items: center; justify-content: center; gap: 10px; padding-bottom: 8px; font-family: var(--mono); letter-spacing: .18em; text-transform: uppercase; font-size: 10px; }
 .brand-preview { background: var(--panel-2); border: 1px solid var(--line); padding: 18px; display: flex; justify-content: center; }
 .brand-preview img { height: 50px; }
 .skeleton-line { height: 12px; background: var(--panel-2); animation: pulse 1.2s ease-in-out infinite; }
@@ -413,3 +413,6 @@ code { font-family: var(--mono); background: var(--panel-2); padding: 2px 5px; f
 .lang-link.active { color: var(--brand-dark); background: var(--brand); }
 @media (max-width: 720px) { .lang-link { min-width: 44px; height: 44px; } }
 .auth-lang { display: flex; justify-content: flex-end; padding: 14px 18px 0; }
+
+/* OpControl logo in "Created by" footers (smaller than the HPB dashboard, 36px there) */
+.opc-logo { height: 24px; width: auto; opacity: .8; display: block; }

@@ -476,7 +476,7 @@ If you were not expecting this, ignore this email.</value></data>
   <data name="Language.Saved" xml:space="preserve"><value>Language saved.</value></data>
   <data name="Language.ServerDefault" xml:space="preserve"><value>Family default</value></data>
   <data name="Language.Spanish" xml:space="preserve"><value>Español</value></data>
-  <data name="Layout.CreatedBy" xml:space="preserve"><value>CREATED BY OpControl</value></data>
+  <data name="Layout.CreatedBy" xml:space="preserve"><value>Created by</value></data>
   <data name="Layout.English" xml:space="preserve"><value>English</value></data>
   <data name="Layout.FamilyDashboard" xml:space="preserve"><value>Family dashboard</value></data>
   <data name="Layout.Language" xml:space="preserve"><value>Language</value></data>
@@ -836,6 +836,7 @@ If you were not expecting this, ignore this email.</value></data>
   <data name="Email.Layout.Details" xml:space="preserve"><value>Details</value></data>
   <data name="Email.Layout.Footer.Alert" xml:space="preserve"><value>You received this email because alert emails are turned on for your family.</value></data>
   <data name="Email.Layout.Footer.CreatedBy" xml:space="preserve"><value>Created by OpControl</value></data>
+  <data name="Email.Layout.Footer.CreatedByLabel" xml:space="preserve"><value>Created by</value></data>
   <data name="Email.Layout.Footer.Invite" xml:space="preserve"><value>You received this email because someone invited you to Parental OpControl.</value></data>
   <data name="Email.Layout.Footer.Settings" xml:space="preserve"><value>Alert settings</value></data>
   <data name="Email.Layout.Footer.Staging" xml:space="preserve"><value>Staging server — this email was sent from a test environment.</value></data>

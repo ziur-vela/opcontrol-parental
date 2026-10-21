@@ -361,7 +361,9 @@ public sealed class EmailRenderer
                 .Append(Html(AppText.Get("Email.Layout.Footer.Settings", language))).Append("</a></p>");
 
         html.Append("<p style=\"margin:0;color:").Append(Faint).Append(";\">")
-            .Append(Html(AppText.Get("Email.Layout.Footer.CreatedBy", language))).Append("</p>");
+            .Append(Html(AppText.Get("Email.Layout.Footer.CreatedByLabel", language)))
+            .Append("&nbsp;&nbsp;<img src=\"").Append(Html(Link("/brand/opcontrol-logo.png")))
+            .Append("\" width=\"101\" height=\"22\" alt=\"OpControl\" style=\"display:inline-block;vertical-align:middle;width:101px;height:22px;border:0;outline:none;text-decoration:none;\" /></p>");
 
         if (Staging)
             html.Append("<p style=\"margin:8px 0 0;color:").Append(Faint).Append(";\">")

@@ -26,7 +26,7 @@
         <div class="auth-card">
             @RenderBody()
         </div>
-        <div class="auth-foot muted tiny">@L["Layout.CreatedBy"]</div>
+        <div class="auth-foot muted tiny"><span>@L["Layout.CreatedBy"]</span><img src="/brand/opcontrol-logo.png" alt="OpControl" class="opc-logo" width="110" height="24" /></div>
     </div>
     <script>
         window.ocpStrings = @(new Microsoft.AspNetCore.Html.HtmlString(System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, string>
