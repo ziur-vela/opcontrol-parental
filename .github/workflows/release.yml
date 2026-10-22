@@ -121,6 +121,8 @@ jobs:
           file: src/OpControl.Parental.Updater/Dockerfile
           push: true
           tags: ${{ steps.updatertags.outputs.value }}
+          build-args: |
+            VERSION=${{ steps.version.outputs.value }}
       - name: Attest images
         uses: actions/attest-build-provenance@v2
         with:
