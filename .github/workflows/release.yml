@@ -84,6 +84,9 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Version
+        id: version
+        run: echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
       - name: Image tags
         id: tags
         run: |
@@ -99,7 +102,7 @@ jobs:
           push: true
           tags: ${{ steps.tags.outputs.value }}
           build-args: |
-            VERSION=${GITHUB_REF_NAME#v}
+            VERSION=${{ steps.version.outputs.value }}
             INFORMATIONAL=${{ github.ref_name }}+${{ github.sha }}
             COMMIT=${{ github.sha }}
             BUILD_DATE=${{ env.RELEASE_DATE }}
