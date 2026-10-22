@@ -1,3 +1,4 @@
+import datetime
 import hashlib
 import json
 import os
@@ -23,7 +24,7 @@ manifest = {
     "updaterImageDigest": os.environ["UPDATER_DIGEST"],
     "minimumVersion": os.environ.get("MINIMUM_UPGRADE_VERSION", "0.13.0"),
     "prerelease": "-" in version,
-    "publishedUtc": os.environ.get("RELEASE_DATE", ""),
+    "publishedUtc": os.environ.get("RELEASE_DATE") or datetime.datetime.now(datetime.timezone.utc).isoformat(),
     "assets": assets,
     "notes": {
         "en": read(f".github/release-notes/v{version}.en.md", "See the release notes on GitHub."),

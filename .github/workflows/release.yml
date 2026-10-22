@@ -152,7 +152,9 @@ jobs:
           MINIMUM_UPGRADE_VERSION: ${{ vars.MINIMUM_UPGRADE_VERSION || '0.13.0' }}
         run: |
           set -euo pipefail
-          cp docker-compose.yml .env.example LICENSE THIRD-PARTY-NOTICES.md dist/
+          cp docker-compose.yml .env.example LICENSE THIRD-PARTY-NOTICES.md README.md README.es.md CONTRIBUTING.md dist/
+          cp .env.example dist/env.example
+          tar -czf "dist/parental-opcontrol-${GITHUB_REF_NAME#v}.tar.gz" -C dist env.example docker-compose.yml LICENSE THIRD-PARTY-NOTICES.md README.md README.es.md CONTRIBUTING.md
           python3 .github/scripts/manifest.py
           ls -la dist
       - name: Attest release files
@@ -173,9 +175,17 @@ jobs:
           version="${GITHUB_REF_NAME#v}"
           notes=".github/release-notes/v${version}.en.md"
           [ -f "$notes" ] || notes="/dev/null"
-          extra=""
-          if [[ "$GITHUB_REF_NAME" == *-* ]]; then extra="--prerelease"; fi
-          gh release create "$GITHUB_REF_NAME" dist/* \
-            --title "Parental OpControl $GITHUB_REF_NAME" \
-            --notes-file "$notes" \
-            $extra
+          extra=()
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then extra=(--prerelease); fi
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+            gh release edit "$GITHUB_REF_NAME" \
+              --title "Parental OpControl $GITHUB_REF_NAME" \
+              --notes-file "$notes" \
+              "${extra[@]}"
+          else
+            gh release create "$GITHUB_REF_NAME" dist/* \
+              --title "Parental OpControl $GITHUB_REF_NAME" \
+              --notes-file "$notes" \
+              "${extra[@]}"
+          fi
