@@ -254,6 +254,10 @@ else
                         <div class="rule-main">
                             <div class="rule-title">@item.Identity</div>
                             <div class="muted tiny">@ActionLabel(item.Action) · @FormatLocal(item.ChangedUtc)</div>
+                            @if (!string.IsNullOrWhiteSpace(item.Note))
+                            {
+                                <div class="muted tiny">@item.Note</div>
+                            }
                         </div>
                         <div class="rule-actions">
                             <button class="ghost-btn" @onclick="() => BlockSiteAsync(item.Identity, RuleMode.Always, null)">@L["Websites.BlockAgain"]</button>
