@@ -8,8 +8,7 @@
 @inject AuthenticationStateProvider AuthState
 @inject IServiceScopeFactory Scopes
 @inject IStringLocalizer<AppStrings> L
-@inject IJSRuntime JS
-@implements IAsyncDisposable
+
 
 <div class="msg-composer @(Compact ? "compact" : "")">
     <div class="chip-row">
@@ -18,7 +17,8 @@
             <button type="button" class="chip @(_preset == key ? "active" : "")" @onclick="() => PickPreset(key)">@L["Messages.Preset." + PresetLabel(key)]</button>
         }
     </div>
-    <textarea id="@_inputId" class="msg-input" maxlength="500" rows="@(Compact ? 2 : 3)" @bind="_text" @bind:event="oninput"
+    <textarea class="msg-input" maxlength="500" rows="@(Compact ? 2 : 3)" @bind="_text" @bind:event="oninput"
+              data-enter-to-send="@(_enterToSend ? "true" : "false")" @onkeydown="OnKeyDownAsync"
               placeholder="@L["Messages.Placeholder"]" aria-label="@L["Messages.Placeholder"]"></textarea>
     <div class="msg-composer-foot">
         <div class="check-row">
@@ -56,10 +56,6 @@
     private bool _enterToSend = true;
     private string? _error;
 
-    private readonly string _inputId = "msg-input-" + Guid.NewGuid().ToString("N");
-    private DotNetObjectReference<MessageComposer>? _self;
-    private bool _jsAttached;
-
     private static string PresetLabel(string key) => key switch
     {
         "dinner" => "Dinner",
@@ -77,23 +73,10 @@
         _enterToSend = await preferences.GetEnterToSendAsync(_familyId, _parentId);
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender || _jsAttached) return;
-        try
-        {
-            _self = DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("ocpComposer.attach", _inputId, _self, _enterToSend);
-            _jsAttached = true;
-        }
-        catch { }
-    }
-
     private async Task SaveEnterToSendAsync()
     {
         try
         {
-            if (_jsAttached) await JS.InvokeVoidAsync("ocpComposer.setEnterToSend", _inputId, _enterToSend);
             using var scope = Scopes.CreateScope();
             var preferences = scope.ServiceProvider.GetRequiredService<ParentPreferenceService>();
             await preferences.SaveEnterToSendAsync(_familyId, _parentId, _enterToSend);
@@ -101,12 +84,10 @@
         catch (Exception ex) { _error = ex.Message; }
     }
 
-    [JSInvokable]
-    public async Task SendFromEnterAsync(string? currentText)
+    private async Task OnKeyDownAsync(KeyboardEventArgs e)
     {
-        if (!_enterToSend) return;
-        if (currentText is not null) _text = currentText;
-        await SendAsync();
+        if (_enterToSend && e.Key == "Enter" && !e.ShiftKey)
+            await SendAsync();
     }
 
     private void PickPreset(string key)
@@ -158,13 +139,4 @@
         }
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        try
-        {
-            if (_jsAttached) await JS.InvokeVoidAsync("ocpComposer.detach", _inputId);
-        }
-        catch { }
-        _self?.Dispose();
-    }
 }
