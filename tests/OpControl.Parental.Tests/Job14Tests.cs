@@ -130,7 +130,7 @@ public class Job14BlockingTests
         await using var db = NewDb();
         var (family, child, device) = await SeedAsync(db);
         var rules = new RuleService(db, Alerts(db));
-        var now = new DateTime(2026, 10, 22, 12, 0, 0, DateTimeKind.Utc);
+        var now = DateTime.UtcNow.AddMinutes(-5);
         for (var i = 0; i < 6; i++)
         {
             await rules.SyncVisitsAsync(device, Batch(
@@ -145,7 +145,7 @@ public class Job14BlockingTests
         Assert.Contains("5 blocked attempts", detail);
         Assert.Contains("Social media", detail);
 
-        await rules.SyncVisitsAsync(device, Batch(("whatsapp.com", true, "category:social", now.AddMinutes(20))));
+        await rules.SyncVisitsAsync(device, Batch(("whatsapp.com", true, "category:social", now.AddMinutes(1))));
         Assert.Single(await db.Alerts.Where(a => a.Type == "repeated-blocked-site").ToListAsync());
     }
 
@@ -220,6 +220,35 @@ public class Job14RemoteTests
         return (provider, registry, service, db, family, child, device, parent);
     }
 
+    [Fact]
+    public async Task Stop_finalises_the_database_even_if_a_socket_close_would_hang()
+    {
+        var ctx = await BuildAsync();
+        await using var db = ctx.Db;
+        var session = new RemoteSession
+        {
+            FamilyId = ctx.Family.Id, ChildId = ctx.Child.Id, DeviceId = ctx.Device.Id,
+            RequestedByParentId = ctx.Parent.Id, Kind = RemoteSessionKind.Screen,
+            Status = RemoteSessionStatus.Requested, CreatedUtc = DateTime.UtcNow
+        };
+        db.RemoteSessions.Add(session);
+        await db.SaveChangesAsync();
+        ctx.Registry.Ensure(session.Id, DateTime.UtcNow.AddMinutes(10));
+        using var socket = new HangingWebSocket();
+        var attach = ctx.Registry.AttachParentAsync(session.Id, socket, CancellationToken.None);
+        await Task.Delay(100);
+        await ctx.Registry.StopAsync(session.Id, "parent-closed");
+        var row = await db.RemoteSessions.FindAsync(session.Id);
+        Assert.Equal(RemoteSessionStatus.Ended, row!.Status);
+        await attach.WaitAsync(TimeSpan.FromSeconds(3));
+    }
+
+    private sealed class HangingWebSocket : FakeWebSocket
+    {
+        public override Task CloseAsync(WebSocketCloseStatus closeStatus, string? statusDescription, CancellationToken cancellationToken)
+            => new TaskCompletionSource().Task;
+    }
+
     private sealed class ProviderHolder
     {
         public IServiceProvider Provider { get; set; } = null!;
@@ -271,7 +300,7 @@ public class Job14RemoteTests
         Assert.Equal("heartbeat-timeout", row.EndReason);
     }
 
-    private sealed class FakeWebSocket : WebSocket
+    private class FakeWebSocket : WebSocket
     {
         private readonly TaskCompletionSource _closed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private WebSocketState _state = WebSocketState.Open;

@@ -159,7 +159,7 @@ public sealed class RemoteSessionRegistry
     {
         if (!_entries.TryGetValue(id, out var entry))
         {
-            await CloseAsync(socket, "Unknown or expired session.");
+            Abort(socket);
             return;
         }
         entry.Parent = socket;
@@ -180,7 +180,7 @@ public sealed class RemoteSessionRegistry
     {
         if (!_entries.TryGetValue(id, out var entry))
         {
-            await CloseAsync(socket, "Unknown or expired session.");
+            Abort(socket);
             return;
         }
         entry.Device = socket;
@@ -276,9 +276,9 @@ public sealed class RemoteSessionRegistry
     {
         if (!_entries.TryRemove(id, out var entry)) return;
         if (Interlocked.Exchange(ref entry.Stopped, 1) == 1) return;
-        await CloseAsync(entry.Parent, reason);
-        await CloseAsync(entry.Device, reason);
-        entry.Closed.TrySetResult();
+        // Finalise the database row first. A half-open browser socket can make a
+        // graceful WebSocket close wait forever, which previously left an Active
+        // row behind and made the device look busy.
         try
         {
             using var scope = _scopes.CreateScope();
@@ -288,17 +288,23 @@ public sealed class RemoteSessionRegistry
         {
             _logger.LogWarning(ex, "Could not finalise remote session {SessionId}", id);
         }
+        finally
+        {
+            Abort(entry.Parent);
+            Abort(entry.Device);
+            entry.Closed.TrySetResult();
+        }
     }
 
-    private static async Task CloseAsync(WebSocket? socket, string reason)
+    private static void Abort(WebSocket? socket)
     {
         if (socket is null) return;
         try
         {
-            if (socket.State is WebSocketState.Open or WebSocketState.CloseReceived)
-                await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, reason, CancellationToken.None);
+            if (socket.State is WebSocketState.Open or WebSocketState.CloseReceived or WebSocketState.CloseSent)
+                socket.Abort();
         }
         catch { }
-        socket.Dispose();
+        try { socket.Dispose(); } catch { }
     }
 }
