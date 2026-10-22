@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Ziur / OpControl IT Solutions
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -365,6 +368,11 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
             e.Property(x => x.SmtpPasswordProtected).HasMaxLength(1024);
             e.Property(x => x.FromAddress).HasMaxLength(255);
             e.Property(x => x.FromName).HasMaxLength(120);
+            e.Property(x => x.PublicBaseUrl).HasMaxLength(500);
+            e.Property(x => x.LatestVersion).HasMaxLength(50);
+            e.Property(x => x.LatestReleaseUrl).HasMaxLength(500);
+            e.Property(x => x.LatestManifestUrl).HasMaxLength(500);
+            e.Property(x => x.LastNotifiedVersion).HasMaxLength(50);
         });
 
         builder.Entity<AlertPreference>(e =>

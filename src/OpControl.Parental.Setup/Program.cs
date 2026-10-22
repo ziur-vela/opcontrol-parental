@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Ziur / OpControl IT Solutions
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+
 using System.Diagnostics;
 using System.Management;
 using System.Reflection;
@@ -40,6 +43,11 @@ internal static class Program
                 return RunMsi(msi, server, code, account, null);
             }
 
+            using (var license = new LicenseForm(ReadLicense()))
+            {
+                if (license.ShowDialog() != DialogResult.OK) return 1;
+            }
+
             using var form = new InstallForm(msi, server, code, account);
             return form.ShowDialog() == DialogResult.OK ? form.ExitCode : 1;
         }
@@ -72,6 +80,22 @@ internal static class Program
             return match.Success ? match.Groups[1].Value.ToUpperInvariant() : null;
         }
         catch { return null; }
+    }
+
+    private static string ReadLicense()
+    {
+        try
+        {
+            using var stream = Assembly.GetExecutingAssembly()
+                .GetManifestResourceStream("OpControl.Parental.License.txt");
+            if (stream is null) return "PolyForm Noncommercial License 1.0.0";
+            using var reader = new StreamReader(stream);
+            return reader.ReadToEnd();
+        }
+        catch
+        {
+            return "PolyForm Noncommercial License 1.0.0";
+        }
     }
 
     private static string ExtractMsi()
@@ -299,5 +323,84 @@ internal sealed class InstallForm : Form
             _server.Enabled = true;
             _code.Enabled = true;
         }
+    }
+}
+
+
+internal sealed class LicenseForm : Form
+{
+    private readonly Button _agree = new();
+
+    public LicenseForm(string licenseText)
+    {
+        Text = Loc.T("Setup.LicenseWindowTitle");
+        FormBorderStyle = FormBorderStyle.FixedDialog;
+        MaximizeBox = false;
+        MinimizeBox = false;
+        StartPosition = FormStartPosition.CenterScreen;
+        AutoScaleMode = AutoScaleMode.Dpi;
+        Theme.StyleForm(this);
+        ClientSize = new Size(700, 520);
+        Padding = new Padding(20);
+
+        var title = new Label
+        {
+            Text = Loc.T("Setup.LicenseTitle"),
+            Font = Theme.Sans(16f, FontStyle.Bold),
+            ForeColor = Theme.Text,
+            AutoSize = true,
+            Location = new Point(22, 18)
+        };
+        var subtitle = new Label
+        {
+            Text = Loc.T("Setup.LicenseSubtitle"),
+            AutoSize = false,
+            Size = new Size(650, 34),
+            Location = new Point(24, 52),
+            ForeColor = Theme.Muted,
+            Font = Theme.Mono(9f)
+        };
+        var text = new TextBox
+        {
+            Multiline = true,
+            ReadOnly = true,
+            ScrollBars = ScrollBars.Vertical,
+            WordWrap = true,
+            Location = new Point(24, 92),
+            Size = new Size(650, 330),
+            Text = licenseText,
+            Font = Theme.Mono(8.5f),
+            BackColor = Theme.Panel2,
+            ForeColor = Theme.Text,
+            BorderStyle = BorderStyle.FixedSingle
+        };
+        var agreeCheck = new CheckBox
+        {
+            Text = Loc.T("Setup.LicenseAgree"),
+            AutoSize = true,
+            Location = new Point(24, 434),
+            ForeColor = Theme.Text,
+            Font = Theme.Mono(9f)
+        };
+        _agree.Text = Loc.T("Setup.LicenseContinue");
+        _agree.Size = new Size(150, 34);
+        _agree.Location = new Point(524, 462);
+        _agree.Enabled = false;
+        Theme.StyleButton(_agree, primary: true);
+        agreeCheck.CheckedChanged += (_, _) => _agree.Enabled = agreeCheck.Checked;
+
+        var decline = new Button
+        {
+            Text = Loc.T("Setup.LicenseDecline"),
+            Size = new Size(110, 34),
+            Location = new Point(404, 462),
+            DialogResult = DialogResult.Cancel
+        };
+        Theme.StyleButton(decline);
+
+        _agree.DialogResult = DialogResult.OK;
+        Controls.AddRange([title, subtitle, text, agreeCheck, _agree, decline]);
+        AcceptButton = _agree;
+        CancelButton = decline;
     }
 }

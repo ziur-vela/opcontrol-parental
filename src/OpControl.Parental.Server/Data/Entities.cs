@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Ziur / OpControl IT Solutions
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+
 using Microsoft.AspNetCore.Identity;
 using OpControl.Parental.Contracts;
 
@@ -455,6 +458,18 @@ public class ServerSettings
     public string? SmtpPasswordProtected { get; set; }
     public string? FromAddress { get; set; }
     public string? FromName { get; set; } = "Parental OpControl";
+    public string? PublicBaseUrl { get; set; }
+    public bool GitHubCheckEnabled { get; set; } = true;
+    public bool NotifyNewVersion { get; set; }
+    public DateTime? LastUpdateCheckUtc { get; set; }
+    public string? LatestVersion { get; set; }
+    public string? LatestReleaseUrl { get; set; }
+    public string? LatestManifestUrl { get; set; }
+    public string? LatestNotesEn { get; set; }
+    public string? LatestNotesEs { get; set; }
+    public DateTime? LatestPublishedUtc { get; set; }
+    public string? LastNotifiedVersion { get; set; }
+    public DateTime? SetupCompletedUtc { get; set; }
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
 }
 

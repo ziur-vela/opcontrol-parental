@@ -1,0 +1,178 @@
+# Copyright (c) 2026 Ziur / OpControl IT Solutions
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+  attestations: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ziur-vela/parental-opcontrol
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet test tests/OpControl.Parental.Tests/OpControl.Parental.Tests.csproj -c Release
+
+  windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install WiX
+        shell: pwsh
+        run: |
+          dotnet tool install wix --tool-path "$env:RUNNER_TEMP\wix" --version 5.0.2
+          & "$env:RUNNER_TEMP\wix\wix.exe" extension add -g WixToolset.Util.wixext/5.0.2
+      - name: Build client, helper, MSI and setup
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          & powershell -ExecutionPolicy Bypass -File installer/build-windows.ps1 `
+            -Version $version `
+            -DotnetRoot "$env:ProgramFiles\dotnet" `
+            -WixTool "$env:RUNNER_TEMP\wix\wix.exe"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifacts
+          path: |
+            artifacts/OpControlParental-*.msi
+            artifacts/OpControlParental-Setup-*.exe
+          if-no-files-found: error
+
+  images:
+    needs: [test, windows]
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.web.outputs.digest }}
+      updater_digest: ${{ steps.updater.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-artifacts
+          path: release-assets
+      - name: Prepare baked release assets
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          find release-assets -maxdepth 1 -type f -print
+          test -f "release-assets/OpControlParental-$version.msi"
+          test -f "release-assets/OpControlParental-Setup-$version.exe"
+      - name: Release date
+        run: echo "RELEASE_DATE=$(date -u +%F)" >> "$GITHUB_ENV"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Image tags
+        id: tags
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          tags="${REGISTRY}/${IMAGE_NAME}:${version}"
+          if [[ "$GITHUB_REF_NAME" != *-* ]]; then tags="${tags},${REGISTRY}/${IMAGE_NAME}:latest"; fi
+          echo "value=${tags}" >> "$GITHUB_OUTPUT"
+      - name: Build and push web image
+        id: web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.tags.outputs.value }}
+          build-args: |
+            VERSION=${GITHUB_REF_NAME#v}
+            INFORMATIONAL=${{ github.ref_name }}+${{ github.sha }}
+            COMMIT=${{ github.sha }}
+            BUILD_DATE=${{ env.RELEASE_DATE }}
+      - name: Updater image tags
+        id: updatertags
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          tags="${REGISTRY}/${IMAGE_NAME}-updater:${version}"
+          if [[ "$GITHUB_REF_NAME" != *-* ]]; then tags="${tags},${REGISTRY}/${IMAGE_NAME}-updater:latest"; fi
+          echo "value=${tags}" >> "$GITHUB_OUTPUT"
+      - name: Build and push updater image
+        id: updater
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/OpControl.Parental.Updater/Dockerfile
+          push: true
+          tags: ${{ steps.updatertags.outputs.value }}
+      - name: Attest images
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.web.outputs.digest }}
+          push-to-registry: true
+      - name: Attest updater image
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-updater
+          subject-digest: ${{ steps.updater.outputs.digest }}
+          push-to-registry: true
+
+  release:
+    needs: [windows, images]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-artifacts
+          path: dist
+      - name: Assemble release files
+        env:
+          WEB_DIGEST: ${{ needs.images.outputs.digest }}
+          UPDATER_DIGEST: ${{ needs.images.outputs.updater_digest }}
+          RELEASE_VERSION: ${{ github.ref_name }}
+          RELEASE_DATE: ${{ env.RELEASE_DATE }}
+          MINIMUM_UPGRADE_VERSION: ${{ vars.MINIMUM_UPGRADE_VERSION || '0.13.0' }}
+        run: |
+          set -euo pipefail
+          cp docker-compose.yml .env.example LICENSE THIRD-PARTY-NOTICES.md dist/
+          python3 .github/scripts/manifest.py
+          ls -la dist
+      - name: Attest release files
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/*.msi
+            dist/*.exe
+            dist/docker-compose.yml
+            dist/.env.example
+            dist/LICENSE
+            dist/release-manifest.json
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          notes=".github/release-notes/v${version}.en.md"
+          [ -f "$notes" ] || notes="/dev/null"
+          extra=""
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then extra="--prerelease"; fi
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "Parental OpControl $GITHUB_REF_NAME" \
+            --notes-file "$notes" \
+            $extra

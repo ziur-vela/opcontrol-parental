@@ -1,3 +1,7 @@
+/* Copyright (c) 2026 Ziur / OpControl IT Solutions
+ * SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+ */
+
 /* OpControl Style — single theme file (Job 6)
    All colours, fonts, spacing and radii live here. Brand colour comes from
    --brand (set by Branding config in MainLayout). */
@@ -494,3 +498,16 @@ code { font-family: var(--mono); background: var(--panel-2); padding: 2px 5px; f
     .msg-composer-foot { align-items: stretch; }
     .msg-composer-foot .button-row { justify-content: flex-end; }
 }
+
+/* Legal / license */
+.legal-line { font-family: var(--mono); font-size: 9.5px; line-height: 1.5; letter-spacing: .02em; color: var(--faint); margin-top: 8px; }
+.legal-line a { color: inherit; text-decoration: underline; }
+.auth-legal { padding-bottom: 18px; text-align: center; }
+.legal-text { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--mono); font-size: 11px; line-height: 1.6; color: var(--text); background: var(--bg); border: 1px solid var(--line); padding: 14px; max-height: 58vh; overflow: auto; }
+body:has(.legal-text) .auth-card { width: min(880px, 100%); }
+
+.twofactor-qr { display:flex; justify-content:center; padding:6px 0; background:#fff; }
+
+/* Updates */
+.update-notes { white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid var(--line); background: var(--panel-2); padding: 12px; margin: 12px 0; font-size: 13px; line-height: 1.5; }
+.manual-commands { white-space: pre-wrap; font-family: var(--mono); font-size: 11px; background: var(--panel-2); padding: 10px; border: 1px solid var(--line); overflow: auto; }

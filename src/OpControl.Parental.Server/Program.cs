@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Ziur / OpControl IT Solutions
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+
 using System.Globalization;
 using System.Net.WebSockets;
 using System.Security.Claims;
@@ -151,11 +154,16 @@ builder.Services.AddScoped<ChildSummaryService>();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<DashboardEventBus>();
 builder.Services.AddSingleton<ReleaseCatalog>();
+builder.Services.AddSingleton<SetupTokenService>();
+builder.Services.AddSingleton<PendingSetupStore>();
+builder.Services.AddSingleton<BakedReleaseService>();
+builder.Services.AddScoped<ServerUpdateService>();
 builder.Services.AddSingleton<DevicePresenceService>();
 builder.Services.AddHostedService<LockExpiryService>();
 builder.Services.AddHostedService<CategoryRefreshService>();
 builder.Services.AddHostedService<ScheduleTransitionService>();
 builder.Services.AddHostedService<UsageLimitService>();
+builder.Services.AddHostedService<UpdateCheckerService>();
 
 var app = builder.Build();
 
@@ -178,6 +186,23 @@ if (app.Configuration.GetValue("Database:Migrate", true))
             logger.LogWarning(ex, "Database migration attempt {Attempt} failed; retrying", attempt);
             await Task.Delay(TimeSpan.FromSeconds(2));
         }
+    }
+}
+
+app.Services.GetRequiredService<BakedReleaseService>().EnsureCopied();
+
+{
+    using var setupScope = app.Services.CreateScope();
+    var setupDb = setupScope.ServiceProvider.GetRequiredService<ParentalDbContext>();
+    var setupLogger = setupScope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var storedBaseUrl = await setupDb.ServerSettings.AsNoTracking()
+        .Select(s => s.PublicBaseUrl).FirstOrDefaultAsync();
+    if (!string.IsNullOrWhiteSpace(storedBaseUrl)) EmailRenderer.DatabaseBaseUrl = storedBaseUrl.TrimEnd('/');
+    var hasServerAdmin = await setupDb.Users.AnyAsync(u => u.IsServerAdmin);
+    if (!hasServerAdmin)
+    {
+        var setupToken = app.Services.GetRequiredService<SetupTokenService>();
+        setupLogger.LogWarning("FIRST-RUN SETUP: no server administrator exists. Open /setup and enter this one-time token: {Token}", setupToken.Token);
     }
 }
 

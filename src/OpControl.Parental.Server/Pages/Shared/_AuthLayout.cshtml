@@ -1,3 +1,6 @@
+@* Copyright (c) 2026 Ziur / OpControl IT Solutions
+   SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0 *@
+
 <!DOCTYPE html>
 <html lang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName">
 <head>
@@ -27,6 +30,7 @@
             @RenderBody()
         </div>
         <div class="auth-foot muted tiny"><span>@L["Layout.CreatedBy"]</span><img src="/brand/opcontrol-logo.png" alt="OpControl" class="opc-logo" width="110" height="24" /></div>
+        <div class="legal-line auth-legal">@L["Legal.CopyrightLine"] · <a href="/license">@L["Legal.LicenseName"]</a></div>
     </div>
     <script>
         window.ocpStrings = @(new Microsoft.AspNetCore.Html.HtmlString(System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, string>

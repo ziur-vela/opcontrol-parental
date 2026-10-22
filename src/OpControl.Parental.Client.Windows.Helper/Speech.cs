@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Ziur / OpControl IT Solutions
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+
 namespace OpControl.Parental.Helper;
 
 /// <summary>Speaks text with SAPI in the device language voice when one is installed.</summary>

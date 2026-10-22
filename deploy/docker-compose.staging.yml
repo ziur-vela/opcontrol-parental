@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Ziur / OpControl IT Solutions
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+
 name: opcontrol-parental-staging
 
 services:
@@ -19,7 +22,7 @@ services:
       retries: 12
 
   web:
-    image: opcontrol-parental-web:0.11.0-20261020
+    image: ${WEB_IMAGE:-ghcr.io/ziur-vela/parental-opcontrol:latest}
     container_name: parental-staging-web
     restart: unless-stopped
     depends_on:
@@ -37,15 +40,41 @@ services:
       Email__FromName: "Parental OpControl"
       Email__LogoUrl: "https://parental.opcontrol.net/brand/email-lockup.png"
       Releases__Path: /var/lib/opcontrol-parental/releases
+      Updater__BaseUrl: http://updater:8098
+      Updater__Secret: ${UPDATER_SECRET:?set UPDATER_SECRET in .env}
       TZ: UTC
     ports:
       - "${STAGING_BIND_IP:-127.0.0.1}:8097:8080"
     volumes:
       - ./data/keys:/var/lib/opcontrol-parental/keys
-      - ./data/releases:/var/lib/opcontrol-parental/releases:ro
+      - ./data/releases:/var/lib/opcontrol-parental/releases
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 10
       start_period: 30s
+
+  updater:
+    image: ${UPDATER_IMAGE:-ghcr.io/ziur-vela/parental-opcontrol-updater:latest}
+    container_name: parental-staging-updater
+    restart: unless-stopped
+    environment:
+      UPDATER_SECRET: ${UPDATER_SECRET:?set UPDATER_SECRET in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      STACK_DIR: ${STACK_DIR:-/opt/stacks/opcontrol-parental-staging}
+      STACK_NETWORK: opcontrol-parental-staging_default
+      STACK_PROJECT: opcontrol-parental-staging
+      WEB_CONTAINER: parental-staging-web
+      WEB_URL: http://web:8080
+      BACKUPS_PATH: /data/backups
+      DB_HOST: db
+      DB_USER: parental
+      DB_NAME: parental
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${STACK_DIR:-/opt/stacks/opcontrol-parental-staging}:${STACK_DIR:-/opt/stacks/opcontrol-parental-staging}
+      - ./data/updater:/data
+    depends_on:
+      web:
+        condition: service_started

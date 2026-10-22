@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Ziur / OpControl IT Solutions
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+
 using System.Diagnostics;
 using System.Drawing;
 using System.Reflection;
@@ -57,6 +60,7 @@ public sealed class MyOpControlForm : Form
     private readonly Label _childLabel = new();
     private readonly Label _deviceLabel = new();
     private readonly Label _updatedLabel = new();
+    private readonly Label _legalLabel = new();
     private readonly Panel _notice = new();
     private readonly Label _noticeLabel = new();
     private readonly Panel _noData = new();
@@ -440,7 +444,7 @@ public sealed class MyOpControlForm : Form
         AddNav(stack, MyOpControlTab.Messages, Loc.T("Client.Kid.Nav.Messages"), MyOpControlTab.Messages);
         sidebar.Controls.Add(stack);
 
-        var bottom = new Panel { Dock = DockStyle.Bottom, Height = 98, BackColor = Color.Transparent };
+        var bottom = new Panel { Dock = DockStyle.Bottom, Height = 122, BackColor = Color.Transparent };
         _childLabel.Text = "";
         _childLabel.Font = Theme.Sans(10.5f, FontStyle.Bold);
         _childLabel.ForeColor = Theme.Text;
@@ -460,7 +464,16 @@ public sealed class MyOpControlForm : Form
         _updatedLabel.Dock = DockStyle.Top;
         _updatedLabel.Height = 20;
         _updatedLabel.BackColor = Color.Transparent;
-        var inner = new Panel { Dock = DockStyle.Bottom, Height = 76, Padding = new Padding(4, 0, 4, 0), BackColor = Color.Transparent };
+        _legalLabel.Text = "© 2026 Ziur / OpControl IT Solutions";
+        _legalLabel.Font = Theme.Mono(6.8f);
+        _legalLabel.ForeColor = Theme.Faint;
+        _legalLabel.AutoSize = false;
+        _legalLabel.Dock = DockStyle.Top;
+        _legalLabel.Height = 26;
+        _legalLabel.Padding = new Padding(0, 4, 0, 0);
+        _legalLabel.BackColor = Color.Transparent;
+        var inner = new Panel { Dock = DockStyle.Bottom, Height = 100, Padding = new Padding(4, 0, 4, 0), BackColor = Color.Transparent };
+        inner.Controls.Add(_legalLabel);
         inner.Controls.Add(_updatedLabel);
         inner.Controls.Add(_deviceLabel);
         inner.Controls.Add(_childLabel);

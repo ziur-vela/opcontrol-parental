@@ -929,4 +929,81 @@ If you were not expecting this, ignore this email.</value></data>
   <data name="Home.StatusOverrideUntil" xml:space="preserve"><value>Unlocked until {0}</value></data>
   <data name="Home.ReasonOverrideUntil" xml:space="preserve"><value>Unlocked by a parent until {0}.</value></data>
   <data name="Activity.UnlockUntilDetail" xml:space="preserve"><value>Unlocked until {0}</value></data>
+  <data name="License.PageTitle" xml:space="preserve"><value>License · Parental OpControl</value></data>
+  <data name="License.Heading" xml:space="preserve"><value>License</value></data>
+  <data name="License.Summary" xml:space="preserve"><value>Parental OpControl is free for personal and other non-commercial use under the PolyForm Noncommercial License 1.0.0.</value></data>
+  <data name="License.ContactNote" xml:space="preserve"><value>Commercial use needs written permission:</value></data>
+  <data name="Notices.PageTitle" xml:space="preserve"><value>Third-party notices · Parental OpControl</value></data>
+  <data name="Notices.Heading" xml:space="preserve"><value>Third-party notices</value></data>
+  <data name="Notices.Summary" xml:space="preserve"><value>Components bundled with Parental OpControl and their licenses.</value></data>
+  <data name="About.Title" xml:space="preserve"><value>About</value></data>
+  <data name="About.Subtitle" xml:space="preserve"><value>Version and license information for this server.</value></data>
+  <data name="About.Version" xml:space="preserve"><value>Version</value></data>
+  <data name="About.Build" xml:space="preserve"><value>Build</value></data>
+  <data name="About.Copyright" xml:space="preserve"><value>Copyright</value></data>
+  <data name="About.License" xml:space="preserve"><value>License</value></data>
+  <data name="About.Repository" xml:space="preserve"><value>Repository</value></data>
+  <data name="About.Notices" xml:space="preserve"><value>Third-party notices</value></data>
+  <data name="About.NoticesLink" xml:space="preserve"><value>View third-party notices</value></data>
+  <data name="Email.UpdateSubject" xml:space="preserve"><value>Parental OpControl {0} is available</value></data>
+  <data name="Email.Update.Preheader" xml:space="preserve"><value>A new stable release is ready to install.</value></data>
+  <data name="Email.Update.Headline" xml:space="preserve"><value>Version {0} is available</value></data>
+  <data name="Email.Update.Intro" xml:space="preserve"><value>Your server is running {0}. The new stable release can be installed from Server admin, Updates.</value></data>
+  <data name="Email.Update.Button" xml:space="preserve"><value>Open Server admin</value></data>
+  <data name="Email.Update.Detail.Current" xml:space="preserve"><value>Current version</value></data>
+  <data name="Email.Update.Detail.New" xml:space="preserve"><value>New version</value></data>
+  <data name="Email.Update.SampleNotes" xml:space="preserve"><value>Bug fixes and improvements.</value></data>
+  <data name="Email.Layout.Footer.Update" xml:space="preserve"><value>You receive this because update notifications are enabled.</value></data>
+  <data name="Setup.TwoFactorSubtitle" xml:space="preserve"><value>Scan the QR code with an authenticator app and enter the six-digit code to protect your server administrator account.</value></data>
+  <data name="Setup.SetupToken" xml:space="preserve"><value>One-time setup token</value></data>
+  <data name="Setup.SetupTokenHelp" xml:space="preserve"><value>Printed in the server log on first start. It works once and is never shown again.</value></data>
+  <data name="Setup.PublicBaseUrl" xml:space="preserve"><value>Public base URL</value></data>
+  <data name="Setup.PublicBaseUrlHelp" xml:space="preserve"><value>The address families use to reach this server. It is used in invitation, alert and update emails.</value></data>
+  <data name="Setup.SmtpOptional" xml:space="preserve"><value>Email settings (optional)</value></data>
+  <data name="Setup.Continue" xml:space="preserve"><value>Continue</value></data>
+  <data name="Setup.ManualKey" xml:space="preserve"><value>Manual setup key</value></data>
+  <data name="Setup.Code" xml:space="preserve"><value>Six-digit code</value></data>
+  <data name="Setup.Finish" xml:space="preserve"><value>Finish setup</value></data>
+  <data name="Setup.Error.Token" xml:space="preserve"><value>The setup token is not valid. Copy it exactly from the server log.</value></data>
+  <data name="Setup.Error.BaseUrl" xml:space="preserve"><value>Enter the public base URL, including https:// or http://.</value></data>
+  <data name="Setup.Error.Code" xml:space="preserve"><value>That code is not valid. Check the clock on your phone and try again.</value></data>
+  <data name="Setup.Error.Expired" xml:space="preserve"><value>The setup session expired. Start again.</value></data>
+  <data name="Setup.Error.Smtp" xml:space="preserve"><value>The account was created, but the SMTP settings could not be saved: {0}</value></data>
+  <data name="Nav.Updates" xml:space="preserve"><value>Updates</value></data>
+  <data name="Updates.PageTitle" xml:space="preserve"><value>Updates · Parental OpControl</value></data>
+  <data name="Updates.Title" xml:space="preserve"><value>Updates</value></data>
+  <data name="Updates.Subtitle" xml:space="preserve"><value>Check for new stable releases and update this server with one click.</value></data>
+  <data name="Updates.CurrentVersion" xml:space="preserve"><value>Current version</value></data>
+  <data name="Updates.CheckNow" xml:space="preserve"><value>Check now</value></data>
+  <data name="Updates.LastChecked" xml:space="preserve"><value>Last checked {0}</value></data>
+  <data name="Updates.Available" xml:space="preserve"><value>Version {0} is available.</value></data>
+  <data name="Updates.ReleaseLink" xml:space="preserve"><value>Open the release on GitHub</value></data>
+  <data name="Updates.UpdateNow" xml:space="preserve"><value>Update now</value></data>
+  <data name="Updates.UpdaterMissing" xml:space="preserve"><value>The updater sidecar is not installed on this server (older installation). Update manually on the Docker host:</value></data>
+  <data name="Updates.UpToDate" xml:space="preserve"><value>This server is running the latest stable release.</value></data>
+  <data name="Updates.CheckFound" xml:space="preserve"><value>A new version is available.</value></data>
+  <data name="Updates.CheckNone" xml:space="preserve"><value>No new stable version is available.</value></data>
+  <data name="Updates.Progress" xml:space="preserve"><value>Update progress</value></data>
+  <data name="Updates.NoUpdateRunning" xml:space="preserve"><value>No update is running.</value></data>
+  <data name="Updates.ToVersion" xml:space="preserve"><value>Updating to {0}</value></data>
+  <data name="Updates.Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="Updates.Settings" xml:space="preserve"><value>Update settings</value></data>
+  <data name="Updates.GitHubCheck" xml:space="preserve"><value>Check GitHub for new releases every six hours</value></data>
+  <data name="Updates.Notify" xml:space="preserve"><value>Email server administrators when a new version is available</value></data>
+  <data name="Updates.SaveSettings" xml:space="preserve"><value>Save settings</value></data>
+  <data name="Updates.SettingsSaved" xml:space="preserve"><value>Update settings saved.</value></data>
+  <data name="Updates.History" xml:space="preserve"><value>Recent update attempts</value></data>
+  <data name="Updates.NoHistory" xml:space="preserve"><value>No updates have been attempted from this server yet.</value></data>
+  <data name="Updates.RestoreHelp" xml:space="preserve"><value>The update failed and the rollback did not become healthy. A database backup was taken before the update. Restoring replaces the current database; do this only after checking with OpControl support.</value></data>
+  <data name="Updates.BackupFile" xml:space="preserve"><value>Backup file</value></data>
+  <data name="Updates.RestoreConfirm" xml:space="preserve"><value>I understand this replaces the current database</value></data>
+  <data name="Updates.Restore" xml:space="preserve"><value>Restore backup</value></data>
+  <data name="Updates.RestoreStarted" xml:space="preserve"><value>Database restore started.</value></data>
+  <data name="Updates.TwoFactorCode" xml:space="preserve"><value>Authenticator code</value></data>
+  <data name="Updates.BadCode" xml:space="preserve"><value>That authenticator code is not valid.</value></data>
+  <data name="Updates.Started" xml:space="preserve"><value>Update started. Progress is shown below.</value></data>
+  <data name="Updates.Nav" xml:space="preserve"><value>Updates</value></data>
+  <data name="Legal.CopyrightLine" xml:space="preserve"><value>© 2026 Ziur / OpControl IT Solutions</value></data>
+  <data name="Legal.LicenseName" xml:space="preserve"><value>PolyForm Noncommercial 1.0.0</value></data>
+  <data name="Setup.QrAlt" xml:space="preserve"><value>QR code</value></data>
 </root>

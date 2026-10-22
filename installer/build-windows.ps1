@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Ziur / OpControl IT Solutions
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+
 param(
     [string]$Version = "",
     [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path,

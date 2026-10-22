@@ -1,3 +1,6 @@
+@* Copyright (c) 2026 Ziur / OpControl IT Solutions
+   SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0 *@
+
 @page "/server-admin"
 @attribute [Authorize(Policy = ParentalPolicies.ServerAdmin)]
 @rendermode InteractiveServer
@@ -30,6 +33,19 @@ else
 {
     @if (_error is not null) { <div class="alert danger">@_error</div> }
     @if (_notice is not null) { <div class="alert ok">@_notice</div> }
+
+    <section class="card">
+        <h2>@L["About.Title"]</h2>
+        <p class="muted small">@L["About.Subtitle"]</p>
+        <div class="grid-2">
+            <div><div class="muted tiny">@L["About.Version"]</div><div>@Build.Version</div></div>
+            <div><div class="muted tiny">@L["About.Build"]</div><div>@Build.BuildDate · @Build.ShortCommit</div></div>
+            <div><div class="muted tiny">@L["About.Copyright"]</div><div>@L["Legal.CopyrightLine"]</div></div>
+            <div><div class="muted tiny">@L["About.License"]</div><div><a href="/license" target="_blank" rel="noopener">@L["Legal.LicenseName"]</a></div></div>
+            <div><div class="muted tiny">@L["About.Repository"]</div><div><a href="https://github.com/ziur-vela/parental-opcontrol" target="_blank" rel="noopener">github.com/ziur-vela/parental-opcontrol</a></div></div>
+            <div><div class="muted tiny">@L["About.Notices"]</div><div><a href="/third-party-notices" target="_blank" rel="noopener">@L["About.NoticesLink"]</a></div></div>
+        </div>
+    </section>
 
     <section class="card">
         <h2>@L["ServerAdmin.EmailPreview"]</h2>

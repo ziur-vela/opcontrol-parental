@@ -1,5 +1,7 @@
 # Parental OpControl
 
+[English](README.md) · [Español](README.es.md)
+
 Self-hosted parental control software for families. It has a web dashboard for parents, a Windows client for the child's computer and a guided installer. It is a ground-up rebuild of the ArktinMonitor parental control system, available in English and Spanish.
 
 ![Family dashboard](assets/screenshots/dashboard.png)
@@ -81,66 +83,50 @@ dotnet build
 dotnet test
 ```
 
-## Server deployment
+## Install on your own server
 
-Stack directory on the Docker host: `/opt/stacks/opcontrol-parental/`.
+You need a Linux machine with Docker Engine and the Docker Compose plugin, a
+domain name and HTTPS (a reverse proxy or tunnel in front of the web port).
 
-- `docker-compose.yml` and `docker-compose.override.yml` (host port `127.0.0.1:8096`)
-- `.env` (database password, not committed)
-- `data/postgres/` persistent PostgreSQL data (back up this directory)
-- `data/keys/` ASP.NET Data Protection keys (back up with the database)
-- `repo/` build context
+1. Download `docker-compose.yml`, `.env.example` and `LICENSE` from the latest
+   release: <https://github.com/ziur-vela/parental-opcontrol/releases>.
+2. Put them in a folder such as `/opt/stacks/opcontrol-parental`.
+3. Copy `.env.example` to `.env` and fill in:
+   - `POSTGRES_PASSWORD`: a long random password.
+   - `UPDATER_SECRET`: run `openssl rand -hex 32`.
+   - `STACK_DIR`: the absolute path of this folder.
+   - `PUBLIC_BASE_URL`: the address families will use, for example
+     `https://parental.example.com`.
+4. Start it: `docker compose up -d`.
+5. Read the first-start setup token in the log:
+   `docker compose logs web | grep 'FIRST-RUN SETUP'`.
+6. Open `https://your-address/setup`, enter the token, create the first server
+   administrator, scan the QR code with an authenticator app, and optionally add
+   SMTP settings.
+7. Add a child device from **Add device** and install the Windows client.
 
-Build and redeploy (the script stamps the version, commit and build date automatically):
+The setup page disappears after the first administrator is created. Later
+families join by invitation from Server admin. The web container runs without
+the Docker socket; only the updater sidecar has it.
 
-```bash
-./deploy/build-image.sh opcontrol-parental-web
-cd /opt/stacks/opcontrol-parental
-docker compose up -d
-```
+## Updating
 
-### Staging stack
+Server admin → **Updates** checks GitHub for stable releases every six hours.
+When a new version is available, click **Update now** (with a two-factor code if
+your account uses 2FA). The updater:
 
-`deploy/docker-compose.staging.yml` binds the web port to `${STAGING_BIND_IP:-127.0.0.1}` and
-uses the same value for `PublicBaseUrl`, so the default is loopback-only. To expose staging on
-the host's Tailscale address, set it in the staging `.env` (not committed):
+1. backs up the database with `pg_dump` (keeps the last five backups),
+2. pulls the signed image by digest,
+3. recreates the web container,
+4. waits up to three minutes for `/health` to report the new version,
+5. rolls back to the previous image if the health check fails.
 
-```bash
-# /opt/stacks/opcontrol-parental-staging/.env
-STAGING_BIND_IP=100.x.y.z
-```
+Child devices update from their own server through the existing client update
+flow. Pre-release tags are never offered on the stable channel. Installations
+that must stay offline can turn the GitHub check off on the same page.
 
-Then `cd /opt/stacks/opcontrol-parental-staging && sudo docker compose up -d`.
-
-The image tag is `<version>-<YYYYMMDD>`. `GET /version` and `GET /health` return the same stamped
-version string; the dashboard sidebar and Settings show it too. A build from an untagged commit
-shows a `git describe` value such as `v0.6.0-3-g1a2b3c4`, so it is never mistaken for a release.
-
-Fonts (IBM Plex Mono and Manrope) are self-hosted in `wwwroot/fonts` and embedded in the
-Windows helper/setup; no Google Fonts runtime dependency. Licences are next to the fonts.
-
-## Remote screen and camera
-
-Parents with the **RemoteView** permission (owner by default) get a **Remote** page. Screen
-view is silent on the child device; camera access is indicated by the device's hardware
-camera light. Camera viewing requires a one-time camera supervision acknowledgement per
-parent; acceptance is stored in `CameraConsents` with version, time, IP and user agent, and
-a checkmark appears on the Remote page after acceptance. Sessions are parent-initiated,
-last at most 10 minutes and can be stopped from the dashboard. No audio and no recording.
-
-Server administrator and SMTP (no dashboard login needed):
-
-```bash
-docker exec parental-web dotnet OpControl.Parental.Server.dll --set-server-admin owner@example.com
-# SMTP JSON on stdin; password is protected with the Data Protection keys
-printf '%s' "$SMTP_JSON" | docker exec -i parental-web \
-  dotnet OpControl.Parental.Server.dll --set-server-smtp-stdin
-```
-
-Only the first run creates a family (`/setup`); afterwards new families join by invitation from
-the server administrator and there is no public sign-up.
-
-Health: `GET /health`. Public URL: `https://parental.opcontrol.net` (Cloudflare Tunnel).
+Our own homelab deployment notes, staging stack and build host steps are in
+[`docs/HOMELAB-DEPLOY.md`](docs/HOMELAB-DEPLOY.md).
 
 ## Windows build host
 
@@ -244,6 +230,26 @@ use the MSI/setup. The legacy installer now requires `-MonitoredAccount`; there 
 The service stores the device credential in `C:\ProgramData\OpControlParental\private\device.json`
 with an ACL that grants access to SYSTEM and Administrators only. The user-session helper reads
 only `state.json` (Users read) and never sees the credential.
+
+## License
+
+Parental OpControl is free for personal and other non-commercial use under the
+[PolyForm Noncommercial License 1.0.0](LICENSE). You may use, change and share
+it for non-commercial purposes, and you must keep the Required Notice:
+
+`Required Notice: Copyright (c) 2026 Ziur / OpControl IT Solutions (https://opcontrol.net)`
+
+Commercial use (selling it, offering it as a paid service, or using it inside a
+business) needs written permission from OpControl IT Solutions. Contact
+`hendry.ruiz@opcontrol.net`.
+
+The project may move to an open-source license (AGPL-3.0) if it gets
+contributors. By sending a contribution you agree that it may be distributed
+under this license and under any future license chosen by the copyright holder,
+including AGPL-3.0. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Third-party components, fonts and data sources are listed in
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ## Migration
 

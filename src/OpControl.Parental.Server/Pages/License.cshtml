@@ -1,0 +1,13 @@
+@* Copyright (c) 2026 Ziur / OpControl IT Solutions
+   SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0 *@
+
+@page "/license"
+@model LicenseModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = L["License.PageTitle"];
+}
+<h1 class="auth-title">@L["License.Heading"]</h1>
+<p class="muted auth-sub">@L["License.Summary"]</p>
+<div class="legal-text">@Model.LicenseText</div>
+<p class="muted tiny auth-note">@L["License.ContactNote"] <a href="mailto:hendry.ruiz@opcontrol.net">hendry.ruiz@opcontrol.net</a></p>

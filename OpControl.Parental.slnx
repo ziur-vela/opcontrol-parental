@@ -4,6 +4,7 @@
     <Project Path="src/OpControl.Parental.Client.Windows/OpControl.Parental.Client.Windows.csproj" />
     <Project Path="src/OpControl.Parental.Contracts/OpControl.Parental.Contracts.csproj" />
     <Project Path="src/OpControl.Parental.Server/OpControl.Parental.Server.csproj" />
+    <Project Path="src/OpControl.Parental.Updater/OpControl.Parental.Updater.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/OpControl.Parental.Tests/OpControl.Parental.Tests.csproj" />

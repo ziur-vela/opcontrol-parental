@@ -14,7 +14,7 @@
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <AssemblyName>OpControl.Parental.Setup</AssemblyName>
     <RootNamespace>OpControl.Parental.Setup</RootNamespace>
-    <Version>0.13.2</Version>
+    <Version>0.14.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.Management" Version="10.0.0" />
@@ -24,6 +24,7 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="fonts\*.ttf" />
+    <EmbeddedResource Include="..\..\LICENSE" LogicalName="OpControl.Parental.License.txt" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\OpControl.Parental.Localization\Loc.cs" Link="Localization\Loc.cs" />

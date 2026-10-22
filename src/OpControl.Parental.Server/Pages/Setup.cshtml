@@ -1,3 +1,6 @@
+@* Copyright (c) 2026 Ziur / OpControl IT Solutions
+   SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0 *@
+
 @page "/setup"
 @model SetupModel
 @{
@@ -5,7 +8,7 @@
     ViewData["Title"] = L["Setup.Title"];
 }
 <h1 class="auth-title">@L["Setup.Title"]</h1>
-<p class="muted auth-sub">@L["Setup.Subtitle"]</p>
+<p class="muted auth-sub">@(Model.Step == 1 ? L["Setup.Subtitle"].Value : L["Setup.TwoFactorSubtitle"].Value)</p>
 
 @if (Model.Errors.Count > 0)
 {
@@ -17,32 +20,73 @@
     </div>
 }
 
-<form method="post" class="stack">
-    <label class="field">
-        <span>@L["Setup.FamilyName"]</span>
-        <input asp-for="Input.FamilyName" placeholder="@L["Setup.FamilyPlaceholder"]" />
-    </label>
-    <label class="field">
-        <span>@L["Setup.YourName"]</span>
-        <input asp-for="Input.DisplayName" placeholder="@L["Setup.ParentPlaceholder"]" />
-    </label>
-    <label class="field">
-        <span>@L["Setup.ChildName"]</span>
-        <input asp-for="Input.ChildName" placeholder="@L["Setup.ChildPlaceholder"]" />
-    </label>
-    <label class="field">
-        <span>@L["Common.Email"]</span>
-        <input asp-for="Input.Email" type="email" autocomplete="username" />
-    </label>
-    <label class="field">
-        <span>@L["Common.Password"]</span>
-        <input asp-for="Input.Password" type="password" autocomplete="new-password" />
-        <span class="muted tiny">@L["Setup.PasswordRule"]</span>
-    </label>
-    <label class="field">
-        <span>@L["Setup.ConfirmPassword"]</span>
-        <input asp-for="Input.ConfirmPassword" type="password" autocomplete="new-password" />
-    </label>
-    <button type="submit" class="btn btn-primary btn-block">@L["Setup.CreateFamily"]</button>
-</form>
+@if (Model.Step == 1)
+{
+    <form method="post" asp-page-handler="Begin" class="stack">
+        <label class="field">
+            <span>@L["Setup.SetupToken"]</span>
+            <input asp-for="Input.Token" autocomplete="off" />
+            <span class="muted tiny">@L["Setup.SetupTokenHelp"]</span>
+        </label>
+        <label class="field">
+            <span>@L["Setup.PublicBaseUrl"]</span>
+            <input asp-for="Input.PublicBaseUrl" placeholder="https://parental.example.com" />
+            <span class="muted tiny">@L["Setup.PublicBaseUrlHelp"]</span>
+        </label>
+        <label class="field">
+            <span>@L["Setup.FamilyName"]</span>
+            <input asp-for="Input.FamilyName" placeholder="@L["Setup.FamilyPlaceholder"]" />
+        </label>
+        <label class="field">
+            <span>@L["Setup.YourName"]</span>
+            <input asp-for="Input.DisplayName" placeholder="@L["Setup.ParentPlaceholder"]" />
+        </label>
+        <label class="field">
+            <span>@L["Setup.ChildName"]</span>
+            <input asp-for="Input.ChildName" placeholder="@L["Setup.ChildPlaceholder"]" />
+        </label>
+        <label class="field">
+            <span>@L["Common.Email"]</span>
+            <input asp-for="Input.Email" type="email" autocomplete="username" />
+        </label>
+        <label class="field">
+            <span>@L["Common.Password"]</span>
+            <input asp-for="Input.Password" type="password" autocomplete="new-password" />
+            <span class="muted tiny">@L["Setup.PasswordRule"]</span>
+        </label>
+        <label class="field">
+            <span>@L["Setup.ConfirmPassword"]</span>
+            <input asp-for="Input.ConfirmPassword" type="password" autocomplete="new-password" />
+        </label>
+        <details class="stack">
+            <summary class="muted">@L["Setup.SmtpOptional"]</summary>
+            <div class="grid-2">
+                <label class="field"><span>@L["Settings.SmtpHost"]</span><input asp-for="Input.SmtpHost" /></label>
+                <label class="field"><span>@L["ServerAdmin.Port"]</span><input type="number" asp-for="Input.SmtpPort" /></label>
+                <label class="field"><span>@L["ServerAdmin.Username"]</span><input asp-for="Input.SmtpUsername" /></label>
+                <label class="field"><span>@L["Settings.SmtpPassword"]</span><input type="password" asp-for="Input.SmtpPassword" /></label>
+                <label class="field"><span>@L["Settings.FromAddress"]</span><input asp-for="Input.SmtpFrom" /></label>
+                <label class="field"><span>@L["ServerAdmin.FromName"]</span><input asp-for="Input.SmtpFromName" /></label>
+            </div>
+            <label class="check"><input type="checkbox" asp-for="Input.SmtpUseSsl" /> @L["Settings.UseSsl"]</label>
+        </details>
+        <button type="submit" class="btn btn-primary btn-block">@L["Setup.Continue"]</button>
+    </form>
+}
+else
+{
+    <form method="post" asp-page-handler="Complete" class="stack">
+        <input type="hidden" name="pendingId" value="@Model.PendingId" />
+        <div class="twofactor-qr"><img src="@Model.QrDataUri" alt="@L["Setup.QrAlt"]" width="180" height="180" /></div>
+        <label class="field">
+            <span>@L["Setup.ManualKey"]</span>
+            <input readonly value="@Model.ManualKey" />
+        </label>
+        <label class="field">
+            <span>@L["Setup.Code"]</span>
+            <input asp-for="Input.Code" inputmode="numeric" autocomplete="one-time-code" />
+        </label>
+        <button type="submit" class="btn btn-primary btn-block">@L["Setup.Finish"]</button>
+    </form>
+}
 <p class="muted tiny auth-note">@L["Setup.Note"]</p>

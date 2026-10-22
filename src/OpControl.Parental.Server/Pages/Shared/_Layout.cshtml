@@ -1,3 +1,6 @@
+@* Copyright (c) 2026 Ziur / OpControl IT Solutions
+   SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0 *@
+
 @inject OpControl.Parental.Server.Services.BuildInfo Build
 @inject Microsoft.Extensions.Options.IOptions<OpControl.Parental.Server.Services.BrandOptions> BrandOptions
 @{
@@ -49,6 +52,7 @@
             <div class="sidebar-foot">
                 <div class="pill-soft">@Build.DisplayVersion</div>
                 <div class="muted small">@brand.ProductName</div>
+                <div class="legal-line">@L["Legal.CopyrightLine"] · <a href="/license" target="_blank" rel="noopener">@L["Legal.LicenseName"]</a></div>
             </div>
         </aside>
         <div class="main-col">

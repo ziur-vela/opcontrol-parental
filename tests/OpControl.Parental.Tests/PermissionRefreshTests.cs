@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Ziur / OpControl IT Solutions
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+
 using System.Security.Claims;
 using OpControl.Parental.Contracts;
 using OpControl.Parental.Server.Auth;

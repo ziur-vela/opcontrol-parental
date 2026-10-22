@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Ziur / OpControl IT Solutions
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+
 using System.Net;
 using System.Text;
 using Microsoft.Extensions.Options;
@@ -30,7 +33,9 @@ public sealed class EmailRenderer
         _configuration = configuration;
     }
 
-    public string BaseUrl => (_configuration["PublicBaseUrl"] ?? "").TrimEnd('/');
+    public static string? DatabaseBaseUrl { get; set; }
+
+    public string BaseUrl => (string.IsNullOrWhiteSpace(DatabaseBaseUrl) ? _configuration["PublicBaseUrl"] : DatabaseBaseUrl)?.TrimEnd('/') ?? "";
 
     public bool Staging => _options.Staging;
 
@@ -201,6 +206,26 @@ public sealed class EmailRenderer
             AppText.Get("Email.Layout.Footer.Alert", lang), true, SettingsUrl);
     }
 
+    public RenderedEmail RenderUpdateAvailable(string? language, string currentVersion, string newVersion,
+        string? notes, string releaseUrl)
+    {
+        var lang = AppCulture.Normalize(language);
+        var subject = AppText.Get("Email.UpdateSubject", lang, newVersion);
+        var preheader = AppText.Get("Email.Update.Preheader", lang);
+        var headline = AppText.Get("Email.Update.Headline", lang, newVersion);
+        var paragraphs = new List<string> { AppText.Get("Email.Update.Intro", lang, currentVersion) };
+        if (!string.IsNullOrWhiteSpace(notes))
+            paragraphs.Add(notes.Trim());
+        var details = new List<EmailDetail>
+        {
+            new(AppText.Get("Email.Update.Detail.Current", lang), currentVersion),
+            new(AppText.Get("Email.Update.Detail.New", lang), newVersion)
+        };
+        return Build(lang, EmailTemplateKind.UpdateAvailable, subject, preheader, headline, paragraphs,
+            AppText.Get("Email.Update.Button", lang), releaseUrl, details,
+            AppText.Get("Email.Layout.Footer.Update", lang), true, null);
+    }
+
     public RenderedEmail RenderTest(string? language, string? recipientName, DateTime utcNow)
     {
         var lang = AppCulture.Normalize(language);
@@ -234,6 +259,8 @@ public sealed class EmailRenderer
                 "Familia Ruiz", "Hendry", now.AddHours(72)),
             EmailTemplateKind.Alert => RenderSampleAlert(lang, now),
             EmailTemplateKind.Digest => RenderSampleDigest(lang, now),
+            EmailTemplateKind.UpdateAvailable => RenderUpdateAvailable(lang, "0.13.2", "0.14.0",
+                AppText.Get("Email.Update.SampleNotes", lang), Link("/server-admin/updates")),
             EmailTemplateKind.Message => RenderMessage(lang, "Emma",
                 AppText.Get("Email.Message.Sample", lang), FormatUtc(now, lang), MessagesUrl),
             EmailTemplateKind.Test => RenderTest(lang, "Hendry", now),
@@ -385,7 +412,9 @@ public sealed class EmailRenderer
         html.Append("<p style=\"margin:0;color:").Append(Faint).Append(";\">")
             .Append(Html(AppText.Get("Email.Layout.Footer.CreatedByLabel", language)))
             .Append("&nbsp;&nbsp;<img src=\"").Append(Html(Link("/brand/opcontrol-logo.png")))
-            .Append("\" width=\"101\" height=\"22\" alt=\"OpControl\" style=\"display:inline-block;vertical-align:middle;width:101px;height:22px;border:0;outline:none;text-decoration:none;\" /></p>");
+            .Append("\" width=\"101\" height=\"22\" alt=\"OpControl\" style=\"display:inline-block;vertical-align:middle;width:101px;height:22px;border:0;outline:none;text-decoration:none;\" /></p>")
+            .Append("<p style=\"margin:8px 0 0;color:").Append(Faint).Append(";\">")
+            .Append(Html(AppText.Get("Email.Layout.Footer.Copyright", language))).Append("</p>");
 
         if (Staging)
             html.Append("<p style=\"margin:8px 0 0;color:").Append(Faint).Append(";\">")
@@ -417,6 +446,7 @@ public sealed class EmailRenderer
         if (showSettingsLink)
             text.AppendLine($"{AppText.Get("Email.Layout.Footer.Settings", language)}: {SettingsUrl}");
         text.AppendLine(AppText.Get("Email.Layout.Footer.CreatedBy", language));
+        text.AppendLine(AppText.Get("Email.Layout.Footer.Copyright", language));
         if (Staging)
             text.AppendLine(AppText.Get("Email.Layout.Footer.Staging", language));
 

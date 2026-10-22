@@ -1688,6 +1688,47 @@ namespace OpControl.Parental.Server.Data.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
 
+                    b.Property<bool>("GitHubCheckEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LastNotifiedVersion")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("LastUpdateCheckUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LatestManifestUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("LatestNotesEn")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LatestNotesEs")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("LatestPublishedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LatestReleaseUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("LatestVersion")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("NotifyNewVersion")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PublicBaseUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("SetupCompletedUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("SmtpHost")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");

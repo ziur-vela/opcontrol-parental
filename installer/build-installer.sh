@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Ziur / OpControl IT Solutions
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+
 #!/usr/bin/env bash
 # Build the Windows client MSI and the interactive setup bootstrapper on Linux.
 # Requirements: .NET 10 SDK, WiX 5 as a global dotnet tool (`dotnet tool install -g wix`).

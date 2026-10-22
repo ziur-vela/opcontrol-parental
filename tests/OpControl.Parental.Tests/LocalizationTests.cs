@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Ziur / OpControl IT Solutions
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+
 using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
@@ -124,7 +127,7 @@ public class LocalizationTests
             "App.Name", "Language.English", "Language.Spanish", "Layout.Spanish",
             "Settings.NoticeDefault", "Downloads.Sha", "Common.Minutes", "Common.HourShort",
             "Common.MinuteShort", "Placeholder.InstallCode", "Setup.Title",
-            "Alert.Update.Detail", "Install.ForChild2", "Messages.StatusAt", "Alert.Tampering.DeviceKind", "Alert.Tampering.DeviceKindMore", "Apps.FilterWin32", "Common.No", "Home.Bonus15", "Home.Bonus30", "Layout.English", "EmailPreview.Html"
+            "Alert.Update.Detail", "Install.ForChild2", "Messages.StatusAt", "Alert.Tampering.DeviceKind", "Alert.Tampering.DeviceKindMore", "Apps.FilterWin32", "Common.No", "Home.Bonus15", "Home.Bonus30", "Layout.English", "EmailPreview.Html", "Legal.CopyrightLine", "Legal.LicenseName"
         };
         Assert.All(identical, key => Assert.Contains(key, allowed));
     }

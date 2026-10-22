@@ -1,0 +1,309 @@
+@* Copyright (c) 2026 Ziur / OpControl IT Solutions
+   SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0 *@
+
+@page "/server-admin/updates"
+@attribute [Authorize(Policy = ParentalPolicies.ServerAdmin)]
+@rendermode InteractiveServer
+@using System.Text.Json
+@using Microsoft.AspNetCore.Identity
+@using OpControl.Parental.Server.Auth
+@using OpControl.Parental.Server.Data
+@using OpControl.Parental.Server.Services
+@inject AuthenticationStateProvider AuthState
+@inject IServiceScopeFactory Scopes
+@inject UserManager<ParentUser> Users
+@inject BuildInfo Build
+@inject IStringLocalizer<AppStrings> L
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>@L["Updates.PageTitle"]</PageTitle>
+
+<div class="page-head">
+    <div>
+        <div class="eyebrow">@L["ServerAdmin.Eyebrow"]</div>
+        <h1>@L["Updates.Title"]</h1>
+        <p class="muted">@L["Updates.Subtitle"]</p>
+    </div>
+    <span class="pill-soft">@Build.DisplayVersion</span>
+</div>
+
+@if (_error is not null) { <div class="alert danger">@_error</div> }
+@if (_notice is not null) { <div class="alert ok">@_notice</div> }
+
+<section class="card">
+    <div class="button-row" style="justify-content:space-between;align-items:center;">
+        <div>
+            <div class="muted tiny">@L["Updates.CurrentVersion"]</div>
+            <div style="font-size:20px;font-weight:800;">@_info?.CurrentDisplay</div>
+        </div>
+        <button class="btn btn-ghost" @onclick="CheckAsync" disabled="@_busy">@L["Updates.CheckNow"]</button>
+    </div>
+    @if (_info is not null)
+    {
+        <div class="muted tiny" style="margin-top:10px;">
+            @L["Updates.LastChecked", _info.LastCheckedUtc is { } last ? Formats.CompactDateTime(last.ToLocalTime()) : L["Common.Never"].Value]
+        </div>
+        @if (_info.UpdateAvailable)
+        {
+            <div class="alert ok" style="margin-top:12px;">
+                <strong>@L["Updates.Available", _info.LatestDisplay ?? ""]</strong>
+            </div>
+            <div class="update-notes">@Notes</div>
+            @if (!string.IsNullOrWhiteSpace(_info.ReleaseUrl))
+            {
+                <p><a href="@_info.ReleaseUrl" target="_blank" rel="noopener">@L["Updates.ReleaseLink"]</a></p>
+            }
+            @if (_updaterAvailable)
+            {
+                @if (_twoFactorEnabled)
+                {
+                    <label class="field"><span>@L["Updates.TwoFactorCode"]</span><input @bind="_code" inputmode="numeric" autocomplete="one-time-code" /></label>
+                }
+                <div class="button-row">
+                    <button class="btn btn-primary" @onclick="ApplyAsync" disabled="@_busy">@L["Updates.UpdateNow"]</button>
+                </div>
+            }
+            else
+            {
+                <div class="alert danger">
+                    <div>@L["Updates.UpdaterMissing"]</div>
+                    <pre class="manual-commands">cd /opt/stacks/opcontrol-parental
+docker compose pull web
+docker compose up -d --no-deps web</pre>
+                </div>
+            }
+        }
+        else
+        {
+            <p class="muted">@L["Updates.UpToDate"]</p>
+        }
+    }
+</section>
+
+<section class="card">
+    <h2>@L["Updates.Progress"]</h2>
+    @if (_current is null)
+    {
+        <p class="muted">@L["Updates.NoUpdateRunning"]</p>
+    }
+    else
+    {
+        <div class="device-row">
+            <div class="device-main">
+                <div class="device-name">@L["Updates.ToVersion", _current.ToVersion]</div>
+                <div class="muted tiny">@_current.Step — @_current.Message</div>
+            </div>
+            <div class="pill-soft">@_current.Status</div>
+        </div>
+    }
+    <div class="button-row">
+        <button class="btn btn-ghost" @onclick="RefreshStatusAsync">@L["Updates.Refresh"]</button>
+    </div>
+</section>
+
+<section class="card">
+    <h2>@L["Updates.Settings"]</h2>
+    <label class="check"><input type="checkbox" @bind="_githubCheck" /> @L["Updates.GitHubCheck"]</label>
+    <label class="check"><input type="checkbox" @bind="_notify" /> @L["Updates.Notify"]</label>
+    <div class="button-row">
+        <button class="btn btn-primary" @onclick="SaveSettingsAsync" disabled="@_busy">@L["Updates.SaveSettings"]</button>
+    </div>
+</section>
+
+<section class="card">
+    <h2>@L["Updates.History"]</h2>
+    @if (_history.Count == 0)
+    {
+        <p class="muted">@L["Updates.NoHistory"]</p>
+    }
+    else
+    {
+        <div class="timeline">
+            @foreach (var attempt in _history)
+            {
+                <div class="timeline-row">
+                    <div class="timeline-icon accent">@(attempt.Status == "success" ? "✓" : "!")</div>
+                    <div class="timeline-main">
+                        <div class="timeline-title">@attempt.FromVersion → @attempt.ToVersion</div>
+                        <div class="muted tiny">@attempt.Status · @attempt.Message</div>
+                        @if (!string.IsNullOrWhiteSpace(attempt.Backup))
+                        {
+                            <div class="muted tiny">@attempt.Backup</div>
+                        }
+                    </div>
+                    <div class="muted tiny">@Formats.CompactDateTime(attempt.StartedUtc.ToLocalTime())</div>
+                </div>
+            }
+        </div>
+    }
+    @if (_history.Any(a => a.Status == "failed" && a.RolledBack))
+    {
+        <div class="alert danger" style="margin-top:12px;">
+            <div>@L["Updates.RestoreHelp"]</div>
+            <label class="field"><span>@L["Updates.BackupFile"]</span><input @bind="_restoreBackup" /></label>
+            <label class="check"><input type="checkbox" @bind="_restoreConfirm" /> @L["Updates.RestoreConfirm"]</label>
+            <div class="button-row">
+                <button class="btn btn-primary" @onclick="RestoreAsync" disabled="@(!_restoreConfirm || _busy)">@L["Updates.Restore"]</button>
+            </div>
+        </div>
+    }
+</section>
+
+@code {
+    private ServerUpdateInfo? _info;
+    private bool _updaterAvailable;
+    private bool _busy;
+    private bool _twoFactorEnabled;
+    private bool _githubCheck = true;
+    private bool _notify;
+    private string? _code;
+    private string? _error;
+    private string? _notice;
+    private Attempt? _current;
+    private List<Attempt> _history = [];
+    private string? _restoreBackup;
+    private bool _restoreConfirm;
+    private Timer? _timer;
+
+    private string Notes => IsSpanish
+        ? (_info?.NotesEs ?? _info?.NotesEn ?? "")
+        : (_info?.NotesEn ?? _info?.NotesEs ?? "");
+
+    private bool IsSpanish => System.Globalization.CultureInfo.CurrentUICulture.Name.StartsWith("es", StringComparison.OrdinalIgnoreCase);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        var user = await Users.GetUserAsync(auth.User);
+        _twoFactorEnabled = user is not null && await Users.GetTwoFactorEnabledAsync(user);
+        await LoadAsync(refresh: false);
+        _timer = new Timer(_ => _ = InvokeAsync(async () => { await RefreshStatusAsync(); StateHasChanged(); }), null,
+            TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
+    }
+
+    private async Task LoadAsync(bool refresh)
+    {
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var updates = scope.ServiceProvider.GetRequiredService<ServerUpdateService>();
+            _info = await updates.GetInfoAsync(refresh);
+            var settings = await updates.GetSettingsAsync();
+            _githubCheck = settings.GitHubCheckEnabled;
+            _notify = settings.NotifyNewVersion;
+            _updaterAvailable = await updates.IsUpdaterAvailableAsync();
+            await RefreshStatusCoreAsync(updates);
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private async Task CheckAsync()
+    {
+        _busy = true; _error = null; _notice = null;
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var updates = scope.ServiceProvider.GetRequiredService<ServerUpdateService>();
+            _info = await updates.CheckAsync();
+            _notice = _info.UpdateAvailable ? L["Updates.CheckFound"] : L["Updates.CheckNone"];
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        _busy = false;
+    }
+
+    private async Task ApplyAsync()
+    {
+        _error = null; _notice = null;
+        if (_info?.LatestVersion is null) return;
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        var user = await Users.GetUserAsync(auth.User);
+        if (user is null || !user.IsServerAdmin) { _error = L["Error.ServerAdminOnly"]; return; }
+        if (await Users.GetTwoFactorEnabledAsync(user))
+        {
+            var ok = await Users.VerifyTwoFactorTokenAsync(user, Users.Options.Tokens.AuthenticatorTokenProvider, (_code ?? "").Replace(" ", ""));
+            if (!ok) { _error = L["Updates.BadCode"]; return; }
+        }
+        _busy = true;
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var updates = scope.ServiceProvider.GetRequiredService<ServerUpdateService>();
+            var (ok, error) = await updates.ApplyAsync(_info.LatestVersion);
+            if (!ok) _error = error;
+            else _notice = L["Updates.Started"];
+            _code = null;
+            await RefreshStatusAsync();
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        _busy = false;
+    }
+
+    private async Task SaveSettingsAsync()
+    {
+        _busy = true; _error = null; _notice = null;
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            await scope.ServiceProvider.GetRequiredService<ServerUpdateService>()
+                .SaveSettingsAsync(_githubCheck, _notify);
+            _notice = L["Updates.SettingsSaved"];
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        _busy = false;
+    }
+
+    private async Task RefreshStatusAsync()
+    {
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            await RefreshStatusCoreAsync(scope.ServiceProvider.GetRequiredService<ServerUpdateService>());
+        }
+        catch { }
+    }
+
+    private async Task RefreshStatusCoreAsync(ServerUpdateService updates)
+    {
+        using var doc = await updates.UpdaterStatusAsync();
+        if (doc is null) { _current = null; return; }
+        var root = doc.RootElement;
+        _current = root.TryGetProperty("current", out var current) && current.ValueKind == JsonValueKind.Object
+            ? Attempt.Parse(current) : null;
+        _history.Clear();
+        if (root.TryGetProperty("history", out var history) && history.ValueKind == JsonValueKind.Array)
+            foreach (var item in history.EnumerateArray())
+                _history.Add(Attempt.Parse(item));
+    }
+
+    private async Task RestoreAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_restoreBackup)) return;
+        _busy = true; _error = null;
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var (ok, error) = await scope.ServiceProvider.GetRequiredService<ServerUpdateService>()
+                .RestoreAsync(_restoreBackup.Trim());
+            if (!ok) _error = error; else _notice = L["Updates.RestoreStarted"];
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        _busy = false;
+    }
+
+    public void Dispose() => _timer?.Dispose();
+
+    private sealed record Attempt(string FromVersion, string ToVersion, string Status, string Step, string? Message,
+        string? Backup, DateTime StartedUtc, bool RolledBack)
+    {
+        public static Attempt Parse(JsonElement item) => new(
+            item.TryGetProperty("fromVersion", out var from) ? from.GetString() ?? "" : "",
+            item.TryGetProperty("toVersion", out var to) ? to.GetString() ?? "" : "",
+            item.TryGetProperty("status", out var status) ? status.GetString() ?? "" : "",
+            item.TryGetProperty("step", out var step) ? step.GetString() ?? "" : "",
+            item.TryGetProperty("message", out var message) ? message.GetString() : null,
+            item.TryGetProperty("backup", out var backup) ? backup.GetString() : null,
+            item.TryGetProperty("startedUtc", out var started) && started.TryGetDateTime(out var dt) ? dt : DateTime.UtcNow,
+            item.TryGetProperty("rolledBack", out var rolled) && rolled.ValueKind == JsonValueKind.True);
+    }
+}

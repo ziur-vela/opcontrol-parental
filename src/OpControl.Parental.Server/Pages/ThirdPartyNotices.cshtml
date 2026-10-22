@@ -1,0 +1,12 @@
+@* Copyright (c) 2026 Ziur / OpControl IT Solutions
+   SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0 *@
+
+@page "/third-party-notices"
+@model ThirdPartyNoticesModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = L["Notices.PageTitle"];
+}
+<h1 class="auth-title">@L["Notices.Heading"]</h1>
+<p class="muted auth-sub">@L["Notices.Summary"]</p>
+<div class="legal-text">@Model.NoticesText</div>
