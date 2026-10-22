@@ -43,9 +43,9 @@ public sealed class OverrideSync
         }
     }
 
-    public async Task ApplyAsync(string option, int? minutes, ClientOptions options, CancellationToken ct)
+    public async Task<RuntimeLockStateDto?> ApplyAsync(string option, int? minutes, ClientOptions options, CancellationToken ct)
     {
-        _runtime.ApplyLocalOverride(option, minutes);
+        var state = _runtime.ApplyLocalOverride(option, minutes);
         lock (_gate)
         {
             Directory.CreateDirectory(ClientPaths.PrivateDirectory);
@@ -53,6 +53,7 @@ public sealed class OverrideSync
                 JsonSerializer.Serialize(new DeviceOverrideRequest(option, minutes, DateTime.UtcNow), QueueJson) + Environment.NewLine);
         }
         await SyncPendingAsync(options, ct);
+        return state;
     }
 
     public async Task<bool> SyncPendingAsync(ClientOptions options, CancellationToken ct)

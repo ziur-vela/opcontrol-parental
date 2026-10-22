@@ -250,6 +250,13 @@ else
                 return L[parts[1] == "1" ? "Activity.CategoryBlocked" : "Activity.CategoryAllowed", name];
             }
         }
+        if ((e.Option is "dashboard-unlock" or "pin-unlock-until-next") && e.Detail is { } unlock)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(unlock, @"until (\S+)");
+            if (match.Success && DateTime.TryParse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal, out var until))
+                return L["Activity.UnlockUntilDetail", FormatLocal(until)];
+        }
         if (e.Option == "daily-limit-reached" && DateTime.TryParse(e.Detail, out var day))
             return L["Activity.DailyLimitDetail", day.ToString("d MMM yyyy", System.Globalization.CultureInfo.CurrentCulture)];
         if (e.Option.StartsWith("schedule", StringComparison.Ordinal)) return e.Detail ?? "";

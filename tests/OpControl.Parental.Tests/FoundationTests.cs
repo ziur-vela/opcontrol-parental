@@ -103,6 +103,184 @@ public class FoundationTests
     }
 
     [Fact]
+    public void Unlock_until_next_without_schedules_uses_daily_limit_or_midnight()
+    {
+        var now = new DateTime(2026, 10, 19, 21, 0, 0, DateTimeKind.Utc);
+        var dayEnd = new DateTime(2026, 10, 20, 0, 0, 0, DateTimeKind.Utc);
+        var daily = new DailyLimitDto(true, 300, 18000, now.Date, dayEnd);
+
+        Assert.Equal(dayEnd, LockRules.NextLockCycleUtc([], TimeZoneInfo.Utc, now, daily));
+        Assert.Equal(dayEnd, LockRules.NextLockCycleUtc([], TimeZoneInfo.Utc, now));
+
+        var overrideState = LockRules.Evaluate(true, dayEnd, null, [], TimeZoneInfo.Utc, now, daily);
+        Assert.False(overrideState.IsLocked);
+        Assert.Equal("override", overrideState.Reason);
+        Assert.Equal(dayEnd, overrideState.EndsUtc);
+    }
+
+    [Fact]
+    public void Unlock_until_next_ends_at_the_next_schedule_start()
+    {
+        var mondayNoon = new DateTime(2026, 10, 19, 12, 0, 0, DateTimeKind.Utc);
+        var schedules = new[] { Schedule(1 << 1, 20 * 60 + 30, 22 * 60, "Bedtime") };
+        var cycle = LockRules.NextLockCycle(schedules, TimeZoneInfo.Utc, mondayNoon);
+        Assert.Equal(new DateTime(2026, 10, 19, 20, 30, 0, DateTimeKind.Utc), cycle.Utc);
+        Assert.Equal("Bedtime", cycle.ScheduleName);
+    }
+
+    [Fact]
+    public void Unlock_until_next_ends_at_the_active_schedule_end()
+    {
+        var mondayNight = new DateTime(2026, 10, 19, 23, 0, 0, DateTimeKind.Utc);
+        var schedules = new[] { Schedule(1 << 1, 22 * 60, 6 * 60, "Bedtime") };
+        var cycle = LockRules.NextLockCycle(schedules, TimeZoneInfo.Utc, mondayNight);
+        Assert.Equal(new DateTime(2026, 10, 20, 6, 0, 0, DateTimeKind.Utc), cycle.Utc);
+        Assert.Equal("Bedtime", cycle.ScheduleName);
+    }
+
+    [Fact]
+    public void Unlock_until_next_prefers_an_earlier_daily_limit_day_end()
+    {
+        var mondayNight = new DateTime(2026, 10, 19, 23, 0, 0, DateTimeKind.Utc);
+        var dayEnd = new DateTime(2026, 10, 20, 0, 0, 0, DateTimeKind.Utc);
+        var daily = new DailyLimitDto(true, 300, 18000, mondayNight.Date, dayEnd);
+        var schedules = new[] { Schedule(1 << 1, 22 * 60, 6 * 60, "Bedtime") };
+
+        Assert.Equal(dayEnd, LockRules.NextLockCycleUtc(schedules, TimeZoneInfo.Utc, mondayNight, daily));
+    }
+
+    [Fact]
+    public void Daily_limit_applies_again_after_the_unlock_day_ends()
+    {
+        var now = new DateTime(2026, 10, 19, 21, 0, 0, DateTimeKind.Utc);
+        var dayEnd = new DateTime(2026, 10, 20, 0, 0, 0, DateTimeKind.Utc);
+        var daily = new DailyLimitDto(true, 300, 18000, now.Date, dayEnd);
+        var after = dayEnd.AddMinutes(1);
+
+        Assert.False(LockRules.Evaluate(false, dayEnd, null, [], TimeZoneInfo.Utc, after, daily).IsLocked);
+
+        var sameDay = new DailyLimitDto(true, 300, 18000, after.Date, after.Date.AddDays(1));
+        var relocked = LockRules.Evaluate(false, dayEnd, null, [], TimeZoneInfo.Utc, after.AddMinutes(5), sameDay);
+        Assert.True(relocked.IsLocked);
+        Assert.Equal("daily-limit", relocked.Reason);
+    }
+
+    [Fact]
+    public async Task Server_unlock_without_schedules_uses_the_daily_limit_end()
+    {
+        await using var db = NewDb();
+        var now = DateTime.UtcNow;
+        var (family, child) = SeedLockFamily(db);
+        db.LockStates.Add(new LockState { FamilyId = family.Id, ChildId = child.Id, ManualLock = true });
+        db.ScreenTimeLimits.Add(new ScreenTimeLimit
+        {
+            FamilyId = family.Id, ChildId = child.Id, Enabled = true,
+            MondayMinutes = 300, TuesdayMinutes = 300, WednesdayMinutes = 300, ThursdayMinutes = 300,
+            FridayMinutes = 300, SaturdayMinutes = 300, SundayMinutes = 300
+        });
+        db.UsageIntervals.Add(new UsageInterval
+        {
+            FamilyId = family.Id, ChildId = child.Id, DeviceId = Guid.NewGuid(),
+            AppIdentity = "app:game", AppDisplayName = "Game",
+            StartUtc = now.AddMinutes(-10), DurationSeconds = 18000
+        });
+        await db.SaveChangesAsync();
+
+        var dto = await NewLocks(db).ApplyAsync(family.Id, child.Id, null, LockAction.Unlock);
+        var expected = LockRules.NextLocalMidnightUtc(TimeZoneInfo.Utc, now);
+        Assert.False(dto.IsLocked);
+        Assert.Equal("override", dto.Reason);
+        Assert.Equal(expected, dto.UnlockUntilUtc);
+    }
+
+    [Fact]
+    public async Task Server_unlock_uses_the_next_schedule_start()
+    {
+        await using var db = NewDb();
+        var now = DateTime.UtcNow;
+        var local = now;
+        var minute = local.Hour * 60 + local.Minute;
+        var start = minute < 22 * 60 ? 22 * 60 : (minute + 1) % 1440;
+        var dayOffset = minute < 22 * 60 ? 0 : start <= minute ? 1 : 0;
+        var (family, child) = SeedLockFamily(db);
+        db.LockStates.Add(new LockState { FamilyId = family.Id, ChildId = child.Id, ManualLock = true });
+        db.Schedules.Add(new Schedule
+        {
+            FamilyId = family.Id, ChildId = child.Id, Name = "Bedtime",
+            DaysMask = 1 << (int)local.Date.AddDays(dayOffset).DayOfWeek,
+            StartMinutes = start, EndMinutes = Math.Min(start + 60, 1439), IsEnabled = true
+        });
+        await db.SaveChangesAsync();
+
+        var dto = await NewLocks(db).ApplyAsync(family.Id, child.Id, null, LockAction.Unlock);
+        var expected = local.Date.AddDays(dayOffset).AddMinutes(start);
+        Assert.False(dto.IsLocked);
+        Assert.Equal(expected, dto.UnlockUntilUtc);
+    }
+
+    [Fact]
+    public async Task Server_unlock_uses_the_active_schedule_end()
+    {
+        await using var db = NewDb();
+        var now = DateTime.UtcNow;
+        var minute = now.Hour * 60 + now.Minute;
+        var overnight = minute >= 1420;
+        var start = overnight ? 1400 : Math.Max(0, minute - 10);
+        var end = overnight ? 30 : minute + 20;
+        var expected = overnight
+            ? now.Date.AddDays(1).AddMinutes(end)
+            : now.Date.AddMinutes(end);
+        var (family, child) = SeedLockFamily(db);
+        db.LockStates.Add(new LockState { FamilyId = family.Id, ChildId = child.Id, ManualLock = true });
+        db.Schedules.Add(new Schedule
+        {
+            FamilyId = family.Id, ChildId = child.Id, Name = "Bedtime",
+            DaysMask = 1 << (int)now.DayOfWeek,
+            StartMinutes = start, EndMinutes = end, IsEnabled = true
+        });
+        await db.SaveChangesAsync();
+
+        var dto = await NewLocks(db).ApplyAsync(family.Id, child.Id, null, LockAction.Unlock);
+        Assert.False(dto.IsLocked);
+        Assert.Equal(expected, dto.UnlockUntilUtc);
+    }
+
+    [Fact]
+    public async Task Server_pin_unlock_without_schedules_ends_at_midnight_and_records_it()
+    {
+        await using var db = NewDb();
+        var now = DateTime.UtcNow;
+        var (family, child) = SeedLockFamily(db);
+        var device = new Device { FamilyId = family.Id, ChildId = child.Id, Name = "X1", TimeZoneId = "UTC" };
+        db.LockStates.Add(new LockState { FamilyId = family.Id, ChildId = child.Id, ManualLock = true });
+        db.Devices.Add(device);
+        await db.SaveChangesAsync();
+
+        var dto = await NewLocks(db).ApplyDeviceOverrideAsync(device,
+            new DeviceOverrideRequest("unlock-until-next", null, now));
+        var expected = LockRules.NextLocalMidnightUtc(TimeZoneInfo.Utc, now);
+        Assert.False(dto.IsLocked);
+        Assert.Equal(expected, dto.UnlockUntilUtc);
+
+        var eventRow = await db.OverrideEvents.SingleAsync(e => e.Option == "pin-unlock-until-next");
+        Assert.Contains($"until {expected:o}", eventRow.Detail);
+    }
+
+    private static (Family Family, Child Child) SeedLockFamily(ParentalDbContext db)
+    {
+        var family = new Family { Name = "Family" };
+        var child = new Child { FamilyId = family.Id, Name = "Child" };
+        db.Families.Add(family);
+        db.Children.Add(child);
+        return (family, child);
+    }
+
+    private static LockService NewLocks(ParentalDbContext db) =>
+        new(db, new TestHubContext(), new DashboardEventBus(),
+            new RuleService(db, NewAlerts(db)), new UsageService(db, NewAlerts(db)), NewAlerts(db),
+            NullLogger<LockService>.Instance);
+
+    [Fact]
     public void Countdown_uses_bonus_expiry_when_bonus_is_active()
     {
         var now = new DateTime(2026, 10, 18, 12, 0, 0, DateTimeKind.Utc);
@@ -171,6 +349,36 @@ public class FoundationTests
         var auth = new DeviceAuthService(db);
         Assert.NotNull(await auth.ValidateAsync(token, CancellationToken.None));
         Assert.Null(await auth.ValidateAsync("not-the-token", CancellationToken.None));
+    }
+    private sealed class TestHubContext : Microsoft.AspNetCore.SignalR.IHubContext<OpControl.Parental.Server.Hubs.ParentalHub>
+    {
+        public Microsoft.AspNetCore.SignalR.IHubClients Clients { get; } = new TestHubClients();
+        public Microsoft.AspNetCore.SignalR.IGroupManager Groups { get; } = new TestGroupManager();
+    }
+
+    private sealed class TestHubClients : Microsoft.AspNetCore.SignalR.IHubClients
+    {
+        private static readonly Microsoft.AspNetCore.SignalR.IClientProxy Proxy = new TestClientProxy();
+        public Microsoft.AspNetCore.SignalR.IClientProxy All => Proxy;
+        public Microsoft.AspNetCore.SignalR.IClientProxy AllExcept(IReadOnlyList<string> excludedConnectionIds) => Proxy;
+        public Microsoft.AspNetCore.SignalR.IClientProxy Client(string connectionId) => Proxy;
+        public Microsoft.AspNetCore.SignalR.IClientProxy Clients(IReadOnlyList<string> connectionIds) => Proxy;
+        public Microsoft.AspNetCore.SignalR.IClientProxy Group(string groupName) => Proxy;
+        public Microsoft.AspNetCore.SignalR.IClientProxy GroupExcept(string groupName, IReadOnlyList<string> excludedConnectionIds) => Proxy;
+        public Microsoft.AspNetCore.SignalR.IClientProxy Groups(IReadOnlyList<string> groupNames) => Proxy;
+        public Microsoft.AspNetCore.SignalR.IClientProxy User(string userId) => Proxy;
+        public Microsoft.AspNetCore.SignalR.IClientProxy Users(IReadOnlyList<string> userIds) => Proxy;
+    }
+
+    private sealed class TestClientProxy : Microsoft.AspNetCore.SignalR.IClientProxy
+    {
+        public Task SendCoreAsync(string method, object?[] args, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
+    private sealed class TestGroupManager : Microsoft.AspNetCore.SignalR.IGroupManager
+    {
+        public Task AddToGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task RemoveFromGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }
 
@@ -563,4 +771,6 @@ public class Job5BMultiTenantTests
         Assert.Contains("build", info.DisplayVersion);
         Assert.False(string.IsNullOrWhiteSpace(info.ToDto().Commit));
     }
+
+
 }

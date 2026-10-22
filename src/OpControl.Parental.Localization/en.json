@@ -219,5 +219,10 @@
   "Client.Messages.Legend": "Sent ✓ · Delivered ✓✓ · Read ✓✓ · Waiting ◷ · Failed !",
   "Client.Messages.Quick.MoreTime": "Can I have more time?",
   "Client.Messages.Quick.Homework": "I finished my homework",
-  "Client.Messages.Quick.ComeHere": "Please come here"
+  "Client.Messages.Quick.ComeHere": "Please come here",
+  "Client.Countdown.UnlockedUntil": "Unlocked by a parent until {0}",
+  "Client.Countdown.UnlockedUntilSchedule": "Unlocked by a parent until {0}, {1}",
+  "Client.Kid.ParentUnlock": "Unlocked by a parent until {0}",
+  "Client.Kid.ParentUnlockSchedule": "Unlocked by a parent until {0}, {1}",
+  "Client.Pipe.OverrideNoEffect": "The override did not unlock the device. Try again."
 }

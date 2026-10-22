@@ -94,6 +94,8 @@ public sealed class LockService
         var now = DateTime.UtcNow;
         var schedules = await LoadScheduleDtosAsync(familyId, childId, ct);
         var zone = ResolveTimeZone(await FirstDeviceTimeZoneAsync(familyId, childId, ct));
+        var daily = await _usage.BuildDailyLimitAsync(familyId, childId, zone, now, ct);
+        DateTime? unlockUntil = null;
 
         switch (action)
         {
@@ -115,13 +117,15 @@ public sealed class LockService
                 state.ManualLock = false;
                 state.BonusUntilUtc = null;
                 state.BonusMinutes = null;
-                state.UnlockUntilUtc = LockRules.NextLockCycleUtc(schedules, zone, now);
+                unlockUntil = LockRules.NextLockCycleUtc(schedules, zone, now, daily);
+                state.UnlockUntilUtc = unlockUntil;
                 _db.OverrideEvents.Add(new OverrideEvent
                 {
                     FamilyId = familyId,
                     ChildId = childId,
                     CreatedByParentId = parentId,
                     Option = "dashboard-unlock",
+                    Detail = $"until {unlockUntil:o}",
                     CreatedUtc = now
                 });
                 break;
@@ -148,10 +152,11 @@ public sealed class LockService
         state.UpdatedUtc = now;
         await _db.SaveChangesAsync(ct);
 
-        var dto = BuildDto(state, schedules, zone, now, await _usage.BuildDailyLimitAsync(familyId, childId, zone, now, ct));
+        var dto = BuildDto(state, schedules, zone, now, daily);
         _events.PublishLockState(dto);
         await PublishDeviceStateAsync(familyId, childId, ct);
-        _logger.LogInformation("Lock action {Action} applied to child {ChildId} (locked={Locked})", action, childId, dto.IsLocked);
+        _logger.LogInformation("Lock action {Action} applied to child {ChildId} (unlockUntil={UnlockUntilUtc} locked={Locked} reason={Reason})",
+            action, childId, dto.UnlockUntilUtc, dto.IsLocked, dto.Reason);
         return dto;
     }
 
@@ -166,6 +171,8 @@ public sealed class LockService
                 : now;
         var schedules = await LoadScheduleDtosAsync(device.FamilyId, device.ChildId, ct);
         var zone = ResolveTimeZone(device.TimeZoneId);
+        var daily = await _usage.BuildDailyLimitAsync(device.FamilyId, device.ChildId, zone, now, ct);
+        DateTime? unlockUntil = null;
         var option = request.Option switch
         {
             "unlock-until-next" => "pin-unlock-until-next",
@@ -178,7 +185,8 @@ public sealed class LockService
             state.ManualLock = false;
             state.BonusUntilUtc = null;
             state.BonusMinutes = null;
-            state.UnlockUntilUtc = LockRules.NextLockCycleUtc(schedules, zone, applied);
+            unlockUntil = LockRules.NextLockCycleUtc(schedules, zone, applied, daily);
+            state.UnlockUntilUtc = unlockUntil;
         }
         else
         {
@@ -198,7 +206,9 @@ public sealed class LockService
             Option = option,
             Minutes = request.Option == "bonus" ? Math.Clamp(request.Minutes ?? 15, 1, 1440) : null,
             CreatedUtc = now,
-            Detail = applied == now ? null : $"applied {applied:o}"
+            Detail = request.Option == "unlock-until-next"
+                ? $"until {unlockUntil:o}" + (applied == now ? "" : $" applied {applied:o}")
+                : applied == now ? null : $"applied {applied:o}"
         });
         await _db.SaveChangesAsync(ct);
 
@@ -209,10 +219,11 @@ public sealed class LockService
                 : new AlertContent("Alert.PinOverride.UnlockTitle", "Alert.PinOverride.UnlockDetail", device.Name),
             TimeSpan.FromMinutes(1), ct);
 
-        var dto = BuildDto(state, schedules, zone, now, await _usage.BuildDailyLimitAsync(device.FamilyId, device.ChildId, zone, now, ct));
+        var dto = BuildDto(state, schedules, zone, now, daily);
         _events.PublishLockState(dto);
         await PublishDeviceStateAsync(device.FamilyId, device.ChildId, ct);
-        _logger.LogInformation("Device PIN override {Option} applied to child {ChildId}", option, device.ChildId);
+        _logger.LogInformation("Device PIN override {Option} applied to child {ChildId} (unlockUntil={UnlockUntilUtc} locked={Locked} reason={Reason})",
+            option, device.ChildId, dto.UnlockUntilUtc, dto.IsLocked, dto.Reason);
         return dto;
     }
 

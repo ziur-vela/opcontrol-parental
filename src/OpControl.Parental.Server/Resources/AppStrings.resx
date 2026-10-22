@@ -926,4 +926,7 @@ If you were not expecting this, ignore this email.</value></data>
   <data name="Messages.Status.Read" xml:space="preserve"><value>Read</value></data>
   <data name="Messages.StatusAt" xml:space="preserve"><value>{0}: {1}</value></data>
   <data name="Messages.By" xml:space="preserve"><value> · by {0}</value></data>
+  <data name="Home.StatusOverrideUntil" xml:space="preserve"><value>Unlocked until {0}</value></data>
+  <data name="Home.ReasonOverrideUntil" xml:space="preserve"><value>Unlocked by a parent until {0}.</value></data>
+  <data name="Activity.UnlockUntilDetail" xml:space="preserve"><value>Unlocked until {0}</value></data>
 </root>

@@ -280,7 +280,8 @@ public sealed record RuntimeLockStateDto(
     int? DailyLimitMinutes = null,
     bool SpokenWarnings = false,
     int? IdleThresholdSeconds = null,
-    string? Language = null);
+    string? Language = null,
+    string? UnlockScheduleName = null);
 
 public sealed record UsageIntervalDto(
     Guid Id,

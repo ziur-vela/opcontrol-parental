@@ -926,4 +926,7 @@ Si no esperabas este correo, ignóralo.</value></data>
   <data name="Messages.Status.Read" xml:space="preserve"><value>Leído</value></data>
   <data name="Messages.StatusAt" xml:space="preserve"><value>{0}: {1}</value></data>
   <data name="Messages.By" xml:space="preserve"><value> · por {0}</value></data>
+  <data name="Home.StatusOverrideUntil" xml:space="preserve"><value>Desbloqueado hasta las {0}</value></data>
+  <data name="Home.ReasonOverrideUntil" xml:space="preserve"><value>Desbloqueado por un padre o madre hasta las {0}.</value></data>
+  <data name="Activity.UnlockUntilDetail" xml:space="preserve"><value>Desbloqueado hasta las {0}</value></data>
 </root>

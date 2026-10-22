@@ -2,6 +2,8 @@ namespace OpControl.Parental.Contracts;
 
 public sealed record LockEvaluation(bool IsLocked, string Reason, string? ScheduleName, DateTime? EndsUtc);
 
+public sealed record LockCycle(DateTime Utc, string? ScheduleName);
+
 public static class LockRules
 {
     public static LockEvaluation Evaluate(DeviceStateDto state, TimeZoneInfo tz, DateTime nowUtc) =>
@@ -59,15 +61,42 @@ public static class LockRules
             return null;
         if (bonusUntilUtc is { } bonus && bonus > nowUtc)
             return bonus;
+        if (unlockUntilUtc is { } unlock && unlock > nowUtc)
+            return unlock;
         return NextScheduleStart(schedules, tz, nowUtc);
     }
 
-    public static DateTime? NextLockCycleUtc(IReadOnlyList<ScheduleDto> schedules, TimeZoneInfo tz, DateTime nowUtc)
+    public static DateTime? NextLockCycleUtc(IReadOnlyList<ScheduleDto> schedules, TimeZoneInfo tz, DateTime nowUtc, DailyLimitDto? dailyLimit = null) =>
+        NextLockCycle(schedules, tz, nowUtc, dailyLimit).Utc;
+
+    public static LockCycle NextLockCycle(IReadOnlyList<ScheduleDto> schedules, TimeZoneInfo tz, DateTime nowUtc, DailyLimitDto? dailyLimit = null)
     {
         var active = ActiveSchedule(schedules, tz, nowUtc);
-        return active is not null
-            ? CurrentScheduleEnd(active, tz, nowUtc)
-            : NextScheduleStart(schedules, tz, nowUtc);
+        LockCycle? best = null;
+
+        if (active is not null)
+        {
+            var end = CurrentScheduleEnd(active, tz, nowUtc);
+            if (end is { } value && value > nowUtc)
+                best = new LockCycle(value, active.Name);
+        }
+
+        if (NextScheduleStartWithName(schedules, tz, nowUtc) is { } next && (best is null || next.Utc < best.Utc))
+            best = next;
+
+        if (dailyLimit is { Enabled: true } && dailyLimit.DayEndUtc > nowUtc && (best is null || dailyLimit.DayEndUtc < best.Utc))
+            best = new LockCycle(dailyLimit.DayEndUtc, null);
+
+        return best ?? new LockCycle(NextLocalMidnightUtc(tz, nowUtc), null);
+    }
+
+    public static DateTime NextLocalMidnightUtc(TimeZoneInfo tz, DateTime nowUtc)
+    {
+        var local = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, tz);
+        var utc = ToUtc(local.Date.AddDays(1), tz);
+        if (utc <= nowUtc)
+            utc = ToUtc(local.Date.AddDays(2), tz);
+        return utc;
     }
 
     public static ScheduleDto? ActiveSchedule(IReadOnlyList<ScheduleDto> schedules, TimeZoneInfo tz, DateTime nowUtc)
@@ -120,10 +149,13 @@ public static class LockRules
         return end is null ? null : ToUtc(end.Value, tz);
     }
 
-    public static DateTime? NextScheduleStart(IReadOnlyList<ScheduleDto> schedules, TimeZoneInfo tz, DateTime nowUtc)
+    public static DateTime? NextScheduleStart(IReadOnlyList<ScheduleDto> schedules, TimeZoneInfo tz, DateTime nowUtc) =>
+        NextScheduleStartWithName(schedules, tz, nowUtc)?.Utc;
+
+    public static LockCycle? NextScheduleStartWithName(IReadOnlyList<ScheduleDto> schedules, TimeZoneInfo tz, DateTime nowUtc)
     {
         var localNow = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, tz);
-        DateTime? best = null;
+        LockCycle? best = null;
 
         foreach (var schedule in schedules.Where(s => s.IsEnabled))
         {
@@ -135,7 +167,7 @@ public static class LockRules
                 var candidateLocal = date.AddMinutes(schedule.StartMinutes);
                 var candidateUtc = ToUtc(candidateLocal, tz);
                 if (candidateUtc <= nowUtc) continue;
-                if (best is null || candidateUtc < best) best = candidateUtc;
+                if (best is null || candidateUtc < best.Utc) best = new LockCycle(candidateUtc, schedule.Name);
                 break;
             }
         }

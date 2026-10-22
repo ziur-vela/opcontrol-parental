@@ -472,7 +472,7 @@ else
         "daily-limit" => L["Home.StatusDailyLimit"],
         "manual" => L["Home.StatusManual"],
         "bonus" => L["Home.StatusBonus"],
-        "override" => L["Home.StatusOverride"],
+        "override" => _state?.EndsUtc is { } ends ? L["Home.StatusOverrideUntil", FormatTimeLocal(ends)] : L["Home.StatusOverride"],
         _ => L["Home.StatusRules"]
     };
 
@@ -483,7 +483,9 @@ else
     private string ReasonText => _state?.Reason switch
     {
         "bonus" => L["Home.ReasonBonus"],
-        "override" => L["Home.ReasonOverride"],
+        "override" => _state?.EndsUtc is { } ends
+            ? L["Home.ReasonOverrideUntil", FormatTimeLocal(ends)]
+            : L["Home.ReasonOverride"],
         "manual" => L["Home.ReasonManual", _parentName ?? L["Home.AParent"]],
         "schedule" => L["Home.ReasonSchedule", string.IsNullOrWhiteSpace(_state.ScheduleName) ? L["Home.ASchedule"] : _state.ScheduleName],
         "daily-limit" => L["Home.ReasonDailyLimit"],

@@ -74,11 +74,11 @@ public sealed class LockRuntime
         return string.Join('\n', parts);
     }
 
-    public void ApplyLocalOverride(string option, int? minutes)
+    public RuntimeLockStateDto? ApplyLocalOverride(string option, int? minutes)
     {
         lock (_gate)
         {
-            if (_state is null) return;
+            if (_state is null) return null;
             var now = DateTime.UtcNow;
             if (option == "unlock-until-next")
             {
@@ -87,7 +87,7 @@ public sealed class LockRuntime
                     ManualLock = false,
                     BonusUntilUtc = null,
                     BonusMinutes = null,
-                    UnlockUntilUtc = LockRules.NextLockCycleUtc(_state.Schedules, TimeZoneInfo.Local, now)
+                    UnlockUntilUtc = LockRules.NextLockCycleUtc(_state.Schedules, TimeZoneInfo.Local, now, _state.DailyLimit)
                 };
             }
             else if (option == "bonus")
@@ -102,7 +102,10 @@ public sealed class LockRuntime
                 };
             }
             _store.Save(_state);
-            ComputeAndWriteLocked();
+            var runtime = ComputeAndWriteLocked();
+            _logger.LogInformation("Local override {Option} applied: unlockUntil={UnlockUntilUtc} locked={Locked} reason={Reason}",
+                option, _state.UnlockUntilUtc, runtime?.IsLocked, runtime?.Reason);
+            return runtime;
         }
     }
 
@@ -170,8 +173,18 @@ public sealed class LockRuntime
         if (_state is null) return null;
         var now = DateTime.UtcNow;
         var state = AdjustedStateLocked() ?? _state;
-        var evaluation = LockRules.Evaluate(state, TimeZoneInfo.Local, now);
-        var next = LockRules.NextLockUtc(state.ManualLock, state.UnlockUntilUtc, state.BonusUntilUtc, state.Schedules, TimeZoneInfo.Local, now);
+        var tz = TimeZoneInfo.Local;
+        var evaluation = LockRules.Evaluate(state, tz, now);
+        var next = LockRules.NextLockUtc(state.ManualLock, state.UnlockUntilUtc, state.BonusUntilUtc, state.Schedules, tz, now);
+        string? unlockSchedule = null;
+        if (evaluation.Reason == "override" && evaluation.EndsUtc is { } unlockEnd)
+        {
+            var active = LockRules.ActiveSchedule(state.Schedules, tz, now);
+            if (active is not null && LockRules.CurrentScheduleEnd(active, tz, now) == unlockEnd)
+                unlockSchedule = active.Name;
+            else if (LockRules.NextScheduleStartWithName(state.Schedules, tz, now) is { } upcoming && upcoming.Utc == unlockEnd)
+                unlockSchedule = upcoming.ScheduleName;
+        }
         var runtime = new RuntimeLockStateDto(
             state.ChildId,
             state.ChildName,
@@ -188,7 +201,8 @@ public sealed class LockRuntime
             state.DailyLimit is { Enabled: true } ? state.DailyLimit.TodayMinutes : null,
             state.SpokenWarnings,
             _settings.Value.IdleThresholdSeconds,
-            state.Language);
+            state.Language,
+            unlockSchedule);
         var changed = _runtime is null
             || _runtime.IsLocked != runtime.IsLocked
             || _runtime.Reason != runtime.Reason

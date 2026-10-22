@@ -124,6 +124,16 @@ public sealed class HelperContext : ApplicationContext
             _countdown.UpdateText(text, remaining);
             SetVisible(true, false, state.Reason, text);
         }
+        else if (state.Reason == "override" && state.EndsUtc is { } unlockedUntil && unlockedUntil > now)
+        {
+            var remaining = unlockedUntil - now;
+            var when = unlockedUntil.ToLocalTime().ToString("t", System.Globalization.CultureInfo.CurrentCulture);
+            var text = string.IsNullOrWhiteSpace(state.UnlockScheduleName)
+                ? Loc.T("Client.Countdown.UnlockedUntil", when)
+                : Loc.T("Client.Countdown.UnlockedUntilSchedule", when, state.UnlockScheduleName);
+            _countdown.UpdateText(text, remaining);
+            SetVisible(true, false, state.Reason, text);
+        }
         else if (state.NextLockUtc is { } next && next > now)
         {
             var remaining = next - now;

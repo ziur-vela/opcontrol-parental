@@ -212,8 +212,16 @@ public sealed class PinPipeServer : BackgroundService
         if (request.Option is not ("unlock-until-next" or "bonus"))
             return new PinPipeResponse(false, Loc.T("Client.Pipe.UnknownOption"));
 
-        await _overrides.ApplyAsync(request.Option, request.Minutes, _settings.Value, ct);
-        return new PinPipeResponse(true, State: _runtime.Current);
+        var state = await _overrides.ApplyAsync(request.Option, request.Minutes, _settings.Value, ct);
+        _logger.LogInformation("Override {Option} computed unlockUntil={UnlockUntilUtc} locked={Locked} reason={Reason}",
+            request.Option, _runtime.DeviceState?.UnlockUntilUtc, state?.IsLocked, state?.Reason);
+        if (request.Option == "unlock-until-next" && state is { IsLocked: true })
+        {
+            _logger.LogWarning("Override {Option} did not unlock the device (unlockUntil={UnlockUntilUtc} reason={Reason})",
+                request.Option, _runtime.DeviceState?.UnlockUntilUtc, state.Reason);
+            return new PinPipeResponse(false, Loc.T("Client.Pipe.OverrideNoEffect"), State: state);
+        }
+        return new PinPipeResponse(true, State: state ?? _runtime.Current);
     }
 
     private static async Task WriteAsync(NamedPipeServerStream pipe, PinPipeResponse response, CancellationToken ct)

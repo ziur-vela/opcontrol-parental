@@ -219,5 +219,10 @@
   "Client.Messages.Legend": "Enviado ✓ · Entregado ✓✓ · Leído ✓✓ · Esperando ◷ · Falló !",
   "Client.Messages.Quick.MoreTime": "¿Puedo tener más tiempo?",
   "Client.Messages.Quick.Homework": "Terminé mi tarea",
-  "Client.Messages.Quick.ComeHere": "Ven aquí, por favor"
+  "Client.Messages.Quick.ComeHere": "Ven aquí, por favor",
+  "Client.Countdown.UnlockedUntil": "Desbloqueado por un padre o madre hasta las {0}",
+  "Client.Countdown.UnlockedUntilSchedule": "Desbloqueado por un padre o madre hasta las {0}, {1}",
+  "Client.Kid.ParentUnlock": "Desbloqueado por un padre o madre hasta las {0}",
+  "Client.Kid.ParentUnlockSchedule": "Desbloqueado por un padre o madre hasta las {0}, {1}",
+  "Client.Pipe.OverrideNoEffect": "No se pudo desbloquear el dispositivo con esta opción. Inténtalo de nuevo."
 }

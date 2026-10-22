@@ -222,6 +222,14 @@ internal sealed class HomeView : KidView
                 bonusUntil.ToLocalTime().ToString("t", CultureInfo.CurrentCulture));
             _bonus.Visible = true;
         }
+        else if (state?.Reason == "override" && state.EndsUtc is { } unlockedUntil && unlockedUntil > now)
+        {
+            var when = unlockedUntil.ToLocalTime().ToString("t", CultureInfo.CurrentCulture);
+            _bonus.Text = string.IsNullOrWhiteSpace(state.UnlockScheduleName)
+                ? Loc.T("Client.Kid.ParentUnlock", when)
+                : Loc.T("Client.Kid.ParentUnlockSchedule", when, state.UnlockScheduleName);
+            _bonus.Visible = true;
+        }
         else
         {
             _bonus.Visible = false;
