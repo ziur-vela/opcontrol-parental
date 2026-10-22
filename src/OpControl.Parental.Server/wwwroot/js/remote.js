@@ -5,13 +5,33 @@
     let socket = null;
     let sessionId = null;
     let currentKind = null;
+    let heartbeat = null;
+
+    function stopHeartbeat() {
+        if (heartbeat) { clearInterval(heartbeat); heartbeat = null; }
+    }
+
+    function stopRequest(session, keepalive) {
+        if (!session) return;
+        const token = window.ocpAntiforgeryToken ? window.ocpAntiforgeryToken() : null;
+        try {
+            fetch('/api/remote/sessions/' + session + '/stop', {
+                method: 'POST',
+                credentials: 'same-origin',
+                keepalive: keepalive === true,
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token || '' },
+                body: 'null'
+            }).catch(function () { });
+        } catch (e) { }
+    }
 
     function setStatus(id, text) {
         const el = document.getElementById(id);
         if (el) el.textContent = text;
     }
 
-    window.addEventListener('pagehide', function () { window.ocpRemote.stop(true); });
+    window.addEventListener('pagehide', function () { window.ocpRemote.stop(true, true); });
+    window.addEventListener('beforeunload', function () { window.ocpRemote.stop(true, true); });
 
     window.ocpRemote = {
         async getConsent() {
@@ -74,19 +94,29 @@
                     setStatus(statusId, kind === 1 ? ((window.ocpStrings && window.ocpStrings.cameraLive) || 'Camera live') : ((window.ocpStrings && window.ocpStrings.screenLive) || 'Screen live'));
                 } catch { }
             };
+            socket.onopen = () => {
+                stopHeartbeat();
+                heartbeat = setInterval(function () {
+                    if (socket && socket.readyState === 1) {
+                        try { socket.send(JSON.stringify({ type: 'heartbeat' })); } catch (e) { }
+                    }
+                }, 5000);
+            };
             socket.onclose = () => {
+                stopHeartbeat();
                 setStatus(statusId, (window.ocpStrings && window.ocpStrings.sessionEnded) || 'Session ended.');
                 socket = null; sessionId = null; currentKind = null;
             };
             socket.onerror = () => setStatus(statusId, (window.ocpStrings && window.ocpStrings.connectionError) || 'Connection error.');
             return true;
         },
-        stop(sendStop) {
+        stop(sendStop, keepalive) {
+            stopHeartbeat();
             if (sendStop !== false && sessionId) {
-                window.ocpJsonPost('/api/remote/sessions/' + sessionId + '/stop', null).catch(() => { });
+                stopRequest(sessionId, keepalive === true);
             }
             if (socket) {
-                socket.close();
+                try { socket.close(); } catch (e) { }
                 socket = null;
             }
             sessionId = null; currentKind = null;

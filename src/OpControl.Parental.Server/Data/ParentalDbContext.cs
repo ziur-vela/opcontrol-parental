@@ -66,6 +66,7 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
             e.Property(x => x.DisplayName).HasMaxLength(120).IsRequired();
             e.Property(x => x.RoleInFamily).HasConversion<string>().HasMaxLength(16);
             e.Property(x => x.Permissions).HasConversion<int>();
+            e.Property(x => x.EnterToSend).HasDefaultValue(true);
             e.Property(x => x.PreferredLanguage).HasMaxLength(16);
             e.HasIndex(x => x.FamilyId);
             e.HasIndex(x => x.IsServerAdmin);
@@ -172,6 +173,8 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
         {
             e.HasKey(x => x.Id);
             e.Property(x => x.Domain).HasMaxLength(255).IsRequired();
+            e.Property(x => x.BlockReason).HasMaxLength(120);
+            e.Property(x => x.Lookups).HasDefaultValue(1);
             e.HasIndex(x => new { x.FamilyId, x.ChildId, x.VisitedUtc });
             e.HasIndex(x => new { x.DeviceId, x.VisitedUtc });
             e.HasIndex(x => new { x.ChildId, x.Blocked, x.VisitedUtc });
@@ -306,6 +309,7 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
             e.Property(x => x.SmtpPasswordProtected).HasMaxLength(1024);
             e.Property(x => x.FromAddress).HasMaxLength(255);
             e.Property(x => x.NoticeText).HasMaxLength(80).IsRequired().HasDefaultValue("Parent's watching you");
+            e.Property(x => x.RepeatedBlockAlertHours).HasDefaultValue(6);
         });
 
         builder.Entity<ClientTamperEvent>(e =>

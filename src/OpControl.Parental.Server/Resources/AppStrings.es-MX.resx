@@ -1007,4 +1007,56 @@ Si no esperabas este correo, ignóralo.</value></data>
   <data name="Legal.LicenseName" xml:space="preserve"><value>PolyForm Noncommercial 1.0.0</value></data>
   <data name="Setup.QrAlt" xml:space="preserve"><value>Código QR</value></data>
   <data name="Email.Layout.Footer.Copyright" xml:space="preserve"><value>© 2026 Ziur / OpControl IT Solutions · PolyForm Noncommercial 1.0.0</value></data>
+  <data name="Messages.EnterToSend" xml:space="preserve"><value>Enviar con Enter</value></data>
+  <data name="Website.Review.Button" xml:space="preserve"><value>Revisar</value></data>
+  <data name="Website.Review.Title" xml:space="preserve"><value>Revisión del sitio</value></data>
+  <data name="Website.Review.Eyebrow" xml:space="preserve"><value>Sitio web</value></data>
+  <data name="Website.Review.AdultNotice" xml:space="preserve"><value>Este sitio está en la lista de contenido para adultos. El enlace está oculto hasta que lo confirmes. No se cargaron el favicon ni los detalles de la página.</value></data>
+  <data name="Website.Review.VisitWithWarning" xml:space="preserve"><value>Entiendo — mostrar el enlace</value></data>
+  <data name="Website.Review.Categories" xml:space="preserve"><value>Listas de categorías</value></data>
+  <data name="Website.Review.NoCategories" xml:space="preserve"><value>Ninguna</value></data>
+  <data name="Website.Review.BlockedBy" xml:space="preserve"><value>Bloqueado por</value></data>
+  <data name="Website.Review.NotBlocked" xml:space="preserve"><value>No bloqueado</value></data>
+  <data name="Website.Review.Visits7" xml:space="preserve"><value>Visitas (7 días)</value></data>
+  <data name="Website.Review.Lookups7" xml:space="preserve"><value>Consultas DNS (7 días)</value></data>
+  <data name="Website.Review.FirstSeen" xml:space="preserve"><value>Primera vez</value></data>
+  <data name="Website.Review.LastSeen" xml:space="preserve"><value>Última vez</value></data>
+  <data name="Website.Review.Visit" xml:space="preserve"><value>Visitar sitio</value></data>
+  <data name="Website.Review.BlockAlways" xml:space="preserve"><value>Bloquear siempre</value></data>
+  <data name="Website.Review.BlockSchedule" xml:space="preserve"><value>Bloquear en el horario</value></data>
+  <data name="Website.Review.Invalid" xml:space="preserve"><value>No es una dirección web válida.</value></data>
+  <data name="Website.Review.Unreachable" xml:space="preserve"><value>No se pudo contactar el sitio.</value></data>
+  <data name="Website.Review.Timeout" xml:space="preserve"><value>El sitio tardó demasiado en responder (5 segundos).</value></data>
+  <data name="Website.Review.TooLarge" xml:space="preserve"><value>La página es mayor de 512 KB.</value></data>
+  <data name="Website.Review.Redirects" xml:space="preserve"><value>El sitio redirigió más de tres veces.</value></data>
+  <data name="Website.Review.NotHtml" xml:space="preserve"><value>Esta dirección no es una página HTML.</value></data>
+  <data name="SiteReview.Purpose.WhatsApp" xml:space="preserve"><value>WhatsApp: aplicación de mensajería de Meta.</value></data>
+  <data name="SiteReview.Purpose.KhanAcademy" xml:space="preserve"><value>Khan Academy: lecciones y práctica gratuitas sin fines de lucro.</value></data>
+  <data name="SiteReview.Purpose.YouTube" xml:space="preserve"><value>YouTube: plataforma de video de Google.</value></data>
+  <data name="SiteReview.Purpose.TikTok" xml:space="preserve"><value>TikTok: aplicación social de videos cortos de ByteDance.</value></data>
+  <data name="SiteReview.Purpose.Instagram" xml:space="preserve"><value>Instagram: aplicación para compartir fotos y videos de Meta.</value></data>
+  <data name="SiteReview.Purpose.Facebook" xml:space="preserve"><value>Facebook: red social de Meta.</value></data>
+  <data name="SiteReview.Purpose.Discord" xml:space="preserve"><value>Discord: chat grupal y voz, popular entre jugadores.</value></data>
+  <data name="SiteReview.Purpose.Roblox" xml:space="preserve"><value>Roblox: plataforma de juegos y comunidad de creadores.</value></data>
+  <data name="SiteReview.Purpose.Minecraft" xml:space="preserve"><value>Minecraft: juego de construcción por Mojang/Microsoft.</value></data>
+  <data name="SiteReview.Purpose.Netflix" xml:space="preserve"><value>Netflix: servicio de streaming por suscripción.</value></data>
+  <data name="SiteReview.Purpose.Spotify" xml:space="preserve"><value>Spotify: servicio de música y podcasts.</value></data>
+  <data name="SiteReview.Purpose.Wikipedia" xml:space="preserve"><value>Wikipedia: enciclopedia libre en línea.</value></data>
+  <data name="SiteReview.Purpose.Google" xml:space="preserve"><value>Google: buscador y servicios en línea.</value></data>
+  <data name="SiteReview.Purpose.Scratch" xml:space="preserve"><value>Scratch: comunidad de programación por bloques del MIT.</value></data>
+  <data name="SiteReview.Purpose.Duolingo" xml:space="preserve"><value>Duolingo: aplicación para aprender idiomas.</value></data>
+  <data name="SiteReview.Purpose.Twitch" xml:space="preserve"><value>Twitch: plataforma de transmisión en vivo de Amazon.</value></data>
+  <data name="BlockReason.Category" xml:space="preserve"><value>Bloqueado por: categoría {0}</value></data>
+  <data name="BlockReason.RuleAlways" xml:space="preserve"><value>Bloqueado por: regla (siempre)</value></data>
+  <data name="BlockReason.RuleSchedule" xml:space="preserve"><value>Bloqueado por: horario {0}</value></data>
+  <data name="BlockReason.RuleScheduleGeneric" xml:space="preserve"><value>Bloqueado por: horario</value></data>
+  <data name="BlockReason.Unknown" xml:space="preserve"><value>Bloqueado por: categoría o regla</value></data>
+  <data name="BlockReason.Doh" xml:space="preserve"><value>Bloqueado por: protección DNS-over-HTTPS</value></data>
+  <data name="BlockReason.UnknownShort" xml:space="preserve"><value>desconocido</value></data>
+  <data name="BlockReason.RuleAlwaysShort" xml:space="preserve"><value>regla (siempre)</value></data>
+  <data name="BlockReason.RuleScheduleShort" xml:space="preserve"><value>horario</value></data>
+  <data name="BlockReason.CategoryShort" xml:space="preserve"><value>categoría {0}</value></data>
+  <data name="Alert.RepeatedBlocked.DetailReason" xml:space="preserve"><value>{1} intentos bloqueados a {0} en {2}. {3}</value></data>
+  <data name="Settings.RepeatedBlockHours" xml:space="preserve"><value>Avisos de intentos bloqueados repetidos (horas, 1 a 24)</value></data>
+  <data name="Settings.RepeatedBlockHoursHelp" xml:space="preserve"><value>Un aviso por dominio y dispositivo en este periodo. El aviso muestra el total de intentos.</value></data>
 </root>

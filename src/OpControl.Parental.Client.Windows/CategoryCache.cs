@@ -54,6 +54,19 @@ public sealed class CategoryCache
         return false;
     }
 
+    public string? GetEnabledCategory(string domain, IReadOnlyList<CategoryToggleDto> categories)
+    {
+        lock (_gate)
+        {
+            foreach (var category in categories.Where(c => c.Enabled))
+            {
+                if (!_cache.Categories.TryGetValue(category.Key, out var entry)) continue;
+                if (DomainUtil.SetContainsDomainOrParent(entry.Domains, domain)) return category.Key;
+            }
+        }
+        return null;
+    }
+
     public async Task UpdateAsync(IReadOnlyList<CategoryToggleDto> categories, CancellationToken ct)
     {
         var enabled = categories.Where(c => c.Enabled).ToList();

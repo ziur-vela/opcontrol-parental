@@ -137,8 +137,21 @@ builder.Services.AddScoped<LanguageService>();
 builder.Services.AddScoped<InvitationService>();
 builder.Services.AddScoped<ServerAdminService>();
 builder.Services.AddScoped<TeamService>();
+builder.Services.AddScoped<SiteReviewService>();
+builder.Services.AddScoped<ParentPreferenceService>();
 builder.Services.AddScoped<RemoteSessionService>();
 builder.Services.AddSingleton<RemoteSessionRegistry>();
+builder.Services.AddHostedService<RemoteSessionSweeper>();
+builder.Services.AddHttpClient("sitereview", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(6);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("OpControlParentalSiteReview/1.0");
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    AllowAutoRedirect = false,
+    UseCookies = false,
+    AutomaticDecompression = System.Net.DecompressionMethods.All
+});
 builder.Services.AddScoped<CameraConsentService>();
 builder.Services.AddScoped<FamilyScope>();
 builder.Services.AddScoped<DeviceAuthService>();
@@ -536,6 +549,15 @@ app.MapPost("/api/device/override", async (DeviceOverrideRequest request, Claims
         return Results.BadRequest(new { error = ex.Message });
     }
 }).RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = DeviceTokenAuthenticationHandler.SchemeName });
+
+app.MapGet("/api/website-review/favicon", async (string domain, HttpContext context, FamilyScope family, SiteReviewService review, CancellationToken ct) =>
+{
+    await family.RequireAsync(ParentPermissions.WebsiteRules, ct);
+    var icon = await review.GetFaviconAsync(domain, ct);
+    if (icon is null) return Results.NotFound();
+    context.Response.Headers.CacheControl = "private, max-age=604800";
+    return Results.File(icon.Value.Bytes, icon.Value.ContentType);
+}).RequireAuthorization();
 
 app.MapPost("/api/children/{childId:guid}/websites", async (Guid childId, WebsiteRuleRequest request, HttpContext context, IAntiforgery antiforgery, FamilyScope family, RuleService rules, LockService locks, CancellationToken ct) =>
 {

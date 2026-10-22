@@ -445,8 +445,8 @@ public sealed class ChildMessagingPanel : UserControl
         UnreadChanged?.Invoke(_unread);
 
         var wasAtBottom = AtBottom();
-        var rowWidth = Math.Max(260, _thread.ClientSize.Width - _thread.Padding.Horizontal - 14);
-        var maxBubble = Math.Max(180, (int)(rowWidth * 0.62));
+        var rowWidth = ChatLayout.RowWidth(_thread.ClientSize.Width, _thread.Padding.Horizontal);
+        var maxBubble = ChatLayout.MaxBubbleWidth(rowWidth);
         _thread.SuspendLayout();
         try
         {
@@ -484,14 +484,15 @@ public sealed class ChildMessagingPanel : UserControl
             ColumnCount = 2,
             RowCount = 1,
             Width = rowWidth,
+            MinimumSize = new Size(rowWidth, 0),
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             BackColor = Color.Transparent,
             Margin = new Padding(0, 0, 0, 8),
             Padding = new Padding(0)
         };
-        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, own ? 38f : 62f));
-        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, own ? 62f : 38f));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, ChatLayout.FirstColumnPercent(own)));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, ChatLayout.SecondColumnPercent(own)));
 
         var highlight = _highlightId is { } id && id == message.Id && DateTime.UtcNow < _highlightUntil;
         var bubble = new CardPanel
@@ -501,7 +502,7 @@ public sealed class ChildMessagingPanel : UserControl
             MaximumSize = new Size(maxBubble, 0),
             Padding = new Padding(11, 9, 11, 9),
             BackColor = highlight ? Theme.Highlight : own ? Theme.OwnBubble : Theme.ParentBubble,
-            BorderColor = own ? Theme.Line2 : Theme.Line,
+            BorderColor = own ? Theme.OwnBubbleBorder : Theme.ParentBubbleBorder,
             Anchor = own ? AnchorStyles.Right | AnchorStyles.Top : AnchorStyles.Left | AnchorStyles.Top,
             Margin = new Padding(0)
         };
@@ -591,7 +592,7 @@ public sealed class ChildMessagingPanel : UserControl
                 {
                     Text = "✓ " + Loc.T("Client.Messages.Status.Ack"),
                     Font = Theme.Mono(8.5f, FontStyle.Bold),
-                    ForeColor = Theme.Brand,
+                    ForeColor = Theme.BrandText,
                     AutoSize = true,
                     BackColor = Color.Transparent
                 });
@@ -628,7 +629,7 @@ public sealed class ChildMessagingPanel : UserControl
         }
 
         bubble.Controls.Add(inner);
-        row.Controls.Add(bubble, own ? 1 : 0, 0);
+        row.Controls.Add(bubble, ChatLayout.ColumnFor(own), 0);
         return row;
     }
 

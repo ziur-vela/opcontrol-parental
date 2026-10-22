@@ -214,7 +214,9 @@ public sealed record CategoryDeltaDto(
 public sealed record VisitEventDto(
     string Domain,
     DateTime VisitedUtc,
-    bool Blocked);
+    bool Blocked,
+    string? BlockReason = null,
+    int Lookups = 1);
 
 public sealed record VisitBatchRequest(
     IReadOnlyList<VisitEventDto> Visits);

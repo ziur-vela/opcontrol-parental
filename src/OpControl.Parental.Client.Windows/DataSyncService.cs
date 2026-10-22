@@ -36,12 +36,14 @@ public sealed class DataSyncService : BackgroundService
         _logger = logger;
     }
 
-    public void RecordVisit(string registrableDomain, bool blocked)
+    public void RecordVisit(string registrableDomain, bool blocked, string? reason = null)
     {
         if (DomainUtil.IsIgnored(registrableDomain)) return;
+        if (BackgroundDomains.IsBackground(registrableDomain)) return;
         var key = (blocked ? "B:" : "A:") + registrableDomain;
         var now = DateTime.UtcNow;
-        if (_lastVisit.TryGetValue(key, out var last) && now - last < TimeSpan.FromSeconds(60)) return;
+        var window = blocked ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(60);
+        if (_lastVisit.TryGetValue(key, out var last) && now - last < window) return;
         _lastVisit[key] = now;
         if (!blocked)
         {
@@ -55,7 +57,7 @@ public sealed class DataSyncService : BackgroundService
             }
             catch { }
         }
-        AppendLine(ClientPaths.VisitQueueFile, new VisitEventDto(registrableDomain, now, blocked));
+        AppendLine(ClientPaths.VisitQueueFile, new VisitEventDto(registrableDomain, now, blocked, blocked ? reason : null));
     }
 
     public (string Domain, DateTime Utc)? LastAllowedVisit

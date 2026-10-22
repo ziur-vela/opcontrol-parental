@@ -10,29 +10,48 @@ public static class PolicyRules
         string domain,
         TimeZoneInfo tz,
         DateTime nowUtc,
-        Func<string, bool>? isInEnabledCategory = null)
+        Func<string, bool>? isInEnabledCategory = null) =>
+        GetWebsiteBlockReason(state, domain, tz, nowUtc,
+            isInEnabledCategory is null ? null : d => isInEnabledCategory(d) ? "category" : null) is not null;
+
+    /// <summary>
+    /// Returns null when the domain is allowed, otherwise a stable reason code:
+    /// rule:always, rule:schedule or category:&lt;key&gt;. Background/infrastructure
+    /// domains are never blocked by categories.
+    /// </summary>
+    public static string? GetWebsiteBlockReason(
+        DeviceStateDto state,
+        string domain,
+        TimeZoneInfo tz,
+        DateTime nowUtc,
+        Func<string, string?>? enabledCategoryKey = null)
     {
         domain = domain.Trim().TrimEnd('.').ToLowerInvariant();
-        if (domain.Length == 0) return false;
+        if (domain.Length == 0) return null;
 
         if (HasItemBonus(state, "site", domain, nowUtc))
-            return false;
+            return null;
 
         var siteRules = state.WebsiteRules;
         if (siteRules.Any(r => !r.IsBlocked && r.Mode == RuleMode.Always && Matches(r.Domain, domain)))
-            return false;
+            return null;
 
         foreach (var rule in siteRules.Where(r => r.IsBlocked))
         {
             if (!Matches(rule.Domain, domain)) continue;
-            if (rule.Mode == RuleMode.Always || ScheduleActive(state.Schedules, rule.ScheduleId, tz, nowUtc))
-                return true;
+            if (rule.Mode == RuleMode.Always) return "rule:always";
+            if (ScheduleActive(state.Schedules, rule.ScheduleId, tz, nowUtc))
+            {
+                var name = state.Schedules.FirstOrDefault(s => s.Id == rule.ScheduleId)?.Name;
+                return string.IsNullOrWhiteSpace(name) ? "rule:schedule" : "rule:schedule:" + name.Trim();
+            }
         }
 
-        if (isInEnabledCategory is not null && isInEnabledCategory(domain))
-            return true;
+        if (!BackgroundDomains.IsBackground(domain)
+            && enabledCategoryKey is not null && enabledCategoryKey(domain) is { } category && category.Length > 0)
+            return "category:" + category;
 
-        return false;
+        return null;
     }
 
     public static bool IsAppBlocked(DeviceStateDto state, string identity, string? path, TimeZoneInfo tz, DateTime nowUtc)

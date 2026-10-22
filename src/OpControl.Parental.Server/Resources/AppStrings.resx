@@ -1007,4 +1007,56 @@ If you were not expecting this, ignore this email.</value></data>
   <data name="Legal.LicenseName" xml:space="preserve"><value>PolyForm Noncommercial 1.0.0</value></data>
   <data name="Setup.QrAlt" xml:space="preserve"><value>QR code</value></data>
   <data name="Email.Layout.Footer.Copyright" xml:space="preserve"><value>© 2026 Ziur / OpControl IT Solutions · PolyForm Noncommercial 1.0.0</value></data>
+  <data name="Messages.EnterToSend" xml:space="preserve"><value>Press Enter to send</value></data>
+  <data name="Website.Review.Button" xml:space="preserve"><value>Review</value></data>
+  <data name="Website.Review.Title" xml:space="preserve"><value>Website review</value></data>
+  <data name="Website.Review.Eyebrow" xml:space="preserve"><value>Website</value></data>
+  <data name="Website.Review.AdultNotice" xml:space="preserve"><value>This site is in the Adult content list. The link is hidden until you confirm. The favicon and page details were not loaded.</value></data>
+  <data name="Website.Review.VisitWithWarning" xml:space="preserve"><value>I understand — show the link</value></data>
+  <data name="Website.Review.Categories" xml:space="preserve"><value>Category lists</value></data>
+  <data name="Website.Review.NoCategories" xml:space="preserve"><value>None</value></data>
+  <data name="Website.Review.BlockedBy" xml:space="preserve"><value>Blocked by</value></data>
+  <data name="Website.Review.NotBlocked" xml:space="preserve"><value>Not blocked</value></data>
+  <data name="Website.Review.Visits7" xml:space="preserve"><value>Visits (7 days)</value></data>
+  <data name="Website.Review.Lookups7" xml:space="preserve"><value>DNS lookups (7 days)</value></data>
+  <data name="Website.Review.FirstSeen" xml:space="preserve"><value>First seen</value></data>
+  <data name="Website.Review.LastSeen" xml:space="preserve"><value>Last seen</value></data>
+  <data name="Website.Review.Visit" xml:space="preserve"><value>Visit site</value></data>
+  <data name="Website.Review.BlockAlways" xml:space="preserve"><value>Block always</value></data>
+  <data name="Website.Review.BlockSchedule" xml:space="preserve"><value>Block during schedule</value></data>
+  <data name="Website.Review.Invalid" xml:space="preserve"><value>This is not a valid website address.</value></data>
+  <data name="Website.Review.Unreachable" xml:space="preserve"><value>The site could not be reached.</value></data>
+  <data name="Website.Review.Timeout" xml:space="preserve"><value>The site took too long to answer (5 seconds).</value></data>
+  <data name="Website.Review.TooLarge" xml:space="preserve"><value>The page is larger than 512 KB.</value></data>
+  <data name="Website.Review.Redirects" xml:space="preserve"><value>The site redirected more than three times.</value></data>
+  <data name="Website.Review.NotHtml" xml:space="preserve"><value>This address is not an HTML page.</value></data>
+  <data name="SiteReview.Purpose.WhatsApp" xml:space="preserve"><value>WhatsApp: messaging app owned by Meta.</value></data>
+  <data name="SiteReview.Purpose.KhanAcademy" xml:space="preserve"><value>Khan Academy: free non-profit lessons and practice.</value></data>
+  <data name="SiteReview.Purpose.YouTube" xml:space="preserve"><value>YouTube: video platform owned by Google.</value></data>
+  <data name="SiteReview.Purpose.TikTok" xml:space="preserve"><value>TikTok: short-video social app owned by ByteDance.</value></data>
+  <data name="SiteReview.Purpose.Instagram" xml:space="preserve"><value>Instagram: photo and video sharing app owned by Meta.</value></data>
+  <data name="SiteReview.Purpose.Facebook" xml:space="preserve"><value>Facebook: social network owned by Meta.</value></data>
+  <data name="SiteReview.Purpose.Discord" xml:space="preserve"><value>Discord: group chat and voice app popular with gamers.</value></data>
+  <data name="SiteReview.Purpose.Roblox" xml:space="preserve"><value>Roblox: game platform and creator community.</value></data>
+  <data name="SiteReview.Purpose.Minecraft" xml:space="preserve"><value>Minecraft: block-building game by Mojang/Microsoft.</value></data>
+  <data name="SiteReview.Purpose.Netflix" xml:space="preserve"><value>Netflix: subscription streaming service.</value></data>
+  <data name="SiteReview.Purpose.Spotify" xml:space="preserve"><value>Spotify: music and podcast streaming service.</value></data>
+  <data name="SiteReview.Purpose.Wikipedia" xml:space="preserve"><value>Wikipedia: free online encyclopedia.</value></data>
+  <data name="SiteReview.Purpose.Google" xml:space="preserve"><value>Google: search engine and online services.</value></data>
+  <data name="SiteReview.Purpose.Scratch" xml:space="preserve"><value>Scratch: block-based coding community by MIT.</value></data>
+  <data name="SiteReview.Purpose.Duolingo" xml:space="preserve"><value>Duolingo: language-learning app.</value></data>
+  <data name="SiteReview.Purpose.Twitch" xml:space="preserve"><value>Twitch: live streaming platform owned by Amazon.</value></data>
+  <data name="BlockReason.Category" xml:space="preserve"><value>Blocked by: {0} category</value></data>
+  <data name="BlockReason.RuleAlways" xml:space="preserve"><value>Blocked by: rule (always)</value></data>
+  <data name="BlockReason.RuleSchedule" xml:space="preserve"><value>Blocked by: schedule {0}</value></data>
+  <data name="BlockReason.RuleScheduleGeneric" xml:space="preserve"><value>Blocked by: schedule</value></data>
+  <data name="BlockReason.Unknown" xml:space="preserve"><value>Blocked by: category or rule</value></data>
+  <data name="BlockReason.Doh" xml:space="preserve"><value>Blocked by: DNS-over-HTTPS protection</value></data>
+  <data name="BlockReason.UnknownShort" xml:space="preserve"><value>unknown</value></data>
+  <data name="BlockReason.RuleAlwaysShort" xml:space="preserve"><value>rule (always)</value></data>
+  <data name="BlockReason.RuleScheduleShort" xml:space="preserve"><value>schedule</value></data>
+  <data name="BlockReason.CategoryShort" xml:space="preserve"><value>{0} category</value></data>
+  <data name="Alert.RepeatedBlocked.DetailReason" xml:space="preserve"><value>{1} blocked attempts to {0} on {2}. {3}</value></data>
+  <data name="Settings.RepeatedBlockHours" xml:space="preserve"><value>Repeated blocked-attempt alerts (hours, 1 to 24)</value></data>
+  <data name="Settings.RepeatedBlockHoursHelp" xml:space="preserve"><value>One alert per domain and device in this window. The alert shows the total attempts.</value></data>
 </root>

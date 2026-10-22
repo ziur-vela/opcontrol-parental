@@ -82,6 +82,7 @@
             </label>
             <label class="field"><span>@L["Settings.FromAddress"]</span><input @bind="_from" disabled="@(!_isOwner)" placeholder="parental@example.com" /></label>
             <label class="field"><span>@L["Settings.OfflineAfter"]</span><input type="number" min="5" max="1440" @bind="_offlineMinutes" disabled="@(!_isOwner)" /></label>
+            <label class="field"><span>@L["Settings.RepeatedBlockHours"]</span><input type="number" min="1" max="24" @bind="_repeatedBlockHours" disabled="@(!_isOwner)" /><span class="muted tiny">@L["Settings.RepeatedBlockHoursHelp"]</span></label>
         </div>
         <label class="check"><input type="checkbox" @bind="_useSsl" disabled="@(!_isOwner)" /> @L["Settings.UseSsl"]</label>
         @if (_isOwner)
@@ -189,6 +190,7 @@
     private string? _from;
     private int _offlineMinutes = 120;
     private int _installLinkMinutes = 1440;
+    private int _repeatedBlockHours = 6;
     private bool _hasPassword;
     private bool _hasPin;
     private string? _childName;
@@ -229,6 +231,7 @@
         _from = settings.FromAddress;
         _offlineMinutes = settings.OfflineAlertMinutes;
         _installLinkMinutes = settings.InstallLinkMinutes;
+        _repeatedBlockHours = settings.RepeatedBlockAlertHours;
         _noticeText = settings.NoticeText == "Parent's watching you" ? "" : settings.NoticeText;
         _hasPassword = !string.IsNullOrWhiteSpace(settings.SmtpPasswordProtected);
         var db = dbLanguages;
@@ -358,7 +361,7 @@
         {
             using var scope = Scopes.CreateScope();
             var alerts = scope.ServiceProvider.GetRequiredService<AlertService>();
-            await alerts.SaveSettingsAsync(_familyId, _enabled, _host, _port, _useSsl, _username, _password, _from, _offlineMinutes, _installLinkMinutes);
+            await alerts.SaveSettingsAsync(_familyId, _enabled, _host, _port, _useSsl, _username, _password, _from, _offlineMinutes, _installLinkMinutes, _repeatedBlockHours);
             _hasPassword |= !string.IsNullOrWhiteSpace(_password);
             _password = null;
             _saved = true;

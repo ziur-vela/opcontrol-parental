@@ -966,6 +966,11 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.Property<int>("OfflineAlertMinutes")
                         .HasColumnType("integer");
 
+                    b.Property<int>("RepeatedBlockAlertHours")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(6);
+
                     b.Property<string>("SmtpHost")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
@@ -1338,6 +1343,11 @@ namespace OpControl.Parental.Server.Data.Migrations
 
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean");
+
+                    b.Property<bool>("EnterToSend")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
                     b.Property<Guid>("FamilyId")
                         .HasColumnType("uuid");
@@ -1847,8 +1857,15 @@ namespace OpControl.Parental.Server.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("BlockReason")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
                     b.Property<bool>("Blocked")
                         .HasColumnType("boolean");
+
+                    b.Property<int>("BlockedLookups")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("ChildId")
                         .HasColumnType("uuid");
@@ -1863,6 +1880,11 @@ namespace OpControl.Parental.Server.Data.Migrations
 
                     b.Property<Guid>("FamilyId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("Lookups")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
 
                     b.Property<DateTime>("VisitedUtc")
                         .HasColumnType("timestamp with time zone");

@@ -23,8 +23,11 @@ internal static class Theme
     public static Color BrandDark = Color.FromArgb(4, 21, 11);
     public static Color Danger = Color.FromArgb(229, 96, 79);
     public static Color Warn = Color.FromArgb(231, 176, 74);
-    public static Color OwnBubble = Color.FromArgb(19, 48, 42);
-    public static Color ParentBubble = Color.FromArgb(17, 36, 32);
+    public static Color OwnBubble = Color.FromArgb(18, 38, 58);
+    public static Color OwnBubbleBorder = Color.FromArgb(36, 71, 106);
+    public static Color ParentBubble = Color.FromArgb(19, 48, 42);
+    public static Color ParentBubbleBorder = Color.FromArgb(42, 74, 66);
+    public static Color BrandText = Color.FromArgb(0, 200, 83);
     public static Color Highlight = Color.FromArgb(27, 58, 50);
     public static bool IsLight { get; private set; }
 
@@ -44,11 +47,14 @@ internal static class Theme
             Label = Color.FromArgb(161, 63, 37);
             Value = Color.FromArgb(11, 107, 87);
             Brand = Color.FromArgb(0, 200, 83);
+            BrandText = Color.FromArgb(0, 122, 61);
             BrandDark = Color.FromArgb(4, 21, 11);
             Danger = Color.FromArgb(178, 58, 45);
             Warn = Color.FromArgb(138, 97, 12);
-            OwnBubble = Color.FromArgb(227, 244, 236);
-            ParentBubble = Color.FromArgb(245, 248, 245);
+            OwnBubble = Color.FromArgb(227, 238, 250);
+            OwnBubbleBorder = Color.FromArgb(185, 210, 238);
+            ParentBubble = Color.FromArgb(227, 244, 234);
+            ParentBubbleBorder = Color.FromArgb(188, 220, 200);
             Highlight = Color.FromArgb(209, 238, 225);
         }
         else
@@ -67,8 +73,11 @@ internal static class Theme
             BrandDark = Color.FromArgb(4, 21, 11);
             Danger = Color.FromArgb(229, 96, 79);
             Warn = Color.FromArgb(231, 176, 74);
-            OwnBubble = Color.FromArgb(19, 48, 42);
-            ParentBubble = Color.FromArgb(17, 36, 32);
+            OwnBubble = Color.FromArgb(18, 38, 58);
+            OwnBubbleBorder = Color.FromArgb(36, 71, 106);
+            ParentBubble = Color.FromArgb(19, 48, 42);
+            ParentBubbleBorder = Color.FromArgb(42, 74, 66);
+            BrandText = Color.FromArgb(0, 200, 83);
             Highlight = Color.FromArgb(27, 58, 50);
         }
     }

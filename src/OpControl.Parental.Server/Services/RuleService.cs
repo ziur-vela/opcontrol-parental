@@ -310,36 +310,131 @@ public sealed class RuleService
     public async Task SyncVisitsAsync(Device device, VisitBatchRequest request, CancellationToken ct = default)
     {
         var now = DateTime.UtcNow;
-        var rows = request.Visits
+        var incoming = request.Visits
             .Where(v => !string.IsNullOrWhiteSpace(v.Domain) && v.Domain.Length <= 255)
-            .GroupBy(v => new { v.Domain, v.Blocked, Minute = new DateTime(v.VisitedUtc.Ticks - v.VisitedUtc.Ticks % TimeSpan.TicksPerMinute, DateTimeKind.Utc) })
-            .Select(g => g.First())
-            .Take(2000)
-            .Select(v => new VisitRecord
+            .Select(v => new
             {
-                FamilyId = device.FamilyId,
-                ChildId = device.ChildId,
-                DeviceId = device.Id,
-                Domain = v.Domain.Trim().ToLowerInvariant(),
-                Blocked = v.Blocked,
-                VisitedUtc = v.VisitedUtc.Kind == DateTimeKind.Utc ? v.VisitedUtc : v.VisitedUtc.ToUniversalTime()
+                Domain = v.Domain.Trim().TrimEnd('.').ToLowerInvariant(),
+                VisitedUtc = v.VisitedUtc.Kind == DateTimeKind.Utc ? v.VisitedUtc : v.VisitedUtc.ToUniversalTime(),
+                v.Blocked,
+                v.BlockReason,
+                Lookups = Math.Clamp(v.Lookups, 1, 10_000)
             })
+            .Where(v => !BackgroundDomains.IsBackground(v.Domain))
+            .Take(5000)
             .ToList();
-        if (rows.Count == 0) return;
-        _db.VisitRecords.AddRange(rows);
+        if (incoming.Count == 0) return;
+
+        var touched = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var group in incoming.GroupBy(v => v.Domain, StringComparer.OrdinalIgnoreCase))
+        {
+            var domain = group.Key;
+            var last = await _db.VisitRecords
+                .Where(v => v.DeviceId == device.Id && v.Domain == domain)
+                .OrderByDescending(v => v.VisitedUtc)
+                .FirstOrDefaultAsync(ct);
+            foreach (var item in group.OrderBy(v => v.VisitedUtc))
+            {
+                var reason = item.Blocked ? item.BlockReason : null;
+                if (item.Blocked && string.IsNullOrWhiteSpace(reason))
+                    reason = await ResolveBlockReasonAsync(device, domain, ct);
+                if (last is not null && item.VisitedUtc >= last.VisitedUtc
+                    && item.VisitedUtc - last.VisitedUtc < TimeSpan.FromMinutes(5))
+                {
+                    last.Lookups += item.Lookups;
+                    if (item.Blocked)
+                    {
+                        last.Blocked = true;
+                        last.BlockedLookups += item.Lookups;
+                        if (!string.IsNullOrWhiteSpace(reason)) last.BlockReason = reason;
+                    }
+                }
+                else
+                {
+                    last = new VisitRecord
+                    {
+                        FamilyId = device.FamilyId,
+                        ChildId = device.ChildId,
+                        DeviceId = device.Id,
+                        Domain = domain,
+                        Blocked = item.Blocked,
+                        BlockReason = reason,
+                        Lookups = item.Lookups,
+                        BlockedLookups = item.Blocked ? item.Lookups : 0,
+                        VisitedUtc = item.VisitedUtc
+                    };
+                    _db.VisitRecords.Add(last);
+                }
+                touched.Add(domain);
+            }
+        }
         await _db.SaveChangesAsync(ct);
 
-        var since = now.AddMinutes(-10);
-        var blockedDomains = rows.Where(r => r.Blocked).Select(r => r.Domain).Distinct().ToList();
-        foreach (var domain in blockedDomains)
+        var settings = await _db.FamilySettings.AsNoTracking().FirstOrDefaultAsync(s => s.FamilyId == device.FamilyId, ct);
+        var hours = Math.Clamp(settings?.RepeatedBlockAlertHours ?? 6, 1, 24);
+        var since = now.AddHours(-hours);
+        foreach (var domain in touched)
         {
-            var attempts = await _db.VisitRecords.AsNoTracking()
-                .CountAsync(v => v.FamilyId == device.FamilyId && v.ChildId == device.ChildId && v.Domain == domain && v.Blocked && v.VisitedUtc >= since, ct);
+            var recent = await _db.VisitRecords.AsNoTracking()
+                .Where(v => v.FamilyId == device.FamilyId && v.ChildId == device.ChildId
+                    && v.DeviceId == device.Id && v.Domain == domain && v.Blocked && v.VisitedUtc >= since)
+                .Select(v => new { v.Lookups, v.BlockedLookups, v.BlockReason })
+                .ToListAsync(ct);
+            var attempts = recent.Sum(v => Math.Max(1, v.BlockedLookups > 0 ? v.BlockedLookups : v.Lookups));
             if (attempts < 5) continue;
+            var already = (await _db.Alerts.AsNoTracking()
+                .Where(a => a.FamilyId == device.FamilyId && a.ChildId == device.ChildId && a.DeviceId == device.Id
+                    && a.Type == "repeated-blocked-site" && a.CreatedUtc >= since)
+                .Select(a => a.ArgsJson)
+                .ToListAsync(ct))
+                .Any(args => args is not null && args.Contains(domain, StringComparison.OrdinalIgnoreCase));
+            if (already) continue;
+            var reason = recent.Select(v => v.BlockReason).FirstOrDefault(r => !string.IsNullOrWhiteSpace(r)) ?? "unknown";
             await _alerts.AddAsync(device.FamilyId, device.ChildId, device.Id, "repeated-blocked-site",
-                new AlertContent("Alert.RepeatedBlocked.Title", "Alert.RepeatedBlocked.Detail",
-                    domain, attempts.ToString(), device.Name),
-                TimeSpan.FromHours(1), ct);
+                new AlertContent("Alert.RepeatedBlocked.Title", "Alert.RepeatedBlocked.DetailReason",
+                    domain, attempts.ToString(), device.Name, reason),
+                null, ct);
+        }
+    }
+
+    private async Task<string> ResolveBlockReasonAsync(Device device, string domain, CancellationToken ct)
+    {
+        var parents = Parents(domain).ToList();
+        var rules = await _db.WebsiteRules.AsNoTracking()
+            .Where(r => r.FamilyId == device.FamilyId && r.ChildId == device.ChildId && parents.Contains(r.Domain))
+            .ToListAsync(ct);
+        if (rules.Any(r => !r.IsBlocked)) return "unknown";
+        foreach (var rule in rules.Where(r => r.IsBlocked))
+        {
+            if (rule.Mode == RuleMode.Always) return "rule:always";
+            if (rule.ScheduleId is { } id)
+            {
+                var name = await _db.Schedules.AsNoTracking().Where(s => s.Id == id).Select(s => s.Name).FirstOrDefaultAsync(ct);
+                return string.IsNullOrWhiteSpace(name) ? "rule:schedule" : "rule:schedule:" + name;
+            }
+        }
+        var enabled = await _db.ChildCategories.AsNoTracking()
+            .Where(c => c.FamilyId == device.FamilyId && c.ChildId == device.ChildId && c.Enabled)
+            .Select(c => c.CategoryKey)
+            .ToListAsync(ct);
+        foreach (var key in enabled)
+        {
+            if (await _db.CategoryDomains.AsNoTracking().AnyAsync(d => d.CategoryKey == key
+                && d.RemovedVersion == null && parents.Contains(d.Domain), ct))
+                return "category:" + key;
+        }
+        return "unknown";
+    }
+
+    private static IEnumerable<string> Parents(string domain)
+    {
+        var value = (domain ?? "").Trim().TrimEnd('.').ToLowerInvariant();
+        while (value.Length > 0)
+        {
+            yield return value;
+            var dot = value.IndexOf('.');
+            if (dot < 0) break;
+            value = value[(dot + 1)..];
         }
     }
 

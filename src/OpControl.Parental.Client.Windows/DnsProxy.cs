@@ -184,7 +184,7 @@ public sealed class DnsProxy
                 if (!await ReadExactAsync(stream, query, ct)) return;
 
                 byte[]? response;
-                if (TryGetBlocked(query, out var blockResponse, out _))
+                if (TryGetBlocked(query, out var blockResponse, out _, out _))
                     response = blockResponse;
                 else
                     response = await ForwardTcpAsync(query, ct);
@@ -204,10 +204,10 @@ public sealed class DnsProxy
 
     private async Task<byte[]?> HandleAsync(byte[] query, CancellationToken ct)
     {
-        if (TryGetBlocked(query, out var blocked, out var question))
+        if (TryGetBlocked(query, out var blocked, out var question, out var reason))
         {
             if (question is not null && DomainUtil.GetRegistrableDomain(question.Name) is { } registrable)
-                _sync.RecordVisit(registrable, true);
+                _sync.RecordVisit(registrable, true, reason);
             return blocked;
         }
 
@@ -225,33 +225,35 @@ public sealed class DnsProxy
         return forwarded;
     }
 
-    private bool TryGetBlocked(byte[] query, out byte[]? response, out DnsQuestion? question)
+    private bool TryGetBlocked(byte[] query, out byte[]? response, out DnsQuestion? question, out string? reason)
     {
         response = null;
         question = null;
+        reason = null;
         if (!DnsPacket.TryParseQuestion(query, out var parsed)) return false;
         question = parsed;
-        if (!IsBlocked(parsed.Name)) return false;
+        reason = GetBlockReason(parsed.Name);
+        if (reason is null) return false;
         response = DnsPacket.BuildBlockedResponse(query, parsed);
         return true;
     }
 
-    private bool IsBlocked(string name)
+    private string? GetBlockReason(string name)
     {
         name = name.Trim().TrimEnd('.').ToLowerInvariant();
-        if (name.Length == 0) return false;
-        if (DomainUtil.SetContainsDomainOrParent(DohDomains, name)) return true;
+        if (name.Length == 0) return null;
+        if (DomainUtil.SetContainsDomainOrParent(DohDomains, name)) return "doh";
 
         var state = _runtime.DeviceState;
-        if (state is null) return false;
+        if (state is null) return null;
         try
         {
-            return PolicyRules.IsWebsiteBlocked(state, name, TimeZoneInfo.Local, DateTime.UtcNow,
-                domain => _categories.IsInEnabledCategory(domain, state.Categories));
+            return PolicyRules.GetWebsiteBlockReason(state, name, TimeZoneInfo.Local, DateTime.UtcNow,
+                domain => _categories.GetEnabledCategory(domain, state.Categories));
         }
         catch
         {
-            return false;
+            return null;
         }
     }
 

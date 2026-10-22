@@ -40,6 +40,11 @@ public static class AlertText
         if (string.IsNullOrWhiteSpace(alert.TitleKey))
             return RenderLegacy(alert, language);
         var args = ParseArgs(alert.ArgsJson);
+        if (alert.DetailKey == "Alert.RepeatedBlocked.DetailReason" && args.Length >= 4)
+        {
+            args = (string[])args.Clone();
+            args[3] = BlockReasonText.Describe(args[3], language);
+        }
         var title = AppText.GetArgs(alert.TitleKey, language, args);
         var detail = string.IsNullOrWhiteSpace(alert.DetailKey) ? "" : AppText.GetArgs(alert.DetailKey, language, args);
         return (title, detail);

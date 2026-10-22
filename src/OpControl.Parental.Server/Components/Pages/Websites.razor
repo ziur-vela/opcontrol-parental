@@ -92,7 +92,7 @@ else
                                     @L[site.Count == 1 ? "Common.VisitCount" : "Common.VisitCountPlural", site.Count] · @L["Websites.LastVisit", FormatLocal(site.LastUtc)]
                                     @if (site.BlockedAttempts > 0)
                                     {
-                                        <span> · @BlockedAttempts(site.BlockedAttempts)</span>
+                                        <span> · @BlockedAttempts(site.BlockedAttempts) · @BlockReasonText.Describe(site.BlockReason)</span>
                                     }
                                     @if (site.IsNewThisWeek)
                                     {
@@ -101,6 +101,7 @@ else
                                 </div>
                             </div>
                             <div class="rule-actions">
+                                <button class="ghost-btn" @onclick="() => OpenReviewAsync(site.Domain)">@L["Website.Review.Button"]</button>
                                 @if (site.IsBlocked)
                                 {
                                     <span class="state-pill blocked">@L["Common.Blocked"]</span>
@@ -143,6 +144,7 @@ else
                             <div class="muted tiny">@L["Websites.Since", FormatLocal(rule.UpdatedUtc)]</div>
                         </div>
                         <div class="rule-actions">
+                            <button class="ghost-btn" @onclick="() => OpenReviewAsync(rule.Domain)">@L["Website.Review.Button"]</button>
                             <button class="ghost-btn" @onclick="() => BonusAsync(rule.Domain, 15)">@L["Home.Bonus15"]</button>
                             <button class="ghost-btn" @onclick="() => RemoveRuleAsync(rule.Id)">@L["Websites.Unblock"]</button>
                         </div>
@@ -164,6 +166,7 @@ else
                             <div class="muted tiny">@ScheduleName(rule.ScheduleId)</div>
                         </div>
                         <div class="rule-actions">
+                            <button class="ghost-btn" @onclick="() => OpenReviewAsync(rule.Domain)">@L["Website.Review.Button"]</button>
                             <button class="ghost-btn" @onclick="() => RemoveRuleAsync(rule.Id)">@L["Websites.Unblock"]</button>
                         </div>
                     </div>
@@ -184,6 +187,7 @@ else
                             <div class="muted tiny">@L["Websites.Overrides"]</div>
                         </div>
                         <div class="rule-actions">
+                            <button class="ghost-btn" @onclick="() => OpenReviewAsync(rule.Domain)">@L["Website.Review.Button"]</button>
                             <button class="ghost-btn" @onclick="() => BlockSiteAsync(rule.Domain, RuleMode.Always, null)">@L["Common.Block"]</button>
                         </div>
                     </div>
@@ -242,6 +246,91 @@ else
     </section>
 }
 
+    @if (_review is not null || _reviewLoading)
+    {
+        <div class="review-backdrop" @onclick="CloseReview"></div>
+        <aside class="review-panel" role="dialog" aria-modal="true" aria-label="@L["Website.Review.Title"]">
+            <div class="review-head">
+                <div>
+                    <div class="eyebrow">@L["Website.Review.Eyebrow"]</div>
+                    <h2>@(_review?.Domain ?? "…")</h2>
+                </div>
+                <button type="button" class="icon-btn" aria-label="@L["Common.Close"]" @onclick="CloseReview">×</button>
+            </div>
+            @if (_reviewLoading)
+            {
+                <div class="skeleton-line"></div><div class="skeleton-line short"></div>
+            }
+            else if (_review is not null)
+            {
+                @if (_adultConfirmed || !_review.IsAdult)
+                {
+                    <div class="review-site">
+                        @if (_review.FaviconUrl is not null)
+                        {
+                            <img class="review-favicon" src="@FaviconUrl(_review.Domain)" alt="" width="24" height="24" />
+                        }
+                        <div>
+                            <div class="rule-title">@(_review.Title ?? _review.Domain)</div>
+                            @if (_review.Description is not null)
+                            {
+                                <p class="muted tiny">@_review.Description</p>
+                            }
+                        </div>
+                    </div>
+                    @if (_review.FetchError is not null)
+                    {
+                        <p class="muted tiny">@L[_review.FetchError]</p>
+                    }
+                }
+                @if (_review.IsAdult && !_adultConfirmed)
+                {
+                    <div class="alert danger">@L["Website.Review.AdultNotice"]</div>
+                }
+                @if (_review.KnownPurposeKey is not null)
+                {
+                    <p class="muted tiny">@L[_review.KnownPurposeKey]</p>
+                }
+                <div class="review-meta">
+                    <div class="review-line"><span class="muted">@L["Website.Review.Categories"]</span>
+                        <span>@(_review.Categories.Count == 0 ? L["Website.Review.NoCategories"].Value : string.Join(", ", _review.Categories.Select(CategoryName)))</span>
+                    </div>
+                    <div class="review-line"><span class="muted">@L["Website.Review.BlockedBy"]</span>
+                        <span>@(_review.BlockReason is null ? L["Website.Review.NotBlocked"].Value : BlockReasonText.Describe(_review.BlockReason))</span>
+                    </div>
+                    <div class="review-line"><span class="muted">@L["Website.Review.Visits7"]</span><span>@_review.VisitCount</span></div>
+                    <div class="review-line"><span class="muted">@L["Website.Review.Lookups7"]</span><span>@_review.LookupCount</span></div>
+                    <div class="review-line"><span class="muted">@L["Website.Review.FirstSeen"]</span><span>@FormatOptional(_review.FirstSeenUtc)</span></div>
+                    <div class="review-line"><span class="muted">@L["Website.Review.LastSeen"]</span><span>@FormatOptional(_review.LastSeenUtc)</span></div>
+                </div>
+                <div class="review-actions">
+                    @if (_review.IsAdult && !_adultConfirmed)
+                    {
+                        <button type="button" class="btn btn-ghost" @onclick="() => _adultConfirmed = true">@L["Website.Review.VisitWithWarning"]</button>
+                    }
+                    else
+                    {
+                        <a class="btn btn-ghost" href="@("https://" + _review.Domain)" target="_blank" rel="noopener noreferrer">@L["Website.Review.Visit"]</a>
+                    }
+                    <button type="button" class="btn btn-accent" @onclick="() => BlockSiteAsync(_review.Domain, RuleMode.Always, null)">@L["Website.Review.BlockAlways"]</button>
+                    <div class="review-schedule">
+                        <select class="mini-input" @bind="_reviewScheduleId">
+                            <option value="">@L["Websites.SchedulePlaceholder"]</option>
+                            @foreach (var schedule in _schedules)
+                            {
+                                <option value="@schedule.Id">@schedule.Name</option>
+                            }
+                        </select>
+                        <button type="button" class="ghost-btn" disabled="@(string.IsNullOrEmpty(_reviewScheduleId))"
+                                @onclick="BlockDuringScheduleAsync">@L["Website.Review.BlockSchedule"]</button>
+                    </div>
+                    <button type="button" class="ghost-btn" @onclick="() => AllowSiteAsync(_review.Domain)">@L["Common.Allow"]</button>
+                    <button type="button" class="ghost-btn" @onclick="UnblockReviewAsync">@L["Websites.Unblock"]</button>
+                </div>
+            }
+        </aside>
+    }
+
 @code {
     private static readonly (string Key, string LabelKey)[] Filters =
     [
@@ -257,6 +346,7 @@ else
         public int Count { get; init; }
         public DateTime LastUtc { get; init; }
         public int BlockedAttempts { get; init; }
+        public string? BlockReason { get; init; }
         public bool IsBlocked { get; init; }
         public bool IsAllowed { get; init; }
         public Guid RuleId { get; init; }
@@ -280,6 +370,10 @@ else
     private List<RuleHistoryDto> _history = [];
     private List<SiteRow> _allSites = [];
     private List<SiteRow> _filteredSites = [];
+    private SiteReviewResult? _review;
+    private bool _reviewLoading;
+    private bool _adultConfirmed;
+    private string _reviewScheduleId = "";
 
     private List<SiteRow> FilteredSites => _filteredSites;
 
@@ -381,7 +475,8 @@ else
                 Domain = domain,
                 Count = group.Count(),
                 LastUtc = group.Max(v => v.VisitedUtc),
-                BlockedAttempts = group.Count(v => v.Blocked),
+                BlockedAttempts = group.Sum(v => v.BlockedLookups > 0 ? v.BlockedLookups : v.Blocked ? Math.Max(1, v.Lookups) : 0),
+                BlockReason = group.Where(v => v.Blocked).Select(v => v.BlockReason).FirstOrDefault(r => !string.IsNullOrWhiteSpace(r)),
                 IsBlocked = blocked,
                 IsAllowed = allowed,
                 RuleId = rule?.Id ?? Guid.Empty,
@@ -458,6 +553,55 @@ else
             await db.SaveChangesAsync();
         });
     }
+
+    private async Task OpenReviewAsync(string domain)
+    {
+        _reviewLoading = true;
+        _review = null;
+        _adultConfirmed = false;
+        _reviewScheduleId = "";
+        _error = null;
+        StateHasChanged();
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var review = scope.ServiceProvider.GetRequiredService<SiteReviewService>();
+            _review = await review.GetAsync(_familyId, _childId, domain);
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _reviewLoading = false; }
+    }
+
+    private void CloseReview()
+    {
+        _review = null;
+        _reviewLoading = false;
+        _adultConfirmed = false;
+    }
+
+    private async Task BlockDuringScheduleAsync()
+    {
+        if (_review is null || !Guid.TryParse(_reviewScheduleId, out var scheduleId)) return;
+        var domain = _review.Domain;
+        await BlockSiteAsync(domain, RuleMode.Scheduled, scheduleId);
+        await OpenReviewAsync(domain);
+    }
+
+    private async Task UnblockReviewAsync()
+    {
+        if (_review is null) return;
+        var domain = _review.Domain;
+        var rule = _rules.FirstOrDefault(r => r.IsBlocked && r.Domain == domain)
+            ?? _rules.FirstOrDefault(r => r.IsBlocked && domain.EndsWith("." + r.Domain, StringComparison.OrdinalIgnoreCase));
+        if (rule is not null) await RemoveRuleAsync(rule.Id);
+        await OpenReviewAsync(domain);
+    }
+
+    private string FaviconUrl(string domain) => "/api/website-review/favicon?domain=" + Uri.EscapeDataString(domain);
+
+    private string CategoryName(string key) => CategoryText.Name(key, key);
+
+    private string FormatOptional(DateTime? utc) => utc is null ? "—" : FormatLocal(utc.Value);
 
     private async Task RunAsync(Func<ParentalDbContext, RuleService, Guid?, Task> action)
     {

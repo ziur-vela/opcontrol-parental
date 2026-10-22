@@ -38,10 +38,7 @@ public sealed class RemoteSessionService
         if (kind == RemoteSessionKind.Camera && !await _consent.HasAcceptedAsync(parentId, ct))
             throw new InvalidOperationException(AppText.Get("Error.CameraConsent"));
         var now = DateTime.UtcNow;
-        var busy = await _db.RemoteSessions.AsNoTracking().AnyAsync(s => s.DeviceId == deviceId
-            && (s.Status == RemoteSessionStatus.Requested || s.Status == RemoteSessionStatus.Active)
-            && s.CreatedUtc > now.AddMinutes(-11), ct);
-        if (busy) throw new InvalidOperationException(AppText.Get("Error.RemoteBusy"));
+        await EndExistingForDeviceAsync(deviceId, ct);
 
         var showNotice = kind == RemoteSessionKind.Screen ? device.ScreenNoticeEnabled : device.CameraNoticeEnabled;
         var familySettings = await _db.FamilySettings.AsNoTracking().FirstOrDefaultAsync(s => s.FamilyId == familyId, ct);
@@ -70,6 +67,19 @@ public sealed class RemoteSessionService
             new RemoteSessionRequest(session.Id, deviceId, device.ChildId, kind, showNotice, noticeText), ct);
         _logger.LogInformation("Remote {Kind} session {SessionId} requested for device {DeviceId} by parent {ParentId}", kind, session.Id, deviceId, parentId);
         return new RemoteSessionCreatedDto(session.Id, deviceId, device.ChildId, kind, session.CreatedUtc, now.AddMinutes(10));
+    }
+
+    public async Task EndExistingForDeviceAsync(Guid deviceId, CancellationToken ct = default)
+    {
+        var existing = await _db.RemoteSessions.AsNoTracking()
+            .Where(s => s.DeviceId == deviceId && (s.Status == RemoteSessionStatus.Requested || s.Status == RemoteSessionStatus.Active))
+            .Select(s => s.Id)
+            .ToListAsync(ct);
+        foreach (var id in existing)
+        {
+            if (_registry.Contains(id)) await _registry.StopAsync(id, "replaced", ct);
+            else await EndAsync(id, "replaced", ct);
+        }
     }
 
     public async Task StopAsync(Guid sessionId, Guid? familyId, string reason, CancellationToken ct = default)
@@ -113,6 +123,7 @@ public sealed class RemoteSessionRegistry
         public WebSocket? Parent;
         public WebSocket? Device;
         public DateTime ExpiresUtc;
+        public DateTime LastParentSeenUtc = DateTime.UtcNow;
         public TaskCompletionSource Closed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public int Started;
         public int Stopped;
@@ -121,11 +132,16 @@ public sealed class RemoteSessionRegistry
     private readonly ConcurrentDictionary<Guid, Entry> _entries = new();
     private readonly IServiceScopeFactory _scopes;
     private readonly ILogger<RemoteSessionRegistry> _logger;
+    private readonly TimeSpan _heartbeatTimeout;
+    private readonly TimeSpan _watchdogInterval;
 
-    public RemoteSessionRegistry(IServiceScopeFactory scopes, ILogger<RemoteSessionRegistry> logger)
+    public RemoteSessionRegistry(IServiceScopeFactory scopes, ILogger<RemoteSessionRegistry> logger,
+        TimeSpan? heartbeatTimeout = null, TimeSpan? watchdogInterval = null)
     {
         _scopes = scopes;
         _logger = logger;
+        _heartbeatTimeout = heartbeatTimeout ?? TimeSpan.FromSeconds(30);
+        _watchdogInterval = watchdogInterval ?? TimeSpan.FromSeconds(5);
     }
 
     public void Ensure(Guid id, DateTime expiresUtc)
@@ -147,7 +163,9 @@ public sealed class RemoteSessionRegistry
             return;
         }
         entry.Parent = socket;
+        entry.LastParentSeenUtc = DateTime.UtcNow;
         StartIfReady(entry);
+        _ = Task.Run(() => WatchdogAsync(entry));
         try
         {
             await MonitorParentAsync(entry, ct);
@@ -225,6 +243,7 @@ public sealed class RemoteSessionRegistry
             while (entry.Parent is { State: WebSocketState.Open } parent)
             {
                 var result = await parent.ReceiveAsync(buffer, ct);
+                entry.LastParentSeenUtc = DateTime.UtcNow;
                 if (result.MessageType == WebSocketMessageType.Close) break;
                 if (result.MessageType == WebSocketMessageType.Text)
                 {
@@ -235,6 +254,22 @@ public sealed class RemoteSessionRegistry
         }
         catch (OperationCanceledException) { }
         catch (WebSocketException) { }
+    }
+
+    public bool Contains(Guid id) => _entries.ContainsKey(id);
+
+    private async Task WatchdogAsync(Entry entry)
+    {
+        while (_entries.TryGetValue(entry.Id, out var current) && ReferenceEquals(current, entry))
+        {
+            await Task.Delay(_watchdogInterval);
+            if (DateTime.UtcNow - entry.LastParentSeenUtc > _heartbeatTimeout)
+            {
+                _logger.LogWarning("Remote session {SessionId} ended: no viewer heartbeat for {Timeout}", entry.Id, _heartbeatTimeout);
+                await StopAsync(entry.Id, "heartbeat-timeout");
+                return;
+            }
+        }
     }
 
     public async Task StopAsync(Guid id, string reason, CancellationToken ct = default)

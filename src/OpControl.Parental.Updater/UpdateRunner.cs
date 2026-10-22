@@ -20,6 +20,7 @@ public sealed class UpdaterOptions
     public string DbUser { get; set; } = "parental";
     public string DbName { get; set; } = "parental";
     public string DbPassword { get; set; } = "";
+    public string UpdaterContainer { get; set; } = "parental-updater";
     public string BackupsPath { get; set; } = "/data/backups";
     public string StatePath { get; set; } = "/data/state.json";
     public string DockerPath { get; set; } = "docker";
@@ -30,7 +31,7 @@ public sealed class UpdaterOptions
 
 public sealed record UpdateRequest(string Version, string ManifestUrl);
 public sealed record RestoreRequest(string Backup, bool Confirm);
-public sealed record Manifest(string Version, string? Image, string? ImageDigest, string? MinimumVersion,
+public sealed record Manifest(string Version, string? Image, string? ImageDigest, string? UpdaterImage, string? UpdaterImageDigest, string? MinimumVersion,
     [property: JsonPropertyName("notes")] ManifestNotes? Notes, bool? Prerelease)
 {
     public string? NotesEn => Notes?.En;
@@ -221,8 +222,45 @@ public sealed class UpdateRunner
             return;
         }
 
-        _state.Finish("success", $"Updated from {fromVersion} to {manifest.Version}. Backup: {backup}", false);
+        var updaterNote = await UpdateUpdaterAsync(manifest);
+        _state.Finish("success", $"Updated from {fromVersion} to {manifest.Version}. Backup: {backup}{updaterNote}", false);
     }
+
+    private async Task<string> UpdateUpdaterAsync(Manifest manifest)
+    {
+        var updaterImage = string.IsNullOrWhiteSpace(manifest.UpdaterImage)
+            ? "ghcr.io/ziur-vela/parental-opcontrol-updater"
+            : manifest.UpdaterImage;
+        var updaterDigest = manifest.UpdaterImageDigest ?? "";
+        if (!updaterDigest.StartsWith("sha256:", StringComparison.Ordinal) || updaterDigest.Length != 71)
+            return " The updater image was not in the manifest; the updater was not restarted.";
+
+        var target = $"{updaterImage}@{updaterDigest}";
+        _state.Step("updater", $"Pulling {target}");
+        var (pullExit, _, pullError) = await RunCaptureAsync(["pull", target], null);
+        if (pullExit != 0) return $" The updater image could not be pulled: {pullError.Trim()}";
+
+        _state.Step("updater", "Scheduling updater container restart");
+        var helperName = "parental-updater-selfupdate-" + Guid.NewGuid().ToString("N")[..8];
+        var command = "sleep 6; docker compose --project-name " + Quote(_options.ProjectName)
+            + " --project-directory " + Quote(_options.ComposeDir)
+            + " -f " + Quote(_options.ComposeFile)
+            + " up -d --no-deps --force-recreate updater";
+        var args = new List<string>
+        {
+            "run", "-d", "--rm", "--name", helperName,
+            "-v", "/var/run/docker.sock:/var/run/docker.sock",
+            "-v", $"{_options.ComposeDir}:{_options.ComposeDir}",
+            "-e", $"UPDATER_IMAGE={target}",
+            "--entrypoint", "sh", target, "-c", command
+        };
+        var (exit, _, error) = await RunCaptureAsync(args, null);
+        if (exit != 0) return $" The updater could not be scheduled to restart: {error.Trim()}";
+        _logger.LogInformation("Updater restart scheduled with {Image} via {Helper}", target, helperName);
+        return $" Both images are on {manifest.Version}; the updater container is restarting on the new image.";
+    }
+
+    private static string Quote(string value) => "'" + value.Replace("'", "'\\''") + "'";
 
     private async Task<Manifest> DownloadManifestAsync(string url)
     {

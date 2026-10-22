@@ -45,7 +45,17 @@ public static class AppUsageExclusions
     {
         "opcontrol.parental.client.exe",
         "opcontrol.parental.helper.exe",
-        "opcontrol.parental.setup.exe"
+        "opcontrol.parental.setup.exe",
+        "dwagent.exe",
+        "dwagentlauncher.exe",
+        "dwservice.exe",
+        "tacticalagent.exe",
+        "tacticalrmm.exe",
+        "meshagent.exe",
+        "meshagent.msi",
+        "tailscale-ipn.exe",
+        "tailscaled.exe",
+        "tailscale.exe"
     };
 
     private static readonly string[] StorePackagePrefixes =
@@ -75,7 +85,14 @@ public static class AppUsageExclusions
         "Windows Input Experience",
         "Windows Logon Application",
         "Windows Shell Experience Host",
-        "Windows Start-Up Application"
+        "Windows Start-Up Application",
+        "DWAgent",
+        "DWService",
+        "Tactical RMM Agent",
+        "Tactical Agent",
+        "Mesh Agent",
+        "MeshCentral Agent",
+        "Tailscale"
     };
 
     private static readonly string[] ExplorerFileDisplays =

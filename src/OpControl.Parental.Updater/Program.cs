@@ -35,7 +35,15 @@ bool Authorized(HttpContext context)
         && string.Equals(value.ToString(), options.Secret, StringComparison.Ordinal);
 }
 
-app.MapGet("/health", () => Results.Ok(new { status = "ok", utc = DateTime.UtcNow }));
+app.MapGet("/health", () => Results.Ok(new { status = "ok", utc = DateTime.UtcNow, version = UpdaterVersion() }));
+
+app.MapGet("/version", () => Results.Ok(new { version = UpdaterVersion() }));
+
+static string UpdaterVersion()
+{
+    var value = typeof(UpdateRunner).Assembly.GetName().Version;
+    return value is null ? "0.0.0" : $"{value.Major}.{value.Minor}.{value.Build}";
+}
 
 app.MapGet("/status", (HttpContext context, UpdateRunner runner) =>
     Authorized(context) ? Results.Ok(runner.Status()) : Results.Unauthorized());

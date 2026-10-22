@@ -45,6 +45,32 @@
         });
         return true;
     };
+
+    window.ocpComposer = {
+        attach(id, dotNetRef, enterToSend) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            el.dataset.enterToSend = enterToSend ? 'true' : 'false';
+            if (el.__ocpComposerHandler) el.removeEventListener('keydown', el.__ocpComposerHandler);
+            el.__ocpComposerHandler = function (event) {
+                if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
+                if (el.dataset.enterToSend !== 'true') return;
+                event.preventDefault();
+                dotNetRef.invokeMethodAsync('SendFromEnterAsync').catch(function () { });
+            };
+            el.addEventListener('keydown', el.__ocpComposerHandler);
+        },
+        setEnterToSend(id, enabled) {
+            var el = document.getElementById(id);
+            if (el) el.dataset.enterToSend = enabled ? 'true' : 'false';
+        },
+        detach(id) {
+            var el = document.getElementById(id);
+            if (!el || !el.__ocpComposerHandler) return;
+            el.removeEventListener('keydown', el.__ocpComposerHandler);
+            el.__ocpComposerHandler = null;
+        }
+    };
     window.ocpRequestUpdate = async function (button, deviceId) {
         var original = button.textContent;
         button.disabled = true;

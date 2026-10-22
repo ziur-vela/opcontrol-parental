@@ -25,6 +25,7 @@ public class ParentUser : IdentityUser<Guid>
     public FamilyRole RoleInFamily { get; set; } = FamilyRole.Parent;
     public ParentPermissions Permissions { get; set; } = ParentPermissions.None;
     public bool IsServerAdmin { get; set; }
+    public bool EnterToSend { get; set; } = true;
     public string? PreferredLanguage { get; set; }
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public Family? Family { get; set; }
@@ -185,6 +186,9 @@ public class VisitRecord
     public Guid DeviceId { get; set; }
     public string Domain { get; set; } = "";
     public bool Blocked { get; set; }
+    public string? BlockReason { get; set; }
+    public int Lookups { get; set; } = 1;
+    public int BlockedLookups { get; set; }
     public DateTime VisitedUtc { get; set; } = DateTime.UtcNow;
 }
 
@@ -358,6 +362,7 @@ public class FamilySettings
     public string? FromAddress { get; set; }
     public int OfflineAlertMinutes { get; set; } = 120;
     public int InstallLinkMinutes { get; set; } = 1440;
+    public int RepeatedBlockAlertHours { get; set; } = 6;
     public string NoticeText { get; set; } = "Parent's watching you";
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
 }

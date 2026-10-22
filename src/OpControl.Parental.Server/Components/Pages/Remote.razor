@@ -13,7 +13,9 @@
 @inject IServiceScopeFactory Scopes
 @inject DevicePresenceService Presence
 @inject IJSRuntime JS
+@inject NavigationManager Nav
 @inject IStringLocalizer<AppStrings> L
+@implements IDisposable
 
 <PageTitle>@L["Remote.PageTitle"]</PageTitle>
 
@@ -118,6 +120,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Nav.LocationChanged += OnLocationChanged;
         var auth = await AuthState.GetAuthenticationStateAsync();
         if (!Guid.TryParse(auth.User.FindFirst("family_id")?.Value, out var familyId)) return;
         using var scope = Scopes.CreateScope();
@@ -198,5 +201,22 @@
     private async Task FullscreenAsync()
     {
         try { await JS.InvokeVoidAsync("ocpRemote.fullscreen", "remote-viewer"); } catch { }
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _ = StopForNavigationAsync();
+    }
+
+    private async Task StopForNavigationAsync()
+    {
+        try { await JS.InvokeVoidAsync("ocpRemote.stop", true, false); } catch { }
+        _active = false;
+    }
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= OnLocationChanged;
+        if (_active) _ = StopForNavigationAsync();
     }
 }
