@@ -8,6 +8,7 @@
 @inject AuthenticationStateProvider AuthState
 @inject IServiceScopeFactory Scopes
 @inject IStringLocalizer<AppStrings> L
+@inject IJSRuntime JS
 
 
 <div class="msg-composer @(Compact ? "compact" : "")">
@@ -17,7 +18,7 @@
             <button type="button" class="chip @(_preset == key ? "active" : "")" @onclick="() => PickPreset(key)">@L["Messages.Preset." + PresetLabel(key)]</button>
         }
     </div>
-    <textarea class="msg-input" maxlength="500" rows="@(Compact ? 2 : 3)" @bind="_text" @bind:event="oninput"
+    <textarea @ref="_input" class="msg-input" maxlength="500" rows="@(Compact ? 2 : 3)" @bind="_text" @bind:event="oninput"
               data-enter-to-send="@(_enterToSend ? "true" : "false")" @onkeydown="OnKeyDownAsync"
               placeholder="@L["Messages.Placeholder"]" aria-label="@L["Messages.Placeholder"]"></textarea>
     <div class="msg-composer-foot">
@@ -48,6 +49,7 @@
     private Guid _familyId;
     private Guid _parentId;
     private string _text = "";
+    private ElementReference _input;
     private string? _preset;
     private string? _presetText;
     private bool _speak;
@@ -87,10 +89,14 @@
     private async Task OnKeyDownAsync(KeyboardEventArgs e)
     {
         if (!_enterToSend || e.Key != "Enter" || e.ShiftKey) return;
-        // Let the browser's newline and its oninput event reach Blazor first,
-        // then send the trimmed text. This keeps fast typing and slow circuits
-        // from sending an empty or partial message.
-        await Task.Delay(120);
+        // Read the live DOM value: the oninput round-trip can still be in flight
+        // on a slow circuit, which would otherwise send an empty message.
+        try
+        {
+            var current = await JS.InvokeAsync<string>("ocpReadTextarea", _input);
+            if (current is not null) _text = current;
+        }
+        catch { }
         await SendAsync();
     }
 

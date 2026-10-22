@@ -24,6 +24,9 @@
         var input = document.querySelector('#af-form input[name="__RequestVerificationToken"], input[name="__RequestVerificationToken"]');
         return input ? input.value : null;
     };
+    window.ocpReadTextarea = function (el) {
+        return el && typeof el.value === 'string' ? el.value : '';
+    };
     window.ocpJsonPost = async function (url, body) {
         var token = window.ocpAntiforgeryToken();
         var response = await fetch(url, {
