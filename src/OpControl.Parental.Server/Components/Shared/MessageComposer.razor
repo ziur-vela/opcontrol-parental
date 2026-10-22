@@ -86,8 +86,12 @@
 
     private async Task OnKeyDownAsync(KeyboardEventArgs e)
     {
-        if (_enterToSend && e.Key == "Enter" && !e.ShiftKey)
-            await SendAsync();
+        if (!_enterToSend || e.Key != "Enter" || e.ShiftKey) return;
+        // Let the browser's newline and its oninput event reach Blazor first,
+        // then send the trimmed text. This keeps fast typing and slow circuits
+        // from sending an empty or partial message.
+        await Task.Delay(120);
+        await SendAsync();
     }
 
     private void PickPreset(string key)

@@ -46,13 +46,6 @@
         return true;
     };
 
-    document.addEventListener('keydown', function (event) {
-        var el = event.target;
-        if (!el || el.tagName !== 'TEXTAREA' || !el.classList.contains('msg-input')) return;
-        if (el.dataset.enterToSend !== 'true') return;
-        if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
-        event.preventDefault();
-    }, true);
     window.ocpRequestUpdate = async function (button, deviceId) {
         var original = button.textContent;
         button.disabled = true;
