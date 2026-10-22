@@ -698,7 +698,7 @@ Si no esperabas este correo, ignóralo.</value></data>
   <data name="Setup.CreateFamily" xml:space="preserve"><value>Crear familia</value></data>
   <data name="Setup.FamilyName" xml:space="preserve"><value>Nombre de la familia</value></data>
   <data name="Setup.FamilyPlaceholder" xml:space="preserve"><value>Nuestra familia</value></data>
-  <data name="Setup.Note" xml:space="preserve"><value>La cuenta del propietario la crea el operador del servidor, no las pruebas automatizadas de este trabajo.</value></data>
+  <data name="Setup.Note" xml:space="preserve"><value>Solo el primer administrador del servidor puede usar esta página. Después de la configuración, agrega familias por invitación.</value></data>
   <data name="Setup.ParentPlaceholder" xml:space="preserve"><value>Nombre del padre o madre</value></data>
   <data name="Setup.PasswordRule" xml:space="preserve"><value>Al menos 8 caracteres con mayúscula, minúscula y un número.</value></data>
   <data name="Setup.Subtitle" xml:space="preserve"><value>Crea la cuenta del propietario y el perfil del primer hijo. El registro se cierra después de este paso.</value></data>

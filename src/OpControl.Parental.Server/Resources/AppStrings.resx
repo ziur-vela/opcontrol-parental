@@ -698,7 +698,7 @@ If you were not expecting this, ignore this email.</value></data>
   <data name="Setup.CreateFamily" xml:space="preserve"><value>Create family</value></data>
   <data name="Setup.FamilyName" xml:space="preserve"><value>Family name</value></data>
   <data name="Setup.FamilyPlaceholder" xml:space="preserve"><value>Our family</value></data>
-  <data name="Setup.Note" xml:space="preserve"><value>The owner account is created by the server operator, not by this job’s automated tests.</value></data>
+  <data name="Setup.Note" xml:space="preserve"><value>Only the first server administrator can use this page. After setup, add families by invitation.</value></data>
   <data name="Setup.ParentPlaceholder" xml:space="preserve"><value>Parent name</value></data>
   <data name="Setup.PasswordRule" xml:space="preserve"><value>At least 8 characters with upper, lower and a digit.</value></data>
   <data name="Setup.Subtitle" xml:space="preserve"><value>Create the owner account and the first child profile. Signup closes after this step.</value></data>
