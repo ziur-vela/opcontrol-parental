@@ -43,6 +43,8 @@ services:
       Updater__BaseUrl: http://updater:8098
       Updater__Secret: ${UPDATER_SECRET:?set UPDATER_SECRET in .env}
       TZ: UTC
+    ports:
+      - "127.0.0.1:8096:8080"
     volumes:
       - ./data/keys:/var/lib/opcontrol-parental/keys
       - ./data/releases:/var/lib/opcontrol-parental/releases
