@@ -427,7 +427,7 @@ public sealed class MessageService
 
     private static string NormalizeText(string? text, string? preset)
     {
-        var value = (text ?? "").Trim();
+        var value = (text ?? "").Replace("\0", "").Trim();
         if (value.Length == 0 && preset is not null)
         {
             var key = preset switch

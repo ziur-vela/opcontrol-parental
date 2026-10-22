@@ -476,3 +476,30 @@ internal sealed class NullGroups : IGroupManager
     public Task AddToGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default) => Task.CompletedTask;
     public Task RemoveFromGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }
+
+public class Job14MessageSanitizeTests
+{
+    private static EmailRenderer Renderer() =>
+        new(Options.Create(new EmailOptions { LogoUrl = "https://parental.opcontrol.net/brand/email-lockup.png" }),
+            new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["PublicBaseUrl"] = "https://parental.opcontrol.net"
+            }).Build());
+
+    [Fact]
+    public async Task Nul_bytes_are_removed_before_saving_a_message()
+    {
+        await using var db = new ParentalDbContext(new DbContextOptionsBuilder<ParentalDbContext>()
+            .UseInMemoryDatabase("job14-nul-" + Guid.NewGuid()).Options);
+        var family = new Family { Name = "F" };
+        var child = new Child { FamilyId = family.Id, Name = "C" };
+        var parent = new ParentUser { FamilyId = family.Id, DisplayName = "P", UserName = "p@test", Email = "p@test" };
+        db.Families.Add(family); db.Children.Add(child); db.Users.Add(parent); await db.SaveChangesAsync();
+        var email = new EmailSender(db, new EphemeralDataProtectionProvider(), Renderer(), Options.Create(new EmailOptions()), NullLogger<EmailSender>.Instance);
+        var alerts = new AlertService(db, new DashboardEventBus(), new EphemeralDataProtectionProvider(), email, Renderer(), NullLogger<AlertService>.Instance);
+        var messages = new MessageService(db, new NullHubContext(), new DashboardEventBus(), alerts, email, Renderer(), NullLogger<MessageService>.Instance);
+        var dto = await messages.SendFromParentAsync(family.Id, parent.Id, child.Id, new ParentMessageRequest("hel\0lo", null, false, false, null));
+        Assert.Equal("hello", dto.Text);
+    }
+}
+

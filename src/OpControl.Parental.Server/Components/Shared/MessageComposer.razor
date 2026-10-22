@@ -102,9 +102,11 @@
     }
 
     [JSInvokable]
-    public async Task SendFromEnterAsync()
+    public async Task SendFromEnterAsync(string? currentText)
     {
-        if (_enterToSend) await SendAsync();
+        if (!_enterToSend) return;
+        if (currentText is not null) _text = currentText;
+        await SendAsync();
     }
 
     private void PickPreset(string key)

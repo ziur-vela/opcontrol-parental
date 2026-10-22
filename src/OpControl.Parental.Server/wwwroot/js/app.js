@@ -56,7 +56,7 @@
                 if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
                 if (el.dataset.enterToSend !== 'true') return;
                 event.preventDefault();
-                dotNetRef.invokeMethodAsync('SendFromEnterAsync').catch(function () { });
+                dotNetRef.invokeMethodAsync('SendFromEnterAsync', el.value).catch(function () { });
             };
             el.addEventListener('keydown', el.__ocpComposerHandler);
         },
