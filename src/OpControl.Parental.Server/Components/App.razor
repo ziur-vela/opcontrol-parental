@@ -2,6 +2,7 @@
    SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0 *@
 
 @inject IStringLocalizer<OpControl.Parental.Server.Resources.AppStrings> L
+@inject OpControl.Parental.Server.Services.BuildInfo BuildInfo
 <!DOCTYPE html>
 <html lang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName">
 <head>
@@ -10,14 +11,14 @@
     <base href="/" />
     <title>Parental OpControl</title>
     <link rel="icon" type="image/x-icon" href="/brand/favicon.ico" />
-    <link rel="stylesheet" href="/css/parental.css?v=0.12.1" />
+    <link rel="stylesheet" href="/css/parental.css?v=@BuildInfo.ShortCommit" />
     <HeadOutlet />
 </head>
 <body class="t-dark">
     <Routes />
     <script src="/_framework/blazor.web.js"></script>
-    <script src="/js/app.js"></script>
-    <script src="/js/remote.js"></script>
+    <script src="/js/app.js?v=@BuildInfo.ShortCommit"></script>
+    <script src="/js/remote.js?v=@BuildInfo.ShortCommit"></script>
     <script>
         window.ocpStrings = @(new Microsoft.AspNetCore.Html.HtmlString(System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, string>
         {
