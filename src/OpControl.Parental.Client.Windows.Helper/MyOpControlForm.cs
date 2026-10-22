@@ -24,6 +24,8 @@ public enum MyOpControlTab
 /// <summary>Read-only child window: what the parents set and how the child is doing.</summary>
 public sealed class MyOpControlForm : Form
 {
+    private const int WmNcCalcSize = 0x0083;
+    private const int WmGetMinMaxInfo = 0x0024;
     private const int WmNcHitTest = 0x84;
     private const int WmNcLButtonDown = 0xA1;
     private const int WmSetRedraw = 0x000B;
@@ -31,6 +33,8 @@ public sealed class MyOpControlForm : Form
     private const int WsThickFrame = 0x00040000;
     private const int WsSysMenu = 0x00080000;
     private const int WsMinimizeBox = 0x00020000;
+    private const int WsMaximizeBox = 0x00010000;
+    private const int MonitorDefaultToNearest = 0x00000002;
     private const int HtCaption = 2;
     private const int HtLeft = 10;
     private const int HtRight = 11;
@@ -49,6 +53,47 @@ public sealed class MyOpControlForm : Form
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, int flags);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern bool GetMonitorInfo(IntPtr monitor, ref MonitorInfo info);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MonitorInfo
+    {
+        public int Size;
+        public NativeRect Monitor;
+        public NativeRect Work;
+        public uint Flags;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativePoint
+    {
+        public int X;
+        public int Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MinMaxInfo
+    {
+        public NativePoint Reserved;
+        public NativePoint MaxSize;
+        public NativePoint MaxPosition;
+        public NativePoint MinTrackSize;
+        public NativePoint MaxTrackSize;
+    }
 
     private bool _messagesOnly;
     private readonly HomeView _home;
@@ -75,6 +120,7 @@ public sealed class MyOpControlForm : Form
     private bool _online;
     private float _scaleFactor = 1f;
     private bool _messagesStarted;
+    private bool _nccalcLogged;
 
     public event Action<int>? UnreadChanged;
 
@@ -145,7 +191,9 @@ public sealed class MyOpControlForm : Form
 
         KeyDown += (_, e) =>
         {
-            if (e.KeyCode == Keys.Escape) HideWindow();
+            // The Messages-only window sits over the lock overlay; Esc must not dismiss
+            // it. Every other helper window closes on Esc as a safety net.
+            if (e.KeyCode == Keys.Escape && !_messagesOnly) HideWindow();
         };
     }
 
@@ -240,7 +288,7 @@ public sealed class MyOpControlForm : Form
 
     private Control BuildHeader()
     {
-        var header = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Panel };
+        var header = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Panel, Margin = new Padding(0) };
         header.Paint += (_, e) =>
         {
             using var pen = new Pen(Theme.Line);
@@ -252,8 +300,10 @@ public sealed class MyOpControlForm : Form
             ColumnCount = 3,
             RowCount = 1,
             BackColor = Color.Transparent,
-            Padding = new Padding(16, 0, 8, 0)
+            Padding = new Padding(16, 0, 8, 0),
+            Margin = new Padding(0)
         };
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -314,7 +364,7 @@ public sealed class MyOpControlForm : Form
         right.Controls.Add(close);
 
         layout.Controls.Add(brand, 0, 0);
-        layout.Controls.Add(new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent }, 1, 0);
+        layout.Controls.Add(new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent, Margin = new Padding(0) }, 1, 0);
         layout.Controls.Add(right, 2, 0);
         header.Controls.Add(layout);
         EnableTitleDrag(header);
@@ -674,6 +724,8 @@ public sealed class MyOpControlForm : Form
             _messages.Start();
         }
         HelperPaths.LogEvent($"my-opcontrol-shown {Width}x{Height} at {Left},{Top} dpi={_scaleFactor:0.##}");
+        Activate();
+        Focus();
     }
 
     protected override void OnFormClosing(FormClosingEventArgs e)
@@ -690,13 +742,76 @@ public sealed class MyOpControlForm : Form
             cp.ExStyle |= WsExComposited;
             // WS_THICKFRAME is what enables Aero Snap, resize borders and the drop shadow.
             // The window still paints its own title bar and borders.
-            cp.Style |= WsThickFrame | WsSysMenu | WsMinimizeBox;
+            cp.Style |= WsThickFrame | WsSysMenu | WsMinimizeBox | WsMaximizeBox;
             return cp;
         }
     }
 
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+    {
+        if (keyData == Keys.Escape && !_messagesOnly)
+        {
+            HideWindow();
+            return true;
+        }
+        return base.ProcessCmdKey(ref msg, keyData);
+    }
+
     protected override void WndProc(ref Message m)
     {
+        if (m.Msg == 0x0100 && m.WParam == (IntPtr)0x1B && !_messagesOnly)
+        {
+            HideWindow();
+            return;
+        }
+
+        if (m.Msg == WmNcCalcSize && m.WParam != IntPtr.Zero)
+        {
+            // Keep the client area covering the whole window. Windows 10 subtracts
+            // the 7 px thick frame (10 px at 150%) from every side, pushing the custom
+            // title bar out of view. Windows 11 uses the same thick frame, but its
+            // DPI-scaled header row was tall enough to hide the layout bug, so the
+            // same build looked correct there.
+            var proposed = Marshal.PtrToStructure<NativeRect>(m.LParam);
+            if (WindowState == FormWindowState.Maximized)
+            {
+                var monitor = MonitorFromWindow(Handle, MonitorDefaultToNearest);
+                var info = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
+                if (GetMonitorInfo(monitor, ref info))
+                {
+                    proposed.Left = info.Work.Left;
+                    proposed.Top = info.Work.Top;
+                    proposed.Right = info.Work.Right;
+                    proposed.Bottom = info.Work.Bottom;
+                    Marshal.StructureToPtr(proposed, m.LParam, false);
+                }
+            }
+            if (!_nccalcLogged)
+            {
+                _nccalcLogged = true;
+                HelperPaths.LogEvent($"my-opcontrol-nccalc wParam={m.WParam} rect={proposed.Left},{proposed.Top},{proposed.Right},{proposed.Bottom} state={WindowState}");
+            }
+            m.Result = IntPtr.Zero;
+            return;
+        }
+
+        if (m.Msg == WmGetMinMaxInfo)
+        {
+            var monitor = MonitorFromWindow(Handle, MonitorDefaultToNearest);
+            var info = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
+            if (GetMonitorInfo(monitor, ref info))
+            {
+                var mmi = Marshal.PtrToStructure<MinMaxInfo>(m.LParam);
+                mmi.MaxPosition.X = Math.Abs(info.Work.Left - info.Monitor.Left);
+                mmi.MaxPosition.Y = Math.Abs(info.Work.Top - info.Monitor.Top);
+                mmi.MaxSize.X = Math.Abs(info.Work.Right - info.Work.Left);
+                mmi.MaxSize.Y = Math.Abs(info.Work.Bottom - info.Work.Top);
+                Marshal.StructureToPtr(mmi, m.LParam, false);
+                m.Result = IntPtr.Zero;
+                return;
+            }
+        }
+
         if (m.Msg == WmNcHitTest)
         {
             var screen = new Point((short)(m.LParam.ToInt64() & 0xFFFF), (short)((m.LParam.ToInt64() >> 16) & 0xFFFF));
@@ -759,6 +874,7 @@ public sealed class MyOpControlForm : Form
         var y = target.WorkingArea.Top + (target.WorkingArea.Height - height) / 2;
 
         var saved = LoadBounds();
+        var hadSavedBounds = saved is { Width: > 0, Height: > 0 };
         if (saved is { Width: > 0, Height: > 0 })
         {
             var scale = saved.Dpi > 0 ? _scaleFactor / saved.Dpi : 1f;
@@ -785,6 +901,11 @@ public sealed class MyOpControlForm : Form
         minHeight = Math.Min(minHeight, maxHeight);
         width = Math.Clamp(width, minWidth, maxWidth);
         height = Math.Clamp(height, minHeight, maxHeight);
+        if (!hadSavedBounds)
+        {
+            x = target.WorkingArea.Left + (target.WorkingArea.Width - width) / 2;
+            y = target.WorkingArea.Top + (target.WorkingArea.Height - height) / 2;
+        }
         MinimumSize = new Size(minWidth, minHeight);
         MaximizedBounds = target.WorkingArea;
         Bounds = new Rectangle(
