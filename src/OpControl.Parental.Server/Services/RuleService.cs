@@ -169,6 +169,20 @@ public sealed class RuleService
 
     public async Task<AppRule> UpsertAppRuleAsync(Guid familyId, Guid childId, Guid? parentId, string identity, string displayName, string? publisher, bool blocked, RuleMode mode, Guid? scheduleId, CancellationToken ct = default)
     {
+        try
+        {
+            return await UpsertAppRuleCoreAsync(familyId, childId, parentId, identity, displayName, publisher, blocked, mode, scheduleId, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "App rule {Action} failed for {App} by parent {ParentId}, child {ChildId}, family {FamilyId}",
+                blocked ? "block" : "allow", identity, parentId, childId, familyId);
+            throw;
+        }
+    }
+
+    private async Task<AppRule> UpsertAppRuleCoreAsync(Guid familyId, Guid childId, Guid? parentId, string identity, string displayName, string? publisher, bool blocked, RuleMode mode, Guid? scheduleId, CancellationToken ct)
+    {
         identity = NormalizeAppIdentity(identity);
         displayName = string.IsNullOrWhiteSpace(displayName) ? identity : displayName.Trim();
         if (!blocked && mode != RuleMode.Always)
@@ -221,13 +235,22 @@ public sealed class RuleService
 
     public async Task RemoveAppRuleAsync(Guid familyId, Guid childId, Guid? parentId, Guid ruleId, CancellationToken ct = default)
     {
-        var rule = await _db.AppRules.FirstOrDefaultAsync(r => r.Id == ruleId && r.FamilyId == familyId && r.ChildId == childId, ct);
-        if (rule is null) return;
-        _db.AppRules.Remove(rule);
-        AddHistory(familyId, childId, "app", rule.Id, rule.AppIdentity, rule.DisplayName, RuleAction.Removed, rule.Mode, rule.ScheduleId, parentId);
-        await _db.SaveChangesAsync(ct);
-        _logger?.LogInformation("App rule removed for {App} by parent {ParentId}, child {ChildId}, family {FamilyId}",
-            rule.AppIdentity, parentId, childId, familyId);
+        try
+        {
+            var rule = await _db.AppRules.FirstOrDefaultAsync(r => r.Id == ruleId && r.FamilyId == familyId && r.ChildId == childId, ct);
+            if (rule is null) return;
+            _db.AppRules.Remove(rule);
+            AddHistory(familyId, childId, "app", rule.Id, rule.AppIdentity, rule.DisplayName, RuleAction.Removed, rule.Mode, rule.ScheduleId, parentId);
+            await _db.SaveChangesAsync(ct);
+            _logger?.LogInformation("App rule removed for {App} by parent {ParentId}, child {ChildId}, family {FamilyId}",
+                rule.AppIdentity, parentId, childId, familyId);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "App rule removal failed for rule {RuleId} by parent {ParentId}, child {ChildId}, family {FamilyId}",
+                ruleId, parentId, childId, familyId);
+            throw;
+        }
     }
 
     public async Task AddItemBonusAsync(Guid familyId, Guid childId, Guid? parentId, string ruleType, string identity, int minutes, DateTime? appliedUtc = null, CancellationToken ct = default)

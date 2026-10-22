@@ -1096,4 +1096,5 @@ If you were not expecting this, ignore this email.</value></data>
   <data name="SiteReview.Service.Scratch" xml:space="preserve"><value>Scratch</value></data>
   <data name="SiteReview.Service.Duolingo" xml:space="preserve"><value>Duolingo</value></data>
   <data name="SiteReview.Service.Twitch" xml:space="preserve"><value>Twitch</value></data>
+  <data name="Websites.RelatedAllowedToastOne" xml:space="preserve"><value>Allowed {0} more domain</value></data>
 </root>

@@ -678,7 +678,7 @@ else
             foreach (var domain in selected)
                 await rules.UpsertWebsiteRuleAsync(_familyId, _childId, parentId, domain, blocked: false, RuleMode.Always, null);
             await db.SaveChangesAsync();
-        }, L["Websites.RelatedAllowedToast", selected.Count]);
+        }, L[selected.Count == 1 ? "Websites.RelatedAllowedToastOne" : "Websites.RelatedAllowedToast", selected.Count]);
         if (ok)
         {
             CloseRelated();

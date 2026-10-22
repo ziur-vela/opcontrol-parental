@@ -1096,4 +1096,5 @@ Si no esperabas este correo, ignóralo.</value></data>
   <data name="SiteReview.Service.Scratch" xml:space="preserve"><value>Scratch</value></data>
   <data name="SiteReview.Service.Duolingo" xml:space="preserve"><value>Duolingo</value></data>
   <data name="SiteReview.Service.Twitch" xml:space="preserve"><value>Twitch</value></data>
+  <data name="Websites.RelatedAllowedToastOne" xml:space="preserve"><value>Se permitió {0} dominio más</value></data>
 </root>
