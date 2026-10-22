@@ -25,7 +25,9 @@ public sealed record SiteReviewResult(
     int VisitCount,
     int LookupCount,
     DateTime? FirstSeenUtc,
-    DateTime? LastSeenUtc);
+    DateTime? LastSeenUtc,
+    Guid? RuleId,
+    string? RuleDomain);
 
 /// <summary>
 /// Builds the "what is this website?" panel: a bounded server-side page fetch,
@@ -95,6 +97,10 @@ public sealed class SiteReviewService
             .Where(r => r.FamilyId == familyId && r.ChildId == childId && parents.Contains(r.Domain))
             .ToListAsync(ct);
         var blockReason = await BlockReasonAsync(familyId, childId, value, rules, enabledCategories, ct);
+        var matchedRule = rules
+            .OrderByDescending(r => r.Domain.Equals(value, StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(r => !r.IsBlocked)
+            .FirstOrDefault();
 
         var now = DateTime.UtcNow;
         var since = now.AddDays(-7);
@@ -119,7 +125,7 @@ public sealed class SiteReviewService
 
         return new SiteReviewResult(value, page.Title, page.Description, page.FaviconUrl,
             page.ErrorKey, categories, isAdult, blockReason, KnownSites.KeyFor(value),
-            visitCount, lookupCount, all?.First, all?.Last);
+            visitCount, lookupCount, all?.First, all?.Last, matchedRule?.Id, matchedRule?.Domain);
     }
 
     public async Task<(byte[] Bytes, string ContentType)?> GetFaviconAsync(string domain, CancellationToken ct = default)
@@ -323,7 +329,7 @@ public sealed class SiteReviewService
     }
 
     private static SiteReviewResult Empty(string domain, string errorKey) => new(domain, null, null, null, errorKey,
-        [], false, null, null, 0, 0, null, null);
+        [], false, null, null, 0, 0, null, null, null, null);
 
     private sealed record PageInfo(string? Title, string? Description, string? FaviconUrl, string? ErrorKey);
 }

@@ -37,6 +37,11 @@ else
         </div>
     </div>
 
+    @if (_toast is not null)
+    {
+        <div class="toast @(_toastError ? "danger" : "ok")" role="status">@_toast</div>
+    }
+
     @if (_error is not null)
     {
         <div class="alert danger">@_error</div>
@@ -291,6 +296,8 @@ else
     private string _search = "";
     private string _manualPath = "";
     private string _manualName = "";
+    private string? _toast;
+    private bool _toastError;
     private List<Schedule> _schedules = [];
     private List<AppRule> _rules = [];
     private List<RuleHistoryDto> _history = [];
@@ -429,7 +436,7 @@ else
         {
             await rules.SetAppLimitAsync(_familyId, _childId, parentId, identity, display, publisher, 60, false);
             await MarkReviewedAsync(db, identity);
-        });
+        }, L["Apps.LimitToast", display]);
     }
 
     private async Task ClearAppLimitAsync(AppRule rule)
@@ -437,7 +444,7 @@ else
         await RunAsync(async (db, rules, parentId) =>
         {
             await rules.SetAppLimitAsync(_familyId, _childId, parentId, rule.AppIdentity, rule.DisplayName, rule.Publisher, null, false);
-        });
+        }, L["Apps.LimitRemovedToast", rule.DisplayName]);
     }
 
     private async Task BlockIdentityAsync(string identity, string display, string? publisher)
@@ -446,7 +453,7 @@ else
         {
             await rules.UpsertAppRuleAsync(_familyId, _childId, parentId, identity, display, publisher, blocked: true, RuleMode.Always, null);
             await MarkReviewedAsync(db, identity);
-        });
+        }, L["Apps.BlockedToast", display]);
     }
 
     private async Task AllowIdentityAsync(string identity, string display, string? publisher)
@@ -455,26 +462,28 @@ else
         {
             await rules.UpsertAppRuleAsync(_familyId, _childId, parentId, identity, display, publisher, blocked: false, RuleMode.Always, null);
             await MarkReviewedAsync(db, identity);
-        });
+        }, L["Apps.AllowedToast", display]);
     }
 
     private async Task RemoveRuleAsync(Guid ruleId)
     {
         if (ruleId == Guid.Empty) return;
+        var name = _rules.FirstOrDefault(r => r.Id == ruleId)?.DisplayName ?? "";
         await RunAsync(async (db, rules, parentId) =>
         {
             await rules.RemoveAppRuleAsync(_familyId, _childId, parentId, ruleId);
             await db.SaveChangesAsync();
-        });
+        }, L["Apps.UnblockedToast", name]);
     }
 
     private async Task BonusAsync(string identity, int minutes)
     {
+        var name = _rules.FirstOrDefault(r => r.AppIdentity.Equals(identity, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? identity;
         await RunAsync(async (db, rules, parentId) =>
         {
             await rules.AddItemBonusAsync(_familyId, _childId, parentId, "app", identity, minutes);
             await db.SaveChangesAsync();
-        });
+        }, L["Apps.BonusToast", minutes, name]);
     }
 
     private async Task MarkReviewedAsync(ParentalDbContext db, string identity)
@@ -490,7 +499,7 @@ else
         await db.SaveChangesAsync();
     }
 
-    private async Task RunAsync(Func<ParentalDbContext, RuleService, Guid?, Task> action)
+    private async Task RunAsync(Func<ParentalDbContext, RuleService, Guid?, Task> action, string? success = null)
     {
         _error = null;
         try
@@ -504,11 +513,32 @@ else
             await action(db, rules, parentId);
             await locks.PublishDeviceStateAsync(_familyId, _childId);
             await RefreshAsync();
+            if (success is not null) ShowToast(success, false);
         }
         catch (Exception ex)
         {
             _error = ex.Message;
+            ShowToast(ex.Message, true);
         }
+    }
+
+    private void ShowToast(string message, bool error)
+    {
+        _toast = message;
+        _toastError = error;
+        StateHasChanged();
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(4000);
+            await InvokeAsync(() =>
+            {
+                if (_toast == message)
+                {
+                    _toast = null;
+                    StateHasChanged();
+                }
+            });
+        });
     }
 
     private string ScheduleName(Guid? id) => id is { } value ? _schedules.FirstOrDefault(s => s.Id == value)?.Name ?? L["Schedules.ScheduleFallback"] : L["Schedules.NoSchedule"];

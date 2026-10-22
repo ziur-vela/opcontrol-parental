@@ -148,6 +148,7 @@ public class RuleHistory
     public RuleMode Mode { get; set; }
     public Guid? ScheduleId { get; set; }
     public Guid? ChangedByParentId { get; set; }
+    public string? Note { get; set; }
     public DateTime ChangedUtc { get; set; } = DateTime.UtcNow;
 }
 

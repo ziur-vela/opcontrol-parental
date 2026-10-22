@@ -357,5 +357,5 @@ public sealed class UsageService
     }
 
     private static int Clamp(int minutes) => Math.Clamp(minutes, 0, 1440);
-    private static string Clean(string? value, int max) => (value ?? "").Trim() is { Length: > 0 } v ? v[..Math.Min(v.Length, max)] : "";
+    private static string Clean(string? value, int max) => DeviceText.Clean(value, max);
 }

@@ -1059,4 +1059,41 @@ If you were not expecting this, ignore this email.</value></data>
   <data name="Alert.RepeatedBlocked.DetailReason" xml:space="preserve"><value>{1} blocked attempts to {0} on {2}. {3}</value></data>
   <data name="Settings.RepeatedBlockHours" xml:space="preserve"><value>Repeated blocked-attempt alerts (hours, 1 to 24)</value></data>
   <data name="Settings.RepeatedBlockHoursHelp" xml:space="preserve"><value>One alert per domain and device in this window. The alert shows the total attempts.</value></data>
+  <data name="Websites.DomainPlaceholder" xml:space="preserve"><value>Domain to block or allow</value></data>
+  <data name="Websites.AllowException" xml:space="preserve"><value>Allow (exception)</value></data>
+  <data name="Websites.OverridesCategory" xml:space="preserve"><value>Overrides: {0}</value></data>
+  <data name="Websites.BlockedToast" xml:space="preserve"><value>Blocked {0}</value></data>
+  <data name="Websites.AllowedToast" xml:space="preserve"><value>Allowed {0}</value></data>
+  <data name="Websites.UnblockedToast" xml:space="preserve"><value>Unblocked {0}</value></data>
+  <data name="Websites.BonusToast" xml:space="preserve"><value>Added {0} minutes for {1}</value></data>
+  <data name="Websites.CategoryToast" xml:space="preserve"><value>Category updated</value></data>
+  <data name="Websites.RelatedEyebrow" xml:space="preserve"><value>Related domains</value></data>
+  <data name="Websites.RelatedTitle" xml:space="preserve"><value>{0} also uses these domains</value></data>
+  <data name="Websites.RelatedHint" xml:space="preserve"><value>Tick only the domains you want to allow. The domain you just allowed is already saved.</value></data>
+  <data name="Websites.AllowSelected" xml:space="preserve"><value>Allow selected</value></data>
+  <data name="Websites.NotNow" xml:space="preserve"><value>Not now</value></data>
+  <data name="Websites.RelatedAllowedToast" xml:space="preserve"><value>Allowed {0} more domains</value></data>
+  <data name="Apps.BlockedToast" xml:space="preserve"><value>Blocked {0}</value></data>
+  <data name="Apps.AllowedToast" xml:space="preserve"><value>Allowed {0}</value></data>
+  <data name="Apps.UnblockedToast" xml:space="preserve"><value>Unblocked {0}</value></data>
+  <data name="Apps.BonusToast" xml:space="preserve"><value>Added {0} minutes for {1}</value></data>
+  <data name="Apps.LimitToast" xml:space="preserve"><value>Set a 1-hour limit for {0}</value></data>
+  <data name="Apps.LimitRemovedToast" xml:space="preserve"><value>Removed the limit for {0}</value></data>
+  <data name="Apps.SavedToast" xml:space="preserve"><value>Saved</value></data>
+  <data name="SiteReview.Service.WhatsApp" xml:space="preserve"><value>WhatsApp</value></data>
+  <data name="SiteReview.Service.YouTube" xml:space="preserve"><value>YouTube</value></data>
+  <data name="SiteReview.Service.Discord" xml:space="preserve"><value>Discord</value></data>
+  <data name="SiteReview.Service.Instagram" xml:space="preserve"><value>Instagram</value></data>
+  <data name="SiteReview.Service.Facebook" xml:space="preserve"><value>Facebook</value></data>
+  <data name="SiteReview.Service.TikTok" xml:space="preserve"><value>TikTok</value></data>
+  <data name="SiteReview.Service.Roblox" xml:space="preserve"><value>Roblox</value></data>
+  <data name="SiteReview.Service.Minecraft" xml:space="preserve"><value>Minecraft</value></data>
+  <data name="SiteReview.Service.Netflix" xml:space="preserve"><value>Netflix</value></data>
+  <data name="SiteReview.Service.Spotify" xml:space="preserve"><value>Spotify</value></data>
+  <data name="SiteReview.Service.Wikipedia" xml:space="preserve"><value>Wikipedia</value></data>
+  <data name="SiteReview.Service.Google" xml:space="preserve"><value>Google</value></data>
+  <data name="SiteReview.Service.KhanAcademy" xml:space="preserve"><value>Khan Academy</value></data>
+  <data name="SiteReview.Service.Scratch" xml:space="preserve"><value>Scratch</value></data>
+  <data name="SiteReview.Service.Duolingo" xml:space="preserve"><value>Duolingo</value></data>
+  <data name="SiteReview.Service.Twitch" xml:space="preserve"><value>Twitch</value></data>
 </root>

@@ -16,11 +16,13 @@ public sealed class RuleService
 
     private readonly ParentalDbContext _db;
     private readonly AlertService _alerts;
+    private readonly ILogger<RuleService>? _logger;
 
-    public RuleService(ParentalDbContext db, AlertService alerts)
+    public RuleService(ParentalDbContext db, AlertService alerts, ILogger<RuleService>? logger = null)
     {
         _db = db;
         _alerts = alerts;
+        _logger = logger;
     }
 
     public async Task EnsureChildAsync(Guid familyId, Guid childId, CancellationToken ct = default)
@@ -89,6 +91,20 @@ public sealed class RuleService
 
     public async Task<WebsiteRule> UpsertWebsiteRuleAsync(Guid familyId, Guid childId, Guid? parentId, string domain, bool blocked, RuleMode mode, Guid? scheduleId, CancellationToken ct = default)
     {
+        try
+        {
+            return await UpsertWebsiteRuleCoreAsync(familyId, childId, parentId, domain, blocked, mode, scheduleId, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Website rule {Action} failed for {Domain} by parent {ParentId}, child {ChildId}, family {FamilyId}",
+                blocked ? "block" : "allow", domain, parentId, childId, familyId);
+            throw;
+        }
+    }
+
+    private async Task<WebsiteRule> UpsertWebsiteRuleCoreAsync(Guid familyId, Guid childId, Guid? parentId, string domain, bool blocked, RuleMode mode, Guid? scheduleId, CancellationToken ct)
+    {
         domain = NormalizeDomain(domain);
         if (!blocked && mode != RuleMode.Always)
             throw new InvalidOperationException(AppText.Get("Error.AllowNoSchedule"));
@@ -126,16 +142,29 @@ public sealed class RuleService
         AddHistory(familyId, childId, "site", rule.Id, rule.Domain, rule.Domain,
             blocked ? RuleAction.Blocked : RuleAction.Allowed, mode, rule.ScheduleId, parentId);
         await _db.SaveChangesAsync(ct);
+        _logger?.LogInformation("Website rule {Action} for {Domain} (mode {Mode}) by parent {ParentId}, child {ChildId}, family {FamilyId}",
+            blocked ? "blocked" : "allowed", rule.Domain, mode, parentId, childId, familyId);
         return rule;
     }
 
     public async Task RemoveWebsiteRuleAsync(Guid familyId, Guid childId, Guid? parentId, Guid ruleId, CancellationToken ct = default)
     {
-        var rule = await _db.WebsiteRules.FirstOrDefaultAsync(r => r.Id == ruleId && r.FamilyId == familyId && r.ChildId == childId, ct);
-        if (rule is null) return;
-        _db.WebsiteRules.Remove(rule);
-        AddHistory(familyId, childId, "site", rule.Id, rule.Domain, rule.Domain, RuleAction.Removed, rule.Mode, rule.ScheduleId, parentId);
-        await _db.SaveChangesAsync(ct);
+        try
+        {
+            var rule = await _db.WebsiteRules.FirstOrDefaultAsync(r => r.Id == ruleId && r.FamilyId == familyId && r.ChildId == childId, ct);
+            if (rule is null) return;
+            _db.WebsiteRules.Remove(rule);
+            AddHistory(familyId, childId, "site", rule.Id, rule.Domain, rule.Domain, RuleAction.Removed, rule.Mode, rule.ScheduleId, parentId);
+            await _db.SaveChangesAsync(ct);
+            _logger?.LogInformation("Website rule removed for {Domain} by parent {ParentId}, child {ChildId}, family {FamilyId}",
+                rule.Domain, parentId, childId, familyId);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Website rule removal failed for rule {RuleId} by parent {ParentId}, child {ChildId}, family {FamilyId}",
+                ruleId, parentId, childId, familyId);
+            throw;
+        }
     }
 
     public async Task<AppRule> UpsertAppRuleAsync(Guid familyId, Guid childId, Guid? parentId, string identity, string displayName, string? publisher, bool blocked, RuleMode mode, Guid? scheduleId, CancellationToken ct = default)
@@ -185,6 +214,8 @@ public sealed class RuleService
         AddHistory(familyId, childId, "app", rule.Id, rule.AppIdentity, rule.DisplayName,
             blocked ? RuleAction.Blocked : RuleAction.Allowed, mode, rule.ScheduleId, parentId);
         await _db.SaveChangesAsync(ct);
+        _logger?.LogInformation("App rule {Action} for {App} (mode {Mode}) by parent {ParentId}, child {ChildId}, family {FamilyId}",
+            blocked ? "blocked" : "allowed", rule.AppIdentity, mode, parentId, childId, familyId);
         return rule;
     }
 
@@ -195,6 +226,8 @@ public sealed class RuleService
         _db.AppRules.Remove(rule);
         AddHistory(familyId, childId, "app", rule.Id, rule.AppIdentity, rule.DisplayName, RuleAction.Removed, rule.Mode, rule.ScheduleId, parentId);
         await _db.SaveChangesAsync(ct);
+        _logger?.LogInformation("App rule removed for {App} by parent {ParentId}, child {ChildId}, family {FamilyId}",
+            rule.AppIdentity, parentId, childId, familyId);
     }
 
     public async Task AddItemBonusAsync(Guid familyId, Guid childId, Guid? parentId, string ruleType, string identity, int minutes, DateTime? appliedUtc = null, CancellationToken ct = default)
@@ -245,6 +278,8 @@ public sealed class RuleService
             CreatedUtc = now
         });
         await _db.SaveChangesAsync(ct);
+        _logger?.LogInformation("Item bonus {Minutes}m added for {Type} {Identity} by parent {ParentId}, child {ChildId}, family {FamilyId}",
+            minutes, ruleType, identity, parentId, childId, familyId);
     }
 
     public async Task ToggleCategoryAsync(Guid familyId, Guid childId, Guid? parentId, string key, bool enabled, CancellationToken ct = default)
@@ -273,6 +308,8 @@ public sealed class RuleService
             CreatedUtc = DateTime.UtcNow
         });
         await _db.SaveChangesAsync(ct);
+        _logger?.LogInformation("Category {Category} set to {Enabled} by parent {ParentId}, child {ChildId}, family {FamilyId}",
+            key, enabled, parentId, childId, familyId);
     }
 
     public async Task<List<RuleHistoryDto>> GetHistoryAsync(Guid familyId, Guid childId, int take = 100, CancellationToken ct = default)
@@ -282,7 +319,7 @@ public sealed class RuleService
             .OrderByDescending(h => h.ChangedUtc)
             .Take(take)
             .ToListAsync(ct);
-        return rows.Select(h => new RuleHistoryDto(h.Id, h.RuleType, h.Identity, h.DisplayName, h.Action.ToString(), h.Mode.ToString(), h.ChangedUtc)).ToList();
+        return rows.Select(h => new RuleHistoryDto(h.Id, h.RuleType, h.Identity, h.DisplayName, h.Action.ToString(), h.Mode.ToString(), h.ChangedUtc, h.Note)).ToList();
     }
 
     public async Task<CategoryDeltaDto> GetCategoryDeltaAsync(string key, int sinceVersion, Guid familyId, Guid childId, CancellationToken ct = default)
@@ -314,13 +351,13 @@ public sealed class RuleService
             .Where(v => !string.IsNullOrWhiteSpace(v.Domain) && v.Domain.Length <= 255)
             .Select(v => new
             {
-                Domain = v.Domain.Trim().TrimEnd('.').ToLowerInvariant(),
+                Domain = DeviceText.Clean(v.Domain, 255).TrimEnd('.').ToLowerInvariant(),
                 VisitedUtc = v.VisitedUtc.Kind == DateTimeKind.Utc ? v.VisitedUtc : v.VisitedUtc.ToUniversalTime(),
                 v.Blocked,
-                v.BlockReason,
+                BlockReason = DeviceText.CleanOptional(v.BlockReason, 120),
                 Lookups = Math.Clamp(v.Lookups, 1, 10_000)
             })
-            .Where(v => !BackgroundDomains.IsBackground(v.Domain))
+            .Where(v => v.Domain.Length > 0 && !BackgroundDomains.IsBackground(v.Domain))
             .Take(5000)
             .ToList();
         if (incoming.Count == 0) return;
@@ -441,16 +478,75 @@ public sealed class RuleService
     public async Task SyncAppInventoryAsync(Device device, AppInventoryRequest request, CancellationToken ct = default)
     {
         var now = DateTime.UtcNow;
-        var incoming = request.Apps
-            .Where(a => !string.IsNullOrWhiteSpace(a.Identity) && a.Identity.Length <= 255)
-            .GroupBy(a => a.Identity)
+        var incoming = (request.Apps ?? [])
+            .Select(a => SanitizeInstalledApp(device, a))
+            .Where(a => a is not null)
+            .Select(a => a!)
+            .GroupBy(a => a.Identity, StringComparer.OrdinalIgnoreCase)
             .Select(g => g.First())
             .Take(2000)
             .ToList();
+        var firstSync = !await _db.InstalledApps.AnyAsync(a => a.DeviceId == device.Id, ct);
+        var newApps = await TrySaveInventoryBatchAsync(device, incoming, firstSync, now, ct);
+
+        foreach (var app in newApps)
+        {
+            await _alerts.AddAsync(device.FamilyId, device.ChildId, device.Id, "new-app",
+                new AlertContent("Alert.NewApp.Title", "Alert.NewApp.Detail",
+                    app.DisplayName, app.Identity, device.Name),
+                TimeSpan.FromDays(1), ct);
+        }
+    }
+
+    private AppInventoryItemDto? SanitizeInstalledApp(Device device, AppInventoryItemDto app)
+    {
+        var identity = DeviceText.Clean(app.Identity, 255);
+        if (identity.Length == 0)
+        {
+            _logger?.LogWarning("Skipped an installed app with an empty identity from device {Device}", device.Name);
+            return null;
+        }
+        if (DeviceText.HasControlCharacters(app.Identity) || DeviceText.HasControlCharacters(app.DisplayName)
+            || DeviceText.HasControlCharacters(app.Publisher) || DeviceText.HasControlCharacters(app.Path)
+            || DeviceText.HasControlCharacters(app.Version))
+        {
+            _logger?.LogWarning("Installed app {Identity} from device {Device} contained NUL or control characters; sanitized before saving",
+                identity, device.Name);
+        }
+        var display = DeviceText.Clean(app.DisplayName, 255);
+        return new AppInventoryItemDto(
+            identity,
+            display.Length == 0 ? identity : display,
+            DeviceText.CleanOptional(app.Publisher, 255),
+            DeviceText.CleanOptional(app.Path, 1024),
+            DeviceText.Clean(app.Source, 16) is { Length: > 0 } source ? source : "win32",
+            DeviceText.CleanOptional(app.Version, 80));
+    }
+
+    private async Task<List<(string Identity, string DisplayName)>> TrySaveInventoryBatchAsync(
+        Device device, List<AppInventoryItemDto> incoming, bool firstSync, DateTime now, CancellationToken ct)
+    {
+        var newApps = new List<(string Identity, string DisplayName)>();
+        try
+        {
+            newApps = await UpsertInventoryAsync(device, incoming, firstSync, now, ct);
+            await _db.SaveChangesAsync(ct);
+            return newApps;
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger?.LogError(ex, "Installed-app batch for device {Device} failed; retrying row by row and skipping bad rows", device.Name);
+            _db.ChangeTracker.Clear();
+            return await UpsertInventoryOneByOneAsync(device, incoming, firstSync, ct);
+        }
+    }
+
+    private async Task<List<(string Identity, string DisplayName)>> UpsertInventoryAsync(
+        Device device, List<AppInventoryItemDto> incoming, bool firstSync, DateTime now, CancellationToken ct)
+    {
         var existing = await _db.InstalledApps
             .Where(a => a.DeviceId == device.Id)
             .ToDictionaryAsync(a => a.Identity, ct);
-        var firstSync = existing.Count == 0;
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var newApps = new List<(string Identity, string DisplayName)>();
 
@@ -459,7 +555,7 @@ public sealed class RuleService
             seen.Add(app.Identity);
             if (existing.TryGetValue(app.Identity, out var row))
             {
-                row.DisplayName = string.IsNullOrWhiteSpace(app.DisplayName) ? row.DisplayName : app.DisplayName.Trim();
+                row.DisplayName = string.IsNullOrWhiteSpace(app.DisplayName) ? row.DisplayName : app.DisplayName;
                 row.Publisher = app.Publisher;
                 row.Path = app.Path;
                 row.Source = app.Source;
@@ -469,23 +565,22 @@ public sealed class RuleService
             }
             else
             {
-                var display = string.IsNullOrWhiteSpace(app.DisplayName) ? app.Identity : app.DisplayName.Trim();
                 _db.InstalledApps.Add(new InstalledApp
                 {
                     FamilyId = device.FamilyId,
                     ChildId = device.ChildId,
                     DeviceId = device.Id,
                     Identity = app.Identity,
-                    DisplayName = display,
+                    DisplayName = app.DisplayName,
                     Publisher = app.Publisher,
                     Path = app.Path,
-                    Source = string.IsNullOrWhiteSpace(app.Source) ? "win32" : app.Source,
+                    Source = app.Source,
                     Version = app.Version,
                     IsNew = !firstSync,
                     FirstSeenUtc = now,
                     LastSeenUtc = now
                 });
-                if (!firstSync) newApps.Add((app.Identity, display));
+                if (!firstSync) newApps.Add((app.Identity, app.DisplayName));
             }
         }
 
@@ -494,16 +589,67 @@ public sealed class RuleService
             if (!seen.Contains(identity) && row.RemovedUtc is null)
                 row.RemovedUtc = now;
         }
+        return newApps;
+    }
 
-        await _db.SaveChangesAsync(ct);
-
-        foreach (var app in newApps)
+    private async Task<List<(string Identity, string DisplayName)>> UpsertInventoryOneByOneAsync(
+        Device device, List<AppInventoryItemDto> incoming, bool firstSync, CancellationToken ct)
+    {
+        var newApps = new List<(string Identity, string DisplayName)>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var app in incoming)
         {
-            await _alerts.AddAsync(device.FamilyId, device.ChildId, device.Id, "new-app",
-                new AlertContent("Alert.NewApp.Title", "Alert.NewApp.Detail",
-                    app.DisplayName, app.Identity, device.Name),
-                TimeSpan.FromDays(1), ct);
+            seen.Add(app.Identity);
+            try
+            {
+                var now = DateTime.UtcNow;
+                var row = await _db.InstalledApps.FirstOrDefaultAsync(a => a.DeviceId == device.Id && a.Identity == app.Identity, ct);
+                if (row is null)
+                {
+                    _db.InstalledApps.Add(new InstalledApp
+                    {
+                        FamilyId = device.FamilyId,
+                        ChildId = device.ChildId,
+                        DeviceId = device.Id,
+                        Identity = app.Identity,
+                        DisplayName = app.DisplayName,
+                        Publisher = app.Publisher,
+                        Path = app.Path,
+                        Source = app.Source,
+                        Version = app.Version,
+                        IsNew = !firstSync,
+                        FirstSeenUtc = now,
+                        LastSeenUtc = now
+                    });
+                    if (!firstSync) newApps.Add((app.Identity, app.DisplayName));
+                }
+                else
+                {
+                    row.DisplayName = string.IsNullOrWhiteSpace(app.DisplayName) ? row.DisplayName : app.DisplayName;
+                    row.Publisher = app.Publisher;
+                    row.Path = app.Path;
+                    row.Source = app.Source;
+                    row.Version = app.Version;
+                    row.LastSeenUtc = now;
+                    row.RemovedUtc = null;
+                }
+                await _db.SaveChangesAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Skipped installed app {Identity} from device {Device}: the row could not be saved", app.Identity, device.Name);
+                _db.ChangeTracker.Clear();
+            }
         }
+
+        var existing = await _db.InstalledApps.Where(a => a.DeviceId == device.Id).ToListAsync(ct);
+        foreach (var row in existing)
+        {
+            if (!seen.Contains(row.Identity) && row.RemovedUtc is null)
+                row.RemovedUtc = DateTime.UtcNow;
+        }
+        await _db.SaveChangesAsync(ct);
+        return newApps;
     }
 
     public async Task SyncBlockEventsAsync(Device device, BlockEventRequest request, CancellationToken ct = default)
@@ -517,10 +663,13 @@ public sealed class RuleService
                 ChildId = device.ChildId,
                 DeviceId = device.Id,
                 RuleType = e.RuleType,
-                Identity = e.Identity.Trim().ToLowerInvariant(),
-                DisplayName = string.IsNullOrWhiteSpace(e.DisplayName) ? e.Identity : e.DisplayName.Trim(),
+                Identity = DeviceText.Clean(e.Identity, 255).ToLowerInvariant(),
+                DisplayName = DeviceText.Clean(e.DisplayName, 255) is { Length: > 0 } display
+                    ? display
+                    : DeviceText.Clean(e.Identity, 255),
                 OccurredUtc = e.OccurredUtc.Kind == DateTimeKind.Utc ? e.OccurredUtc : e.OccurredUtc.ToUniversalTime()
             })
+            .Where(r => r.Identity.Length > 0)
             .ToList();
         if (rows.Count == 0) return;
         _db.BlockEvents.AddRange(rows);
@@ -531,7 +680,8 @@ public sealed class RuleService
     {
         await EnsureChildAsync(familyId, childId, ct);
         identity = NormalizeAppIdentity(identity);
-        displayName = string.IsNullOrWhiteSpace(displayName) ? identity : displayName.Trim();
+        displayName = DeviceText.Clean(displayName, 255) is { Length: > 0 } cleanDisplay ? cleanDisplay : identity;
+        publisher = DeviceText.CleanOptional(publisher, 255);
         var rule = await _db.AppRules.FirstOrDefaultAsync(r => r.FamilyId == familyId && r.ChildId == childId && r.AppIdentity == identity, ct);
 
         if (minutes is null && !alwaysAllowed)
@@ -608,6 +758,8 @@ public sealed class RuleService
         });
         AddHistory(familyId, childId, "app", rule.Id, rule.AppIdentity, rule.DisplayName, RuleAction.Allowed, rule.Mode, rule.ScheduleId, parentId);
         await _db.SaveChangesAsync(ct);
+        _logger?.LogInformation("App {Action} for {App} by parent {ParentId}, child {ChildId}, family {FamilyId}",
+            alwaysAllowed ? "always-allowed" : $"limit {minutes}m", rule.AppIdentity, parentId, childId, familyId);
     }
 
     public async Task SyncTamperEventsAsync(Device device, TamperEventRequest request, CancellationToken ct = default)
@@ -624,8 +776,8 @@ public sealed class RuleService
                 FamilyId = device.FamilyId,
                 ChildId = device.ChildId,
                 DeviceId = device.Id,
-                Kind = item.Kind.Length > 40 ? item.Kind[..40] : item.Kind,
-                Detail = item.Detail is { Length: > 500 } ? item.Detail[..500] : item.Detail,
+                Kind = DeviceText.Clean(item.Kind, 40),
+                Detail = DeviceText.CleanOptional(item.Detail, 500),
                 OccurredUtc = item.OccurredUtc.Kind == DateTimeKind.Utc ? item.OccurredUtc : item.OccurredUtc.ToUniversalTime(),
                 CreatedUtc = now
             });
@@ -642,7 +794,7 @@ public sealed class RuleService
         }
     }
 
-    private void AddHistory(Guid familyId, Guid childId, string ruleType, Guid ruleId, string identity, string displayName, RuleAction action, RuleMode mode, Guid? scheduleId, Guid? parentId)
+    private void AddHistory(Guid familyId, Guid childId, string ruleType, Guid ruleId, string identity, string displayName, RuleAction action, RuleMode mode, Guid? scheduleId, Guid? parentId, string? note = null)
     {
         _db.RuleHistory.Add(new RuleHistory
         {
@@ -655,7 +807,8 @@ public sealed class RuleService
             Action = action,
             Mode = mode,
             ScheduleId = scheduleId,
-            ChangedByParentId = parentId
+            ChangedByParentId = parentId,
+            Note = note
         });
     }
 }

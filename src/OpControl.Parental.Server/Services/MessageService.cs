@@ -427,7 +427,7 @@ public sealed class MessageService
 
     private static string NormalizeText(string? text, string? preset)
     {
-        var value = (text ?? "").Replace("\0", "").Trim();
+        var value = DeviceText.Clean(text, MaxTextLength);
         if (value.Length == 0 && preset is not null)
         {
             var key = preset switch
@@ -441,7 +441,7 @@ public sealed class MessageService
         }
         if (value.Length == 0)
             throw new InvalidOperationException(AppText.Get("Error.Messages.Empty"));
-        return value.Length > MaxTextLength ? value[..MaxTextLength] : value;
+        return value;
     }
 
     private static string? NormalizePreset(string? preset)

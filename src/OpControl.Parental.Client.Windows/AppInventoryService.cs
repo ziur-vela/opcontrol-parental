@@ -89,7 +89,34 @@ public sealed class AppInventoryService : BackgroundService
         foreach (var app in CollectStoreApps()) apps[app.Identity] = app;
         foreach (var app in CollectWin32Apps()) apps[app.Identity] = app;
         foreach (var app in CollectShortcutApps()) apps[app.Identity] = app;
-        return apps.Values.OrderBy(a => a.DisplayName, StringComparer.OrdinalIgnoreCase).ToList();
+        var cleaned = new List<AppInventoryItemDto>(apps.Count);
+        foreach (var app in apps.Values)
+        {
+            var safe = CleanApp(app);
+            if (safe.Identity.Length == 0) continue;
+            cleaned.Add(safe);
+        }
+        return cleaned.OrderBy(a => a.DisplayName, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    private AppInventoryItemDto CleanApp(AppInventoryItemDto app)
+    {
+        if (DeviceText.HasControlCharacters(app.Identity) || DeviceText.HasControlCharacters(app.DisplayName)
+            || DeviceText.HasControlCharacters(app.Publisher) || DeviceText.HasControlCharacters(app.Path)
+            || DeviceText.HasControlCharacters(app.Version))
+        {
+            _logger.LogWarning("App inventory entry {Identity} on {Device} contained NUL or control characters; sanitized before upload",
+                DeviceText.Clean(app.Identity, 120), Environment.MachineName);
+        }
+        var identity = DeviceText.Clean(app.Identity, 255);
+        var display = DeviceText.Clean(app.DisplayName, 255);
+        return new AppInventoryItemDto(
+            identity,
+            display.Length == 0 ? identity : display,
+            DeviceText.CleanOptional(app.Publisher, 255),
+            DeviceText.CleanOptional(app.Path, 1024),
+            DeviceText.Clean(app.Source, 16) is { Length: > 0 } source ? source : "win32",
+            DeviceText.CleanOptional(app.Version, 80));
     }
 
     private IEnumerable<AppInventoryItemDto> CollectStoreApps()

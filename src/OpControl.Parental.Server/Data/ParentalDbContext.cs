@@ -150,6 +150,7 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
             e.Property(x => x.DisplayName).HasMaxLength(255).IsRequired();
             e.Property(x => x.Action).HasConversion<string>().HasMaxLength(16);
             e.Property(x => x.Mode).HasConversion<string>().HasMaxLength(16);
+            e.Property(x => x.Note).HasMaxLength(500);
             e.HasIndex(x => new { x.FamilyId, x.ChildId, x.ChangedUtc });
             e.HasIndex(x => new { x.ChildId, x.RuleType, x.Identity, x.ChangedUtc });
         });

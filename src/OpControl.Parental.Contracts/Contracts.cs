@@ -255,7 +255,8 @@ public sealed record RuleHistoryDto(
     string DisplayName,
     string Action,
     string Mode,
-    DateTime ChangedUtc);
+    DateTime ChangedUtc,
+    string? Note = null);
 
 public sealed record LockStateDto(
     Guid ChildId,

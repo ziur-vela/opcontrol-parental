@@ -37,6 +37,11 @@ else
         </div>
     </div>
 
+    @if (_toast is not null)
+    {
+        <div class="toast @(_toastError ? "danger" : "ok")" role="status">@_toast</div>
+    }
+
     @if (_error is not null)
     {
         <div class="alert danger">@_error</div>
@@ -61,19 +66,26 @@ else
             </div>
 
             <form class="inline-add" @onsubmit="AddSiteAsync" @onsubmit:preventDefault>
-                <input class="mini-input grow" placeholder="@L["Websites.BlockPlaceholder"]" @bind="_newDomain" />
-                <select class="mini-input" @bind="_newMode">
-                    <option value="always">@L["Websites.Always"]</option>
-                    <option value="scheduled">@L["Websites.DuringSchedule"]</option>
+                <input class="mini-input grow" placeholder="@L["Websites.DomainPlaceholder"]" @bind="_newDomain" />
+                <select class="mini-input" @bind="_newAction">
+                    <option value="block">@L["Common.Block"]</option>
+                    <option value="allow">@L["Common.Allow"]</option>
                 </select>
-                <select class="mini-input" @bind="_newScheduleId" disabled="@(_newMode != "scheduled")">
-                    <option value="">@L["Websites.SchedulePlaceholder"]</option>
-                    @foreach (var schedule in _schedules)
-                    {
-                        <option value="@schedule.Id">@schedule.Name</option>
-                    }
-                </select>
-                <button class="btn btn-primary" type="submit">@L["Common.Block"]</button>
+                @if (_newAction == "block")
+                {
+                    <select class="mini-input" @bind="_newMode">
+                        <option value="always">@L["Websites.Always"]</option>
+                        <option value="scheduled">@L["Websites.DuringSchedule"]</option>
+                    </select>
+                    <select class="mini-input" @bind="_newScheduleId" disabled="@(_newMode != "scheduled")">
+                        <option value="">@L["Websites.SchedulePlaceholder"]</option>
+                        @foreach (var schedule in _schedules)
+                        {
+                            <option value="@schedule.Id">@schedule.Name</option>
+                        }
+                    </select>
+                }
+                <button class="btn @(_newAction == "allow" ? "btn-accent" : "btn-primary")" type="submit">@L[_newAction == "allow" ? "Common.Allow" : "Common.Block"]</button>
             </form>
 
             @if (FilteredSites.Count == 0)
@@ -105,7 +117,13 @@ else
                                 @if (site.IsBlocked)
                                 {
                                     <span class="state-pill blocked">@L["Common.Blocked"]</span>
-                                    <button class="ghost-btn" @onclick="() => RemoveRuleAsync(site.RuleId)">@L["Websites.Unblock"]</button>
+                                    <button class="ghost-btn" @onclick="() => AllowDomainAsync(site.Domain, false)">
+                                        @L[RuleAvailability.CanUnblock(site.RuleId) ? "Common.Allow" : "Websites.AllowException"]
+                                    </button>
+                                    @if (RuleAvailability.CanUnblock(site.RuleId))
+                                    {
+                                        <button class="ghost-btn" @onclick="() => RemoveRuleAsync(site.RuleId, site.Domain)">@L["Websites.Unblock"]</button>
+                                    }
                                 }
                                 else if (site.IsAllowed)
                                 {
@@ -115,7 +133,7 @@ else
                                 else
                                 {
                                     <button class="btn btn-accent" @onclick="() => BlockSiteAsync(site.Domain, RuleMode.Always, null)">@L["Common.Block"]</button>
-                                    <button class="ghost-btn" @onclick="() => AllowSiteAsync(site.Domain)">@L["Common.Allow"]</button>
+                                    <button class="ghost-btn" @onclick="() => AllowDomainAsync(site.Domain, false)">@L["Common.Allow"]</button>
                                 }
                                 @if (site.IsBlocked)
                                 {
@@ -146,7 +164,8 @@ else
                         <div class="rule-actions">
                             <button class="ghost-btn" @onclick="() => OpenReviewAsync(rule.Domain)">@L["Website.Review.Button"]</button>
                             <button class="ghost-btn" @onclick="() => BonusAsync(rule.Domain, 15)">@L["Home.Bonus15"]</button>
-                            <button class="ghost-btn" @onclick="() => RemoveRuleAsync(rule.Id)">@L["Websites.Unblock"]</button>
+                            <button class="ghost-btn" @onclick="() => AllowDomainAsync(rule.Domain, false)">@L["Common.Allow"]</button>
+                            <button class="ghost-btn" @onclick="() => RemoveRuleAsync(rule.Id, rule.Domain)">@L["Websites.Unblock"]</button>
                         </div>
                     </div>
                 }
@@ -167,7 +186,8 @@ else
                         </div>
                         <div class="rule-actions">
                             <button class="ghost-btn" @onclick="() => OpenReviewAsync(rule.Domain)">@L["Website.Review.Button"]</button>
-                            <button class="ghost-btn" @onclick="() => RemoveRuleAsync(rule.Id)">@L["Websites.Unblock"]</button>
+                            <button class="ghost-btn" @onclick="() => AllowDomainAsync(rule.Domain, false)">@L["Common.Allow"]</button>
+                            <button class="ghost-btn" @onclick="() => RemoveRuleAsync(rule.Id, rule.Domain)">@L["Websites.Unblock"]</button>
                         </div>
                     </div>
                 }
@@ -184,7 +204,7 @@ else
                     <div class="rule-row compact">
                         <div class="rule-main">
                             <div class="rule-title">@rule.Domain</div>
-                            <div class="muted tiny">@L["Websites.Overrides"]</div>
+                            <div class="muted tiny">@OverrideText(rule.Domain)</div>
                         </div>
                         <div class="rule-actions">
                             <button class="ghost-btn" @onclick="() => OpenReviewAsync(rule.Domain)">@L["Website.Review.Button"]</button>
@@ -237,7 +257,7 @@ else
                         </div>
                         <div class="rule-actions">
                             <button class="ghost-btn" @onclick="() => BlockSiteAsync(item.Identity, RuleMode.Always, null)">@L["Websites.BlockAgain"]</button>
-                            <button class="ghost-btn" @onclick="() => AllowSiteAsync(item.Identity)">@L["Websites.AllowAgain"]</button>
+                            <button class="ghost-btn" @onclick="() => AllowDomainAsync(item.Identity, false)">@L["Websites.AllowAgain"]</button>
                         </div>
                     </div>
                 }
@@ -324,11 +344,44 @@ else
                         <button type="button" class="ghost-btn" disabled="@(string.IsNullOrEmpty(_reviewScheduleId))"
                                 @onclick="BlockDuringScheduleAsync">@L["Website.Review.BlockSchedule"]</button>
                     </div>
-                    <button type="button" class="ghost-btn" @onclick="() => AllowSiteAsync(_review.Domain)">@L["Common.Allow"]</button>
-                    <button type="button" class="ghost-btn" @onclick="UnblockReviewAsync">@L["Websites.Unblock"]</button>
+                    <button type="button" class="ghost-btn" @onclick="() => AllowDomainAsync(_review.Domain, true)">
+                        @L[_review.BlockReason?.StartsWith("category:", StringComparison.Ordinal) == true ? "Websites.AllowException" : "Common.Allow"]
+                    </button>
+                    @if (RuleAvailability.CanUnblock(_review.RuleId))
+                    {
+                        <button type="button" class="ghost-btn" @onclick="UnblockReviewAsync">@L["Websites.Unblock"]</button>
+                    }
                 </div>
             }
         </aside>
+    }
+
+    @if (_relatedService is not null)
+    {
+        <div class="review-backdrop" @onclick="CloseRelated"></div>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-label="@L["Websites.RelatedTitle", L[_relatedService.LabelKey]]">
+            <div class="review-head">
+                <div>
+                    <div class="eyebrow">@L["Websites.RelatedEyebrow"]</div>
+                    <h2>@L["Websites.RelatedTitle", L[_relatedService.LabelKey]]</h2>
+                </div>
+                <button type="button" class="icon-btn" aria-label="@L["Common.Close"]" @onclick="CloseRelated">×</button>
+            </div>
+            <p class="muted tiny">@L["Websites.RelatedHint"]</p>
+            <div class="check-list">
+                @foreach (var choice in _related)
+                {
+                    <label class="check-row">
+                        <input type="checkbox" @bind="choice.Selected" />
+                        <span>@choice.Domain</span>
+                    </label>
+                }
+            </div>
+            <div class="button-row">
+                <button type="button" class="btn btn-primary" @onclick="AllowRelatedAsync">@L["Websites.AllowSelected"]</button>
+                <button type="button" class="btn btn-ghost" @onclick="CloseRelated">@L["Websites.NotNow"]</button>
+            </div>
+        </div>
     }
 
 @code {
@@ -339,6 +392,12 @@ else
         ("blocked", "Websites.FilterBlocked"),
         ("new", "Websites.NewThisWeek")
     ];
+
+    private sealed class RelatedChoice
+    {
+        public string Domain { get; init; } = "";
+        public bool Selected { get; set; }
+    }
 
     private sealed class SiteRow
     {
@@ -362,8 +421,14 @@ else
     private string _filter = "all";
     private DateTime _date = DateTime.Today;
     private string _newDomain = "";
+    private string _newAction = "block";
     private string _newMode = "always";
     private string _newScheduleId = "";
+    private string? _toast;
+    private bool _toastError;
+    private KnownSites.KnownService? _relatedService;
+    private List<RelatedChoice> _related = [];
+    private Dictionary<string, string> _overrideByDomain = new(StringComparer.OrdinalIgnoreCase);
     private List<Schedule> _schedules = [];
     private List<WebsiteRule> _rules = [];
     private List<CategoryToggleDto> _categories = [];
@@ -426,6 +491,18 @@ else
         var policy = await rulesService.GetDevicePolicyAsync(_familyId, child.Id);
         _categories = policy.Categories.ToList();
         _history = await rulesService.GetHistoryAsync(_familyId, child.Id, 60);
+
+        var enabledKeys = _categories.Where(c => c.Enabled).Select(c => c.Key).ToList();
+        var allowedDomains = _rules.Where(r => !r.IsBlocked).Select(r => r.Domain).ToList();
+        _overrideByDomain = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (enabledKeys.Count > 0 && allowedDomains.Count > 0)
+        {
+            var matches = await db.CategoryDomains.AsNoTracking()
+                .Where(d => enabledKeys.Contains(d.CategoryKey) && d.RemovedVersion == null && allowedDomains.Contains(d.Domain))
+                .Select(d => new { d.Domain, d.CategoryKey })
+                .ToListAsync();
+            foreach (var match in matches) _overrideByDomain.TryAdd(match.Domain, match.CategoryKey);
+        }
 
         var tz = ResolveTimeZone(_timeZoneId);
         var date = DateOnly.FromDateTime(_date);
@@ -502,38 +579,54 @@ else
     private async Task AddSiteAsync()
     {
         if (string.IsNullOrWhiteSpace(_newDomain)) return;
+        if (_newAction == "allow")
+        {
+            if (await AllowDomainAsync(_newDomain.Trim(), false)) _newDomain = "";
+            return;
+        }
         var mode = _newMode == "scheduled" ? RuleMode.Scheduled : RuleMode.Always;
         Guid? scheduleId = Guid.TryParse(_newScheduleId, out var id) ? id : null;
-        await BlockSiteAsync(_newDomain, mode, scheduleId);
-        _newDomain = "";
+        if (await BlockSiteAsync(_newDomain.Trim(), mode, scheduleId)) _newDomain = "";
     }
 
-    private async Task BlockSiteAsync(string domain, RuleMode mode, Guid? scheduleId)
+    private async Task<bool> BlockSiteAsync(string domain, RuleMode mode, Guid? scheduleId)
     {
-        await RunAsync(async (db, rules, parentId) =>
+        var ok = await RunAsync(async (db, rules, parentId) =>
         {
             await rules.UpsertWebsiteRuleAsync(_familyId, _childId, parentId, domain, blocked: true, mode, scheduleId);
             await db.SaveChangesAsync();
-        });
+        }, L["Websites.BlockedToast", domain]);
+        if (ok && _review is not null && _review.Domain.Equals(domain, StringComparison.OrdinalIgnoreCase))
+            await OpenReviewAsync(domain);
+        return ok;
     }
 
-    private async Task AllowSiteAsync(string domain)
+    private async Task<bool> AllowDomainAsync(string domain, bool fromReview)
     {
-        await RunAsync(async (db, rules, parentId) =>
+        var ok = await RunAsync(async (db, rules, parentId) =>
         {
             await rules.UpsertWebsiteRuleAsync(_familyId, _childId, parentId, domain, blocked: false, RuleMode.Always, null);
             await db.SaveChangesAsync();
-        });
+        }, L["Websites.AllowedToast", domain]);
+        if (ok)
+        {
+            if (fromReview && _review is not null && _review.Domain.Equals(domain, StringComparison.OrdinalIgnoreCase))
+                await OpenReviewAsync(domain);
+            OfferRelatedDomains(domain);
+        }
+        return ok;
     }
 
-    private async Task RemoveRuleAsync(Guid ruleId)
+    private async Task RemoveRuleAsync(Guid ruleId, string domain)
     {
-        if (ruleId == Guid.Empty) return;
+        if (!RuleAvailability.CanUnblock(ruleId)) return;
         await RunAsync(async (db, rules, parentId) =>
         {
             await rules.RemoveWebsiteRuleAsync(_familyId, _childId, parentId, ruleId);
             await db.SaveChangesAsync();
-        });
+        }, L["Websites.UnblockedToast", domain]);
+        if (_review is not null && _review.Domain.Equals(domain, StringComparison.OrdinalIgnoreCase))
+            await OpenReviewAsync(domain);
     }
 
     private async Task BonusAsync(string domain, int minutes)
@@ -542,7 +635,7 @@ else
         {
             await rules.AddItemBonusAsync(_familyId, _childId, parentId, "site", domain, minutes);
             await db.SaveChangesAsync();
-        });
+        }, L["Websites.BonusToast", minutes, domain]);
     }
 
     private async Task ToggleCategoryAsync(string key, bool enabled)
@@ -551,7 +644,46 @@ else
         {
             await rules.ToggleCategoryAsync(_familyId, _childId, parentId, key, enabled);
             await db.SaveChangesAsync();
-        });
+        }, L["Websites.CategoryToast"]);
+    }
+
+    private void OfferRelatedDomains(string domain)
+    {
+        var service = KnownSites.ServiceFor(domain);
+        if (service is null) return;
+        var existing = _rules.Where(r => !r.IsBlocked).Select(r => r.Domain).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var choices = KnownSites.RelatedDomains(domain).Where(d => !existing.Contains(d)).ToList();
+        if (choices.Count == 0) return;
+        _relatedService = service;
+        _related = choices.Select(d => new RelatedChoice { Domain = d }).ToList();
+        StateHasChanged();
+    }
+
+    private void CloseRelated()
+    {
+        _relatedService = null;
+        _related = [];
+    }
+
+    private async Task AllowRelatedAsync()
+    {
+        var selected = _related.Where(c => c.Selected).Select(c => c.Domain).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (selected.Count == 0)
+        {
+            CloseRelated();
+            return;
+        }
+        var ok = await RunAsync(async (db, rules, parentId) =>
+        {
+            foreach (var domain in selected)
+                await rules.UpsertWebsiteRuleAsync(_familyId, _childId, parentId, domain, blocked: false, RuleMode.Always, null);
+            await db.SaveChangesAsync();
+        }, L["Websites.RelatedAllowedToast", selected.Count]);
+        if (ok)
+        {
+            CloseRelated();
+            if (_review is not null) await OpenReviewAsync(_review.Domain);
+        }
     }
 
     private async Task OpenReviewAsync(string domain)
@@ -583,27 +715,28 @@ else
     {
         if (_review is null || !Guid.TryParse(_reviewScheduleId, out var scheduleId)) return;
         var domain = _review.Domain;
-        await BlockSiteAsync(domain, RuleMode.Scheduled, scheduleId);
-        await OpenReviewAsync(domain);
+        if (await BlockSiteAsync(domain, RuleMode.Scheduled, scheduleId))
+            await OpenReviewAsync(domain);
     }
 
     private async Task UnblockReviewAsync()
     {
-        if (_review is null) return;
+        if (_review is null || !RuleAvailability.CanUnblock(_review.RuleId)) return;
         var domain = _review.Domain;
-        var rule = _rules.FirstOrDefault(r => r.IsBlocked && r.Domain == domain)
-            ?? _rules.FirstOrDefault(r => r.IsBlocked && domain.EndsWith("." + r.Domain, StringComparison.OrdinalIgnoreCase));
-        if (rule is not null) await RemoveRuleAsync(rule.Id);
-        await OpenReviewAsync(domain);
+        await RemoveRuleAsync(_review.RuleId!.Value, domain);
     }
 
     private string FaviconUrl(string domain) => "/api/website-review/favicon?domain=" + Uri.EscapeDataString(domain);
 
     private string CategoryName(string key) => CategoryText.Name(key, key);
 
+    private string OverrideText(string domain) => _overrideByDomain.TryGetValue(domain, out var key)
+        ? L["Websites.OverridesCategory", CategoryText.Name(key, key)]
+        : L["Websites.Overrides"];
+
     private string FormatOptional(DateTime? utc) => utc is null ? "—" : FormatLocal(utc.Value);
 
-    private async Task RunAsync(Func<ParentalDbContext, RuleService, Guid?, Task> action)
+    private async Task<bool> RunAsync(Func<ParentalDbContext, RuleService, Guid?, Task> action, string? success = null)
     {
         _error = null;
         try
@@ -617,14 +750,34 @@ else
             await action(db, rules, parentId);
             await locks.PublishDeviceStateAsync(_familyId, _childId);
             await RefreshAsync();
+            if (success is not null) ShowToast(success, false);
+            return true;
         }
         catch (Exception ex)
         {
             _error = ex.Message;
+            ShowToast(ex.Message, true);
+            return false;
         }
-        finally
+    }
+
+    private void ShowToast(string message, bool error)
+    {
+        _toast = message;
+        _toastError = error;
+        StateHasChanged();
+        _ = Task.Run(async () =>
         {
-        }
+            await Task.Delay(4000);
+            await InvokeAsync(() =>
+            {
+                if (_toast == message)
+                {
+                    _toast = null;
+                    StateHasChanged();
+                }
+            });
+        });
     }
 
     private static IEnumerable<string> Parents(string domain)

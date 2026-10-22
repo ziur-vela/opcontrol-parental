@@ -1509,6 +1509,10 @@ namespace OpControl.Parental.Server.Data.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)");
 
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<Guid>("RuleId")
                         .HasColumnType("uuid");
 

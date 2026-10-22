@@ -127,7 +127,13 @@ public class LocalizationTests
             "App.Name", "Language.English", "Language.Spanish", "Layout.Spanish",
             "Settings.NoticeDefault", "Downloads.Sha", "Common.Minutes", "Common.HourShort",
             "Common.MinuteShort", "Placeholder.InstallCode", "Setup.Title",
-            "Alert.Update.Detail", "Install.ForChild2", "Messages.StatusAt", "Alert.Tampering.DeviceKind", "Alert.Tampering.DeviceKindMore", "Apps.FilterWin32", "Common.No", "Home.Bonus15", "Home.Bonus30", "Layout.English", "EmailPreview.Html", "Legal.CopyrightLine", "Legal.LicenseName", "Email.Layout.Footer.Copyright"
+            "Alert.Update.Detail", "Install.ForChild2", "Messages.StatusAt", "Alert.Tampering.DeviceKind", "Alert.Tampering.DeviceKindMore", "Apps.FilterWin32", "Common.No", "Home.Bonus15", "Home.Bonus30", "Layout.English", "EmailPreview.Html", "Legal.CopyrightLine", "Legal.LicenseName", "Email.Layout.Footer.Copyright",
+            "SiteReview.Service.WhatsApp", "SiteReview.Service.YouTube", "SiteReview.Service.Discord",
+            "SiteReview.Service.Instagram", "SiteReview.Service.Facebook", "SiteReview.Service.TikTok",
+            "SiteReview.Service.Roblox", "SiteReview.Service.Minecraft", "SiteReview.Service.Netflix",
+            "SiteReview.Service.Spotify", "SiteReview.Service.Wikipedia", "SiteReview.Service.Google",
+            "SiteReview.Service.KhanAcademy", "SiteReview.Service.Scratch", "SiteReview.Service.Duolingo",
+            "SiteReview.Service.Twitch"
         };
         Assert.All(identical, key => Assert.Contains(key, allowed));
     }
