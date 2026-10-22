@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0.402 AS build
+ARG VERSION=0.0.0
 WORKDIR /src
 COPY Directory.Build.props ./
 COPY src/OpControl.Parental.Updater/OpControl.Parental.Updater.csproj src/OpControl.Parental.Updater/
