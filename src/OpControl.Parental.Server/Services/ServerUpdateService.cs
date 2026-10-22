@@ -57,7 +57,7 @@ public sealed class ServerUpdateService
         if (refresh || (settings.LastUpdateCheckUtc is null
             || DateTime.UtcNow - settings.LastUpdateCheckUtc > CheckInterval))
         {
-            if (settings.GitHubCheckEnabled) await CheckAsync(settings, ct);
+            if (refresh || settings.GitHubCheckEnabled) await CheckAsync(settings, ct);
             else
             {
                 settings.LastUpdateCheckUtc = DateTime.UtcNow;
@@ -76,11 +76,6 @@ public sealed class ServerUpdateService
     private async Task<ServerUpdateInfo> CheckAsync(ServerSettings settings, CancellationToken ct)
     {
         settings.LastUpdateCheckUtc = DateTime.UtcNow;
-        if (!settings.GitHubCheckEnabled)
-        {
-            await _db.SaveChangesAsync(ct);
-            return ToInfo(settings);
-        }
 
         try
         {

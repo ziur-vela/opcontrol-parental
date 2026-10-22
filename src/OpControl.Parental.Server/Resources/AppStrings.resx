@@ -1006,4 +1006,5 @@ If you were not expecting this, ignore this email.</value></data>
   <data name="Legal.CopyrightLine" xml:space="preserve"><value>© 2026 Ziur / OpControl IT Solutions</value></data>
   <data name="Legal.LicenseName" xml:space="preserve"><value>PolyForm Noncommercial 1.0.0</value></data>
   <data name="Setup.QrAlt" xml:space="preserve"><value>QR code</value></data>
+  <data name="Email.Layout.Footer.Copyright" xml:space="preserve"><value>© 2026 Ziur / OpControl IT Solutions · PolyForm Noncommercial 1.0.0</value></data>
 </root>
