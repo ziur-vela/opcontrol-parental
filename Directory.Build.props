@@ -6,7 +6,7 @@
     <Copyright>Copyright (c) 2026 Ziur / OpControl IT Solutions</Copyright>
     <Product>Parental OpControl</Product>
     <PackageLicenseExpression>PolyForm-Noncommercial-1.0.0</PackageLicenseExpression>
-    <Version>0.14.2</Version>
+    <Version>0.14.3</Version>
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>

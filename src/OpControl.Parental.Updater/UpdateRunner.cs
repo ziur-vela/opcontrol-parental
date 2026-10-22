@@ -177,7 +177,7 @@ public sealed class UpdateRunner
             throw new InvalidOperationException($"Manifest version {manifest.Version} does not match requested {request.Version}.");
         if (manifest.Prerelease == true)
             throw new InvalidOperationException("Pre-release versions cannot be installed on the stable channel.");
-        if (!Version.TryParse(fromVersion, out var from) || !Version.TryParse(manifest.Version, out var to))
+        if (!Version.TryParse(fromVersion.TrimStart('v'), out var from) || !Version.TryParse(manifest.Version.TrimStart('v'), out var to))
             throw new InvalidOperationException("Could not parse versions.");
         if (to < from)
             throw new InvalidOperationException($"Downgrades are not allowed ({fromVersion} -> {manifest.Version}).");
@@ -315,7 +315,8 @@ public sealed class UpdateRunner
             using var response = _http.GetAsync($"{_options.WebUrl.TrimEnd('/')}/version").GetAwaiter().GetResult();
             if (!response.IsSuccessStatusCode) return "0.0.0";
             using var doc = JsonDocument.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
-            return doc.RootElement.TryGetProperty("version", out var value) ? value.GetString() ?? "0.0.0" : "0.0.0";
+            var value = doc.RootElement.TryGetProperty("version", out var property) ? property.GetString() ?? "0.0.0" : "0.0.0";
+            return value.TrimStart('v');
         }
         catch { return "0.0.0"; }
     }
