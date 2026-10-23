@@ -47,8 +47,8 @@ else
         <div class="alert danger">@_error</div>
     }
 
-    <div class="grid-2">
-        <section class="card">
+    <div class="grid-2 websites-grid">
+        <section class="card visits-card">
             <div class="card-title-row">
                 <h2>@L["Websites.VisitedSites"]</h2>
                 <div class="date-nav">
@@ -88,62 +88,68 @@ else
                 <button class="btn @(_newAction == "allow" ? "btn-accent" : "btn-primary")" type="submit">@L[_newAction == "allow" ? "Common.Allow" : "Common.Block"]</button>
             </form>
 
-            @if (FilteredSites.Count == 0)
-            {
-                <p class="muted">@L["Websites.NoVisitsDay"]</p>
-            }
-            else
-            {
-                <div class="rule-list">
-                    @foreach (var site in FilteredSites)
-                    {
-                        <div class="rule-row">
-                            <div class="rule-main">
-                                <div class="rule-title">@site.Domain</div>
-                                <div class="muted tiny">
-                                    @L[site.Count == 1 ? "Common.VisitCount" : "Common.VisitCountPlural", site.Count] · @L["Websites.LastVisit", FormatLocal(site.LastUtc)]
-                                    @if (site.BlockedAttempts > 0)
+            <div class="visits-scroll" tabindex="0" role="region" aria-label="@L["Websites.VisitedSites"]">
+                @if (FilteredSites.Count == 0)
+                {
+                    <p class="muted">@L["Websites.NoVisitsDay"]</p>
+                }
+                else
+                {
+                    <div class="rule-list">
+                        @foreach (var site in FilteredSites)
+                        {
+                            <div class="rule-row">
+                                <div class="rule-main">
+                                    <div class="rule-title">@site.Domain</div>
+                                    <div class="muted tiny">
+                                        @L[site.Count == 1 ? "Common.VisitCount" : "Common.VisitCountPlural", site.Count] · @L["Websites.LastVisit", FormatLocal(site.LastUtc)]
+                                        @if (site.BlockedAttempts > 0)
+                                        {
+                                            <span> · @(site.IsAllowed ? EarlierBlockedAttempts(site.BlockedAttempts) : BlockedAttempts(site.BlockedAttempts))</span>
+                                            @if (!site.IsAllowed)
+                                            {
+                                                <span> · @BlockReasonText.Describe(site.BlockReason)</span>
+                                            }
+                                        }
+                                        @if (site.IsNewThisWeek)
+                                        {
+                                            <span class="pill-soft tiny-pill">@L["Websites.NewThisWeek"]</span>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="rule-actions">
+                                    <button class="ghost-btn" @onclick="() => OpenReviewAsync(site.Domain)">@L["Website.Review.Button"]</button>
+                                    @if (site.IsBlocked)
                                     {
-                                        <span> · @BlockedAttempts(site.BlockedAttempts) · @BlockReasonText.Describe(site.BlockReason)</span>
+                                        <span class="state-pill blocked">@L["Common.Blocked"]</span>
+                                        <button class="ghost-btn" @onclick="() => AllowDomainAsync(site.Domain, false)">
+                                            @L[RuleAvailability.CanUnblock(site.RuleId) ? "Common.Allow" : "Websites.AllowException"]
+                                        </button>
+                                        @if (RuleAvailability.CanUnblock(site.RuleId))
+                                        {
+                                            <button class="ghost-btn" @onclick="() => RemoveRuleAsync(site.RuleId, site.Domain)">@L["Websites.Unblock"]</button>
+                                        }
                                     }
-                                    @if (site.IsNewThisWeek)
+                                    else if (site.IsAllowed)
                                     {
-                                        <span class="pill-soft tiny-pill">@L["Websites.NewThisWeek"]</span>
+                                        <span class="state-pill allowed">@L["Common.Allowed"]</span>
+                                        <button class="ghost-btn" @onclick="() => BlockSiteAsync(site.Domain, RuleMode.Always, null)">@L["Common.Block"]</button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-accent" @onclick="() => BlockSiteAsync(site.Domain, RuleMode.Always, null)">@L["Common.Block"]</button>
+                                        <button class="ghost-btn" @onclick="() => AllowDomainAsync(site.Domain, false)">@L["Common.Allow"]</button>
+                                    }
+                                    @if (site.IsBlocked)
+                                    {
+                                        <button class="ghost-btn" @onclick="() => BonusAsync(site.Domain, 15)">@L["Home.Bonus15"]</button>
                                     }
                                 </div>
                             </div>
-                            <div class="rule-actions">
-                                <button class="ghost-btn" @onclick="() => OpenReviewAsync(site.Domain)">@L["Website.Review.Button"]</button>
-                                @if (site.IsBlocked)
-                                {
-                                    <span class="state-pill blocked">@L["Common.Blocked"]</span>
-                                    <button class="ghost-btn" @onclick="() => AllowDomainAsync(site.Domain, false)">
-                                        @L[RuleAvailability.CanUnblock(site.RuleId) ? "Common.Allow" : "Websites.AllowException"]
-                                    </button>
-                                    @if (RuleAvailability.CanUnblock(site.RuleId))
-                                    {
-                                        <button class="ghost-btn" @onclick="() => RemoveRuleAsync(site.RuleId, site.Domain)">@L["Websites.Unblock"]</button>
-                                    }
-                                }
-                                else if (site.IsAllowed)
-                                {
-                                    <span class="state-pill allowed">@L["Common.Allowed"]</span>
-                                    <button class="ghost-btn" @onclick="() => BlockSiteAsync(site.Domain, RuleMode.Always, null)">@L["Common.Block"]</button>
-                                }
-                                else
-                                {
-                                    <button class="btn btn-accent" @onclick="() => BlockSiteAsync(site.Domain, RuleMode.Always, null)">@L["Common.Block"]</button>
-                                    <button class="ghost-btn" @onclick="() => AllowDomainAsync(site.Domain, false)">@L["Common.Allow"]</button>
-                                }
-                                @if (site.IsBlocked)
-                                {
-                                    <button class="ghost-btn" @onclick="() => BonusAsync(site.Domain, 15)">@L["Home.Bonus15"]</button>
-                                }
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
+                        }
+                    </div>
+                }
+            </div>
         </section>
 
         <section class="card">
@@ -804,6 +810,8 @@ else
     private static TimeZoneInfo ResolveTimeZone(string? id) => TimeZoneResolver.Resolve(id);
 
     private string BlockedAttempts(int count) => L[count == 1 ? "Websites.BlockedAttemptOne" : "Websites.BlockedAttemptMany", count];
+
+    private string EarlierBlockedAttempts(int count) => L[count == 1 ? "Websites.EarlierBlockedAttemptOne" : "Websites.EarlierBlockedAttemptMany", count];
 
     private string ActionLabel(string action) => action switch
     {

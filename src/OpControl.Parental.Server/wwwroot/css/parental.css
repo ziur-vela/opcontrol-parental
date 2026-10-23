@@ -159,6 +159,10 @@ code { font-family: var(--mono); background: var(--panel-2); padding: 2px 5px; f
 .card-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .card > p, .card > .muted { color: var(--muted); }
 .grid-2 { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.websites-grid { align-items: stretch; }
+.visits-card { min-height: 420px; }
+.visits-scroll { flex: 1 1 0; height: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.visits-scroll:focus-visible { outline: 2px solid var(--value); outline-offset: -2px; }
 .stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .stat-card { text-decoration: none; color: var(--text); padding: 14px 16px; gap: 4px; }
 .stat-card > * { margin: 0 !important; }
@@ -375,6 +379,8 @@ code { font-family: var(--mono); background: var(--panel-2); padding: 2px 5px; f
     .topbar-title { display: none; }
     .content { padding: 16px 12px 28px; }
     .grid-2, .app-grid { grid-template-columns: 1fr; }
+    .visits-card { min-height: 0; }
+    .visits-scroll { flex: 0 1 auto; height: auto; max-height: 70vh; }
     h1 { font-size: 24px; }
     .user-chip { display: none; }
     .btn, .ghost-btn, .icon-btn, .field input, .field select, select { min-height: 44px; }
@@ -402,10 +408,10 @@ code { font-family: var(--mono); background: var(--panel-2); padding: 2px 5px; f
 }
 
 /* Remote viewer */
-.remote-canvas-wrap { background: #050b09; border: 1px solid var(--line); width: 100%; min-height: 240px; display: flex; align-items: center; justify-content: center; overflow: auto; }
-.remote-canvas-wrap canvas { display: block; max-width: 100%; height: auto; image-rendering: auto; }
-#remote-viewer:fullscreen { background: var(--bg); padding: 12px; overflow: auto; }
-#remote-viewer:fullscreen .remote-canvas-wrap { min-height: calc(100vh - 120px); }
+.remote-canvas-wrap { background: #050b09; border: 1px solid var(--line); width: auto; max-width: 100%; min-width: 0; min-height: 240px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.remote-canvas-wrap canvas { display: block; flex: 0 1 auto; min-width: 0; max-width: 100%; max-height: 100%; width: auto; height: auto; image-rendering: auto; }
+#remote-viewer:fullscreen { background: var(--bg); padding: 12px; overflow: hidden; display: flex; flex-direction: column; }
+#remote-viewer:fullscreen .remote-canvas-wrap { flex: 1 1 auto; min-height: 0; margin: 12px 0 0; }
 
 /* Camera consent */
 .consent-ok { border-color: color-mix(in srgb, var(--value) 45%, var(--line)); color: var(--value); }

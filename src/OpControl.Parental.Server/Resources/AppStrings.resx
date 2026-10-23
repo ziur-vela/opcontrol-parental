@@ -783,6 +783,8 @@ If you were not expecting this, ignore this email.</value></data>
   <data name="Websites.BlockedDuringSchedule" xml:space="preserve"><value>Blocked during schedule</value></data>
   <data name="Websites.Categories" xml:space="preserve"><value>Categories</value></data>
   <data name="Websites.DuringSchedule" xml:space="preserve"><value>During schedule</value></data>
+  <data name="Websites.EarlierBlockedAttemptMany" xml:space="preserve"><value>{0} earlier blocked attempts</value></data>
+  <data name="Websites.EarlierBlockedAttemptOne" xml:space="preserve"><value>{0} earlier blocked attempt</value></data>
   <data name="Websites.FilterAll" xml:space="preserve"><value>All visits</value></data>
   <data name="Websites.FilterBlocked" xml:space="preserve"><value>Blocked attempts</value></data>
   <data name="Websites.FilterNotBlocked" xml:space="preserve"><value>Not blocked</value></data>

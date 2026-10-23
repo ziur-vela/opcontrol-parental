@@ -783,6 +783,8 @@ Si no esperabas este correo, ignóralo.</value></data>
   <data name="Websites.BlockedDuringSchedule" xml:space="preserve"><value>Bloqueados durante el horario</value></data>
   <data name="Websites.Categories" xml:space="preserve"><value>Categorías</value></data>
   <data name="Websites.DuringSchedule" xml:space="preserve"><value>Durante el horario</value></data>
+  <data name="Websites.EarlierBlockedAttemptMany" xml:space="preserve"><value>{0} intentos bloqueados anteriormente</value></data>
+  <data name="Websites.EarlierBlockedAttemptOne" xml:space="preserve"><value>{0} intento bloqueado anteriormente</value></data>
   <data name="Websites.FilterAll" xml:space="preserve"><value>Todas las visitas</value></data>
   <data name="Websites.FilterBlocked" xml:space="preserve"><value>Intentos bloqueados</value></data>
   <data name="Websites.FilterNotBlocked" xml:space="preserve"><value>No bloqueados</value></data>
