@@ -176,15 +176,17 @@ public sealed class PushService
     }
 
     /// <summary>Sends a test notification to one of the parent's subscriptions.</summary>
-    public async Task<(bool Ok, string? Error)> SendTestAsync(Guid parentId, string endpoint, CancellationToken ct = default)
+    /// <summary>Sends a test. Renew is true when this device has no live subscription any more and should subscribe again.</summary>
+    public async Task<(bool Ok, string? Error, bool Renew)> SendTestAsync(Guid parentId, string endpoint, CancellationToken ct = default)
     {
         var sub = await _db.PushSubscriptions.FirstOrDefaultAsync(s => s.Endpoint == endpoint && s.ParentId == parentId, ct);
-        if (sub is null) return (false, AppText.Get("Push.Error.NotSubscribed"));
+        if (sub is null) return (false, AppText.Get("Push.Error.NotSubscribed"), true);
         var language = await LanguageForAsync(sub.ParentId, sub.FamilyId, ct);
         var payload = new PushPayload(AppText.Get("App.Name", language), AppText.Get("Push.Test.Body", language), "/settings", "test");
         var error = await SendAsync(sub, payload, urgent: true, ct);
+        var gone = _db.Entry(sub).State == EntityState.Deleted;
         await _db.SaveChangesAsync(ct);
-        return (error is null, error);
+        return (error is null, error, gone);
     }
 
     /// <summary>Pushes one alert to every parent in the family who wants that kind of alert.</summary>

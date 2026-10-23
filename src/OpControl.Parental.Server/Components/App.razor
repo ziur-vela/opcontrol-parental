@@ -12,7 +12,7 @@
     <title>Parental OpControl</title>
     <link rel="icon" type="image/x-icon" href="/brand/favicon.ico" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#0b1714" />
+    <meta name="theme-color" content="@(Light ? "#f1f4f1" : "#0b1714")" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -21,7 +21,7 @@
     <link rel="stylesheet" href="/css/parental.css?v=@BuildInfo.ShortCommit" />
     <HeadOutlet />
 </head>
-<body class="t-dark">
+<body class="@(Light ? "t-light" : "t-dark")">
     <Routes />
     <script src="/_framework/blazor.web.js"></script>
     <script src="/js/app.js?v=@BuildInfo.ShortCommit"></script>
@@ -46,3 +46,11 @@
     </script>
 </body>
 </html>
+
+@code {
+    [CascadingParameter] private HttpContext? HttpContext { get; set; }
+
+    // The saved theme is also kept in a cookie so the server renders it. Blazor copies the
+    // server-rendered body class on every page change, so it must match the parent's choice.
+    private bool Light => HttpContext?.Request.Cookies["ocp.theme"] == "light";
+}

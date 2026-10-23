@@ -118,7 +118,18 @@
             try {
                 var sub = await currentSubscription();
                 if (!sub) return 'not-subscribed';
-                await window.ocpJsonPost('/api/push/test', { endpoint: sub.endpoint });
+                try {
+                    await window.ocpJsonPost('/api/push/test', { endpoint: sub.endpoint });
+                } catch (e) {
+                    if (!(e && e.data && e.data.renew)) throw e;
+                    // The push service dropped this device. Make a fresh subscription and try once more.
+                    try { await sub.unsubscribe(); } catch (x) { }
+                    var again = await window.ocpPush.enable();
+                    if (again) return again;
+                    sub = await currentSubscription();
+                    if (!sub) return 'not-subscribed';
+                    await window.ocpJsonPost('/api/push/test', { endpoint: sub.endpoint });
+                }
                 return null;
             } catch (e) {
                 return (e && e.message) || 'error';

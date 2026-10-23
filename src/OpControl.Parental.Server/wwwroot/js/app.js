@@ -2,23 +2,44 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
 (function () {
+    function saved() {
+        try { if (localStorage.getItem('ocp-theme') === 'light') return 'light'; } catch (e) { }
+        return /(?:^|;\s*)ocp\.theme=light(?:;|$)/.test(document.cookie) ? 'light' : 'dark';
+    }
+    function remember(theme) {
+        try { localStorage.setItem('ocp-theme', theme); } catch (e) { }
+        document.cookie = 'ocp.theme=' + theme + '; path=/; max-age=31536000; samesite=lax';
+    }
     function apply(theme) {
-        document.body.classList.remove('t-dark', 't-light');
-        document.body.classList.add('t-' + theme);
+        if (!document.body.classList.contains('t-' + theme)) {
+            document.body.classList.remove('t-dark', 't-light');
+            document.body.classList.add('t-' + theme);
+        }
         document.documentElement.style.colorScheme = theme;
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', theme === 'light' ? '#f1f4f1' : '#0b1714');
     }
-    try {
-        apply(localStorage.getItem('ocp-theme') === 'light' ? 'light' : 'dark');
-    } catch (e) {
-        apply('dark');
+    var initial = saved();
+    remember(initial);
+    apply(initial);
+    // Page changes inside the dashboard patch the body class back to what the server sent.
+    // Put the parent's choice back after every one of them, and whenever the class is reset.
+    function reapply() { apply(saved()); }
+    if (window.Blazor && window.Blazor.addEventListener) {
+        window.Blazor.addEventListener('enhancedload', reapply);
+    } else {
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.Blazor && window.Blazor.addEventListener) window.Blazor.addEventListener('enhancedload', reapply);
+        });
     }
+    new MutationObserver(reapply).observe(document.body, { attributes: true, attributeFilter: ['class'] });
     window.ocpSetLanguageCookie = function (lang) {
         document.cookie = 'ocp.lang=' + encodeURIComponent(lang) + '; path=/; max-age=31536000; samesite=lax';
     };
     window.ocpToggleTheme = function () {
         var next = document.body.classList.contains('t-light') ? 'dark' : 'light';
+        remember(next);
         apply(next);
-        try { localStorage.setItem('ocp-theme', next); } catch (e) { }
     };
     window.ocpAntiforgeryToken = function () {
         var input = document.querySelector('#af-form input[name="__RequestVerificationToken"], input[name="__RequestVerificationToken"]');
@@ -36,7 +57,12 @@
         });
         if (!response.ok) {
             var text = await response.text();
-            throw new Error(text || ('HTTP ' + response.status));
+            var message = text;
+            var data = null;
+            try { data = JSON.parse(text); if (data && typeof data.error === 'string') message = data.error; } catch (e) { data = null; }
+            var error = new Error(message || ('HTTP ' + response.status));
+            error.data = data;
+            throw error;
         }
         return response.json();
     };

@@ -495,8 +495,8 @@ app.MapPost("/api/push/test", async (OpControl.Parental.Server.Services.Push.Pus
 {
     await antiforgery.ValidateRequestAsync(context);
     await family.AccessAsync(ct);
-    var (ok, error) = await push.SendTestAsync(family.ParentId, request.Endpoint ?? "", ct);
-    return ok ? Results.Ok(new { ok = true }) : Results.BadRequest(new { error });
+    var (ok, error, renew) = await push.SendTestAsync(family.ParentId, request.Endpoint ?? "", ct);
+    return ok ? Results.Ok(new { ok = true }) : Results.BadRequest(new { error, renew });
 }).RequireAuthorization();
 
 app.MapPost("/api/enroll", async (EnrollRequest request, EnrollmentService enrollment, CancellationToken ct) =>
