@@ -84,6 +84,18 @@
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
+
+/* Scroll bars: thin and in the theme colours instead of the browser default.
+   Standard properties (Chrome 121+, Edge, Firefox) plus the WebKit fallback (Safari, older Chromium). */
+:root, .t-dark { --scroll-thumb: #2a4a42; --scroll-thumb-hover: #3d6a5e; }
+:root:has(body.t-light), .t-light { --scroll-thumb: #bccbc2; --scroll-thumb-hover: #93aa9d; }
+html, body, * { scrollbar-width: thin; }
+html, body, body * { scrollbar-color: var(--scroll-thumb) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 4px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); background-clip: padding-box; }
+::-webkit-scrollbar-corner { background: transparent; }
 body {
     font-family: var(--sans);
     font-size: 14px;

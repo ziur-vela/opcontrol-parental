@@ -155,6 +155,7 @@ public sealed class MessagePopupForm : Form
         };
 
         Dpi.ScaleForm(this);
+        ScrollbarTheme.Attach(this);
     }
 
     protected override CreateParams CreateParams

@@ -166,6 +166,7 @@ public sealed class MyOpControlForm : Form
         // half-built and there is no scaling pass after Show.
         _ = Handle;
         PlaceWindow();
+        ScrollbarTheme.Attach(this);
         PerformLayout();
         HelperPaths.LogEvent($"my-opcontrol-placed {Width}x{Height} at {Left},{Top} dpi={_scaleFactor:0.##}");
 

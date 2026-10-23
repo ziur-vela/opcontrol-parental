@@ -310,8 +310,31 @@ internal sealed class HomeView : KidView
         grid.Controls.Add(messagesCard, 2, 1);
         root.Controls.Add(grid, 0, 1);
 
+        // Short screens (e.g. 1366x768 at 100%): the fixed 260 px top row left the bottom
+        // cards too short, so they scrolled. Give the bottom row at least ~215 px and use a
+        // smaller ring when the top row has to shrink.
+        var fullTop = grid.RowStyles[0].Height;
+        grid.SizeChanged += (_, _) => FitHomeRows(grid, fullTop);
+
         RebuildBase(root);
         UpdateLive(_live, _online);
+    }
+
+    private void FitHomeRows(TableLayoutPanel grid, float fullTop)
+    {
+        if (grid.Height <= 0 || grid.RowStyles.Count < 2) return;
+        var f = fullTop / 260f;
+        var minBottom = 215f * f;
+        var minTop = 200f * f;
+        var top = Math.Max(minTop, Math.Min(fullTop, grid.Height - minBottom));
+        if (Math.Abs(grid.RowStyles[0].Height - top) >= 1f)
+            grid.RowStyles[0].Height = top;
+        if (_ring is not null)
+        {
+            var compact = top < 245f * f;
+            var ring = (int)Math.Round((compact ? 108f : 132f) * f);
+            if (_ring.Width != ring) { _ring.Size = new Size(ring, ring); _ring.Invalidate(); }
+        }
     }
 
     private CardPanel BuildTimeCard()
