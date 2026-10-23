@@ -48,6 +48,8 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
     public DbSet<RemoteSession> RemoteSessions => Set<RemoteSession>();
     public DbSet<CameraConsent> CameraConsents => Set<CameraConsent>();
     public DbSet<ChildMessage> ChildMessages => Set<ChildMessage>();
+    public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
+    public DbSet<PushPreference> PushPreferences => Set<PushPreference>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -378,6 +380,26 @@ public class ParentalDbContext : IdentityDbContext<ParentUser, IdentityRole<Guid
             e.Property(x => x.LatestReleaseUrl).HasMaxLength(500);
             e.Property(x => x.LatestManifestUrl).HasMaxLength(500);
             e.Property(x => x.LastNotifiedVersion).HasMaxLength(50);
+            e.Property(x => x.VapidPublicKey).HasMaxLength(200);
+            e.Property(x => x.VapidPrivateKeyProtected).HasMaxLength(1024);
+        });
+
+        builder.Entity<PushSubscription>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Endpoint).HasMaxLength(1000);
+            e.Property(x => x.P256dh).HasMaxLength(200);
+            e.Property(x => x.Auth).HasMaxLength(100);
+            e.Property(x => x.DeviceLabel).HasMaxLength(200);
+            e.Property(x => x.LastError).HasMaxLength(500);
+            e.HasIndex(x => x.Endpoint).IsUnique();
+            e.HasIndex(x => new { x.FamilyId, x.ParentId });
+        });
+
+        builder.Entity<PushPreference>(e =>
+        {
+            e.HasKey(x => x.ParentId);
+            e.HasIndex(x => x.FamilyId);
         });
 
         builder.Entity<AlertPreference>(e =>

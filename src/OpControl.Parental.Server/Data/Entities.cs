@@ -476,6 +476,42 @@ public class ServerSettings
     public DateTime? LatestPublishedUtc { get; set; }
     public string? LastNotifiedVersion { get; set; }
     public DateTime? SetupCompletedUtc { get; set; }
+    public string? VapidPublicKey { get; set; }
+    public string? VapidPrivateKeyProtected { get; set; }
+    public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>One browser or installed app of a parent that receives Web Push notifications.</summary>
+public class PushSubscription
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid FamilyId { get; set; }
+    public Guid ParentId { get; set; }
+    public string Endpoint { get; set; } = "";
+    public string P256dh { get; set; } = "";
+    public string Auth { get; set; } = "";
+    public string? DeviceLabel { get; set; }
+    public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
+    public DateTime? LastSuccessUtc { get; set; }
+    public DateTime? LastErrorUtc { get; set; }
+    public string? LastError { get; set; }
+    public int FailureCount { get; set; }
+}
+
+/// <summary>What a parent wants as push notifications (applies to all of their devices).</summary>
+public class PushPreference
+{
+    public Guid ParentId { get; set; }
+    public Guid FamilyId { get; set; }
+    public bool Messages { get; set; } = true;
+    public bool Tampering { get; set; } = true;
+    public bool Limits { get; set; } = true;
+    public bool PinOverride { get; set; } = true;
+    public bool Offline { get; set; } = true;
+    public bool RepeatedBlock { get; set; } = true;
+    public bool NewApp { get; set; }
+    public bool Other { get; set; } = true;
+    public bool RespectQuietHours { get; set; } = true;
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
 }
 

@@ -16,10 +16,12 @@ public sealed class AlertService
     private readonly EmailSender _serverEmail;
     private readonly EmailRenderer _renderer;
     private readonly ILogger<AlertService> _logger;
+    private readonly Push.PushQueue? _push;
 
     public AlertService(ParentalDbContext db, DashboardEventBus events, IDataProtectionProvider protection,
-        EmailSender serverEmail, EmailRenderer renderer, ILogger<AlertService> logger)
+        EmailSender serverEmail, EmailRenderer renderer, ILogger<AlertService> logger, Push.PushQueue? push = null)
     {
+        _push = push;
         _db = db;
         _events = events;
         _protector = protection.CreateProtector("OpControl.Parental.Smtp");
@@ -71,6 +73,7 @@ public sealed class AlertService
         _db.Alerts.Add(alert);
         await _db.SaveChangesAsync(ct);
         _events.PublishAlert(alert);
+        _push?.Enqueue(alert.Id);
         _logger.LogInformation("Alert {Type} for child {ChildId}: {Detail}", type, childId, detail);
         return alert;
     }

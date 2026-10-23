@@ -162,6 +162,10 @@ builder.Services.AddScoped<LockService>();
 builder.Services.AddScoped<RuleService>();
 builder.Services.AddScoped<UsageService>();
 builder.Services.AddScoped<AlertService>();
+builder.Services.AddSingleton<OpControl.Parental.Server.Services.Push.PushQueue>();
+builder.Services.AddScoped<OpControl.Parental.Server.Services.Push.PushService>();
+builder.Services.AddHostedService<OpControl.Parental.Server.Services.Push.PushDispatcher>();
+builder.Services.AddHttpClient("webpush", client => client.Timeout = TimeSpan.FromSeconds(15));
 builder.Services.AddScoped<MessageService>();
 builder.Services.AddScoped<ChildSummaryService>();
 builder.Services.AddHttpClient();
@@ -456,6 +460,44 @@ app.MapGet("/health", async (ParentalDbContext db, BuildInfo build, Cancellation
 }).AllowAnonymous();
 
 app.MapGet("/version", (BuildInfo build) => Results.Ok(build.ToDto())).AllowAnonymous();
+
+// Web Push (dashboard notifications for alerts and child messages).
+app.MapGet("/api/push/key", async (FamilyScope family, OpControl.Parental.Server.Services.Push.PushService push, CancellationToken ct) =>
+{
+    await family.AccessAsync(ct);
+    return Results.Ok(new { publicKey = await push.GetPublicKeyAsync(ct) });
+}).RequireAuthorization();
+
+app.MapPost("/api/push/subscribe", async (OpControl.Parental.Server.Services.Push.PushSubscribeRequest request, HttpContext context, IAntiforgery antiforgery, FamilyScope family, OpControl.Parental.Server.Services.Push.PushService push, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    await family.AccessAsync(ct);
+    try
+    {
+        await push.SubscribeAsync(family.FamilyId, family.ParentId, request, ct);
+        return Results.Ok(new { ok = true });
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/push/unsubscribe", async (OpControl.Parental.Server.Services.Push.PushEndpointRequest request, HttpContext context, IAntiforgery antiforgery, FamilyScope family, OpControl.Parental.Server.Services.Push.PushService push, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    await family.AccessAsync(ct);
+    await push.UnsubscribeAsync(family.ParentId, request.Endpoint ?? "", ct);
+    return Results.Ok(new { ok = true });
+}).RequireAuthorization();
+
+app.MapPost("/api/push/test", async (OpControl.Parental.Server.Services.Push.PushEndpointRequest request, HttpContext context, IAntiforgery antiforgery, FamilyScope family, OpControl.Parental.Server.Services.Push.PushService push, CancellationToken ct) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    await family.AccessAsync(ct);
+    var (ok, error) = await push.SendTestAsync(family.ParentId, request.Endpoint ?? "", ct);
+    return ok ? Results.Ok(new { ok = true }) : Results.BadRequest(new { error });
+}).RequireAuthorization();
 
 app.MapPost("/api/enroll", async (EnrollRequest request, EnrollmentService enrollment, CancellationToken ct) =>
 {

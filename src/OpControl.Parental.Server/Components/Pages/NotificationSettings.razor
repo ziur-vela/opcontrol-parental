@@ -1,0 +1,254 @@
+@* Copyright (c) 2026 Ziur / OpControl IT Solutions
+   SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0 *@
+
+@using Microsoft.EntityFrameworkCore
+@using OpControl.Parental.Server.Data
+@using OpControl.Parental.Server.Services.Push
+@inject IServiceScopeFactory Scopes
+@inject IStringLocalizer<AppStrings> L
+@inject IJSRuntime JS
+
+<section class="card" id="notifications">
+    <div class="card-title-row">
+        <h2>@L["Push.Title"]</h2>
+        <span class="pill-soft">@StatusText</span>
+    </div>
+    <p class="muted small">@L["Push.Help"]</p>
+
+    @if (_state is null)
+    {
+        <p class="muted small">@L["Push.Checking"]</p>
+    }
+    else if (!_state.Supported && _state.Ios && !_state.Standalone)
+    {
+        <div class="stack">
+            <p class="small"><strong>@L["Push.Ios.Title"]</strong></p>
+            <ol class="small">
+                <li>@L["Push.Ios.Step1"]</li>
+                <li>@L["Push.Ios.Step2"]</li>
+                <li>@L["Push.Ios.Step3"]</li>
+            </ol>
+        </div>
+    }
+    else if (!_state.Supported)
+    {
+        <p class="muted small">@L["Push.Unsupported"]</p>
+    }
+    else
+    {
+        <div class="button-row">
+            @if (_state.Subscribed)
+            {
+                <button class="btn btn-primary" disabled="@_busy" @onclick="TestAsync">@L["Push.SendTest"]</button>
+                <button class="btn btn-ghost" disabled="@_busy" @onclick="DisableAsync">@L["Push.DisableHere"]</button>
+            }
+            else if (_state.Permission == "denied")
+            {
+                <span class="small">@L["Push.Blocked"]</span>
+            }
+            else
+            {
+                <button class="btn btn-primary" disabled="@_busy" @onclick="EnableAsync">@L["Push.EnableHere"]</button>
+            }
+            @if (_state.CanInstall)
+            {
+                <button class="btn btn-ghost" disabled="@_busy" @onclick="InstallAsync">@L["Push.InstallApp"]</button>
+            }
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_message))
+    {
+        <p class="small" style="color: @(_messageIsError ? "var(--danger)" : "var(--value)")" role="status">@_message</p>
+    }
+
+    <div class="stack" style="margin-top: 14px">
+        <div class="eyebrow">@L["Push.WhatToSend"]</div>
+        <label class="check"><input type="checkbox" @bind="_pref.Messages" /> @L["Push.Pref.Messages"]</label>
+        <label class="check"><input type="checkbox" @bind="_pref.Tampering" /> @L["Push.Pref.Tampering"]</label>
+        <label class="check"><input type="checkbox" @bind="_pref.Limits" /> @L["Push.Pref.Limits"]</label>
+        <label class="check"><input type="checkbox" @bind="_pref.PinOverride" /> @L["Push.Pref.Pin"]</label>
+        <label class="check"><input type="checkbox" @bind="_pref.Offline" /> @L["Push.Pref.Offline"]</label>
+        <label class="check"><input type="checkbox" @bind="_pref.RepeatedBlock" /> @L["Push.Pref.Blocked"]</label>
+        <label class="check"><input type="checkbox" @bind="_pref.NewApp" /> @L["Push.Pref.NewApp"]</label>
+        <label class="check"><input type="checkbox" @bind="_pref.Other" /> @L["Push.Pref.Other"]</label>
+        <label class="check"><input type="checkbox" @bind="_pref.RespectQuietHours" /> @L["Push.Pref.Quiet"]</label>
+        <div class="button-row"><button class="btn btn-ghost" disabled="@_busy" @onclick="SavePreferencesAsync">@L["Push.SavePrefs"]</button></div>
+    </div>
+
+    @if (_devices.Count > 0)
+    {
+        <div class="stack" style="margin-top: 14px">
+            <div class="eyebrow">@L["Push.Devices"]</div>
+            @foreach (var device in _devices)
+            {
+                <div class="rule-row" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+                    <div style="flex: 1; min-width: 200px">
+                        <div>@(device.DeviceLabel ?? L["Push.UnknownDevice"]) @(device.Endpoint == _state?.Endpoint ? L["Push.ThisDevice"] : "")</div>
+                        <div class="muted tiny">@DeviceDetail(device)</div>
+                    </div>
+                    <button class="ghost-btn" disabled="@_busy" @onclick="() => RemoveAsync(device)">@L["Push.Remove"]</button>
+                </div>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter] public Guid FamilyId { get; set; }
+    [Parameter] public Guid ParentId { get; set; }
+
+    private sealed class PushState
+    {
+        public bool Supported { get; set; }
+        public string Permission { get; set; } = "default";
+        public bool Subscribed { get; set; }
+        public string? Endpoint { get; set; }
+        public bool Ios { get; set; }
+        public bool Standalone { get; set; }
+        public bool CanInstall { get; set; }
+    }
+
+    private PushState? _state;
+    private PushPreference _pref = new();
+    private List<PushSubscription> _devices = [];
+    private bool _busy;
+    private string? _message;
+    private bool _messageIsError;
+    private Guid _loadedFor;
+    private TimeZoneInfo _tz = TimeZoneInfo.Utc;
+
+    private string StatusText => _state switch
+    {
+        null => "…",
+        { Subscribed: true } => L["Push.Status.On"],
+        { Permission: "denied" } => L["Push.Status.Blocked"],
+        _ => L["Push.Status.Off"]
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ParentId == Guid.Empty || FamilyId == Guid.Empty || _loadedFor == ParentId) return;
+        _loadedFor = ParentId;
+        await LoadAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        await RefreshStateAsync();
+        StateHasChanged();
+    }
+
+    private async Task LoadAsync()
+    {
+        using var scope = Scopes.CreateScope();
+        var push = scope.ServiceProvider.GetRequiredService<PushService>();
+        _pref = await push.EnsurePreferenceAsync(FamilyId, ParentId);
+        _devices = await push.ListAsync(ParentId);
+        var db = scope.ServiceProvider.GetRequiredService<ParentalDbContext>();
+        var tzId = await db.Devices.AsNoTracking().Where(d => d.FamilyId == FamilyId).Select(d => d.TimeZoneId).FirstOrDefaultAsync();
+        _tz = TimeZoneResolver.Resolve(tzId);
+    }
+
+    private async Task RefreshStateAsync()
+    {
+        try { _state = await JS.InvokeAsync<PushState>("ocpPush.state"); }
+        catch { _state = new PushState(); }
+    }
+
+    private async Task RunAsync(Func<Task<string?>> action, string okMessage)
+    {
+        _busy = true;
+        _message = null;
+        try
+        {
+            var error = await action();
+            _messageIsError = error is not null;
+            _message = error switch
+            {
+                null => okMessage,
+                "denied" => L["Push.Blocked"],
+                "unsupported" => L["Push.Unsupported"],
+                _ => L["Push.Error", error]
+            };
+        }
+        catch (Exception ex)
+        {
+            _messageIsError = true;
+            _message = L["Push.Error", ex.Message];
+        }
+        finally
+        {
+            await RefreshStateAsync();
+            await LoadAsync();
+            _busy = false;
+        }
+    }
+
+    private Task EnableAsync() => RunAsync(() => JS.InvokeAsync<string?>("ocpPush.enable").AsTask(), L["Push.Enabled"]);
+    private Task DisableAsync() => RunAsync(() => JS.InvokeAsync<string?>("ocpPush.disable").AsTask(), L["Push.Disabled"]);
+    private Task TestAsync() => RunAsync(() => JS.InvokeAsync<string?>("ocpPush.test").AsTask(), L["Push.TestSent"]);
+
+    private async Task InstallAsync()
+    {
+        try { await JS.InvokeAsync<bool>("ocpPush.install"); } catch { }
+        await RefreshStateAsync();
+    }
+
+    private async Task SavePreferencesAsync()
+    {
+        _busy = true;
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            await scope.ServiceProvider.GetRequiredService<PushService>().SavePreferenceAsync(FamilyId, ParentId, _pref);
+            _messageIsError = false;
+            _message = L["Push.PrefsSaved"];
+        }
+        catch (Exception ex)
+        {
+            _messageIsError = true;
+            _message = L["Push.Error", ex.Message];
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task RemoveAsync(PushSubscription device)
+    {
+        _busy = true;
+        try
+        {
+            if (device.Endpoint == _state?.Endpoint)
+            {
+                await JS.InvokeAsync<string?>("ocpPush.disable");
+            }
+            else
+            {
+                using var scope = Scopes.CreateScope();
+                await scope.ServiceProvider.GetRequiredService<PushService>().RemoveSubscriptionAsync(ParentId, device.Id);
+            }
+            _messageIsError = false;
+            _message = L["Push.Removed"];
+        }
+        catch (Exception ex)
+        {
+            _messageIsError = true;
+            _message = L["Push.Error", ex.Message];
+        }
+        finally
+        {
+            await RefreshStateAsync();
+            await LoadAsync();
+            _busy = false;
+        }
+    }
+
+    private string DeviceDetail(PushSubscription device)
+    {
+        var added = L["Push.Added", TimeZoneInfo.ConvertTimeFromUtc(device.CreatedUtc, _tz).ToString("d MMM yyyy")];
+        if (device.LastError is not null && device.FailureCount > 0) return added + " · " + L["Push.LastFailed", device.FailureCount];
+        if (device.LastSuccessUtc is { } ok) return added + " · " + L["Push.LastSent", TimeZoneInfo.ConvertTimeFromUtc(ok, _tz).ToString("d MMM, h:mm tt")];
+        return added;
+    }
+}

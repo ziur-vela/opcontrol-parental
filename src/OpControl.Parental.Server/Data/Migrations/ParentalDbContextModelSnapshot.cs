@@ -1416,6 +1416,109 @@ namespace OpControl.Parental.Server.Data.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("OpControl.Parental.Server.Data.PushPreference", b =>
+                {
+                    b.Property<Guid>("ParentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Limits")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("Messages")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("NewApp")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("Offline")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("Other")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("PinOverride")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("RepeatedBlock")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("RespectQuietHours")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("Tampering")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("UpdatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("ParentId");
+
+                    b.HasIndex("FamilyId");
+
+                    b.ToTable("PushPreferences");
+                });
+
+            modelBuilder.Entity("OpControl.Parental.Server.Data.PushSubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Auth")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeviceLabel")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Endpoint")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("FailureCount")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("LastErrorUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastSuccessUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("P256dh")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("ParentId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Endpoint")
+                        .IsUnique();
+
+                    b.HasIndex("FamilyId", "ParentId");
+
+                    b.ToTable("PushSubscriptions");
+                });
+
             modelBuilder.Entity("OpControl.Parental.Server.Data.RemoteSession", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1763,6 +1866,14 @@ namespace OpControl.Parental.Server.Data.Migrations
 
                     b.Property<DateTime>("UpdatedUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("VapidPrivateKeyProtected")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<string>("VapidPublicKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.HasKey("Id");
 

@@ -1099,4 +1099,48 @@ Si no esperabas este correo, ignóralo.</value></data>
   <data name="SiteReview.Service.Duolingo" xml:space="preserve"><value>Duolingo</value></data>
   <data name="SiteReview.Service.Twitch" xml:space="preserve"><value>Twitch</value></data>
   <data name="Websites.RelatedAllowedToastOne" xml:space="preserve"><value>Se permitió {0} dominio más</value></data>
+  <data name="Push.Title" xml:space="preserve"><value>Notificaciones en tu teléfono y computadora</value></data>
+  <data name="Push.Help" xml:space="preserve"><value>Recibe notificaciones al instante de los mensajes de tu hijo o hija y de las alertas importantes en este dispositivo. Actívalas en cada navegador o app instalada que uses.</value></data>
+  <data name="Push.Checking" xml:space="preserve"><value>Revisando este dispositivo…</value></data>
+  <data name="Push.Ios.Title" xml:space="preserve"><value>En iPhone y iPad, primero agrega el panel a tu pantalla de inicio:</value></data>
+  <data name="Push.Ios.Step1" xml:space="preserve"><value>Toca el botón Compartir en Safari.</value></data>
+  <data name="Push.Ios.Step2" xml:space="preserve"><value>Elige "Agregar a pantalla de inicio".</value></data>
+  <data name="Push.Ios.Step3" xml:space="preserve"><value>Abre Parental OpControl desde tu pantalla de inicio y regresa a Configuración para activar las notificaciones.</value></data>
+  <data name="Push.Unsupported" xml:space="preserve"><value>Este navegador no puede recibir notificaciones. Prueba con Chrome, Edge o Firefox.</value></data>
+  <data name="Push.SendTest" xml:space="preserve"><value>Enviar prueba</value></data>
+  <data name="Push.DisableHere" xml:space="preserve"><value>Desactivar en este dispositivo</value></data>
+  <data name="Push.Blocked" xml:space="preserve"><value>Las notificaciones están bloqueadas para este sitio. Permítelas en la configuración del sitio de tu navegador y vuelve a intentarlo.</value></data>
+  <data name="Push.EnableHere" xml:space="preserve"><value>Activar en este dispositivo</value></data>
+  <data name="Push.InstallApp" xml:space="preserve"><value>Instalar la app</value></data>
+  <data name="Push.WhatToSend" xml:space="preserve"><value>Sobre qué notificarme</value></data>
+  <data name="Push.Pref.Messages" xml:space="preserve"><value>Mensajes de mi hijo o hija</value></data>
+  <data name="Push.Pref.Tampering" xml:space="preserve"><value>Señales de manipulación</value></data>
+  <data name="Push.Pref.Limits" xml:space="preserve"><value>Límite diario o de app alcanzado</value></data>
+  <data name="Push.Pref.Pin" xml:space="preserve"><value>PIN de padres usado en un dispositivo</value></data>
+  <data name="Push.Pref.Offline" xml:space="preserve"><value>Dispositivo sin conexión</value></data>
+  <data name="Push.Pref.Blocked" xml:space="preserve"><value>Intentos bloqueados repetidos</value></data>
+  <data name="Push.Pref.NewApp" xml:space="preserve"><value>Apps nuevas instaladas</value></data>
+  <data name="Push.Pref.Other" xml:space="preserve"><value>Otras alertas (actualizaciones y avisos del servidor)</value></data>
+  <data name="Push.Pref.Quiet" xml:space="preserve"><value>Respetar las horas de silencio (los mensajes y la manipulación siempre notifican)</value></data>
+  <data name="Push.SavePrefs" xml:space="preserve"><value>Guardar opciones de notificación</value></data>
+  <data name="Push.Devices" xml:space="preserve"><value>Dispositivos que reciben notificaciones</value></data>
+  <data name="Push.UnknownDevice" xml:space="preserve"><value>Navegador</value></data>
+  <data name="Push.ThisDevice" xml:space="preserve"><value>(este dispositivo)</value></data>
+  <data name="Push.Remove" xml:space="preserve"><value>Quitar</value></data>
+  <data name="Push.Status.On" xml:space="preserve"><value>Activadas aquí</value></data>
+  <data name="Push.Status.Off" xml:space="preserve"><value>Desactivadas aquí</value></data>
+  <data name="Push.Status.Blocked" xml:space="preserve"><value>Bloqueadas</value></data>
+  <data name="Push.Error" xml:space="preserve"><value>No se pudo completar: {0}</value></data>
+  <data name="Push.Enabled" xml:space="preserve"><value>Las notificaciones están activadas en este dispositivo.</value></data>
+  <data name="Push.Disabled" xml:space="preserve"><value>Las notificaciones están desactivadas en este dispositivo.</value></data>
+  <data name="Push.TestSent" xml:space="preserve"><value>Prueba enviada. Debería aparecer en unos segundos.</value></data>
+  <data name="Push.PrefsSaved" xml:space="preserve"><value>Opciones de notificación guardadas.</value></data>
+  <data name="Push.Removed" xml:space="preserve"><value>Dispositivo quitado.</value></data>
+  <data name="Push.Added" xml:space="preserve"><value>Agregado el {0}</value></data>
+  <data name="Push.LastFailed" xml:space="preserve"><value>fallaron los últimos {0} envíos</value></data>
+  <data name="Push.LastSent" xml:space="preserve"><value>último envío {0}</value></data>
+  <data name="Push.Error.BadSubscription" xml:space="preserve"><value>Este navegador envió una suscripción de notificaciones no válida.</value></data>
+  <data name="Push.Error.NotSubscribed" xml:space="preserve"><value>Las notificaciones no están activadas en este dispositivo.</value></data>
+  <data name="Push.Error.Expired" xml:space="preserve"><value>La suscripción de notificaciones de este dispositivo caducó. Vuelve a activar las notificaciones.</value></data>
+  <data name="Push.Test.Body" xml:space="preserve"><value>Las notificaciones funcionan en este dispositivo.</value></data>
 </root>

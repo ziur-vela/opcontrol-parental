@@ -1,0 +1,21 @@
+{
+  "name": "Parental OpControl",
+  "short_name": "OpControl",
+  "description": "Family dashboard for Parental OpControl.",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b1714",
+  "theme_color": "#0b1714",
+  "icons": [
+    { "src": "/brand/app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/app-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Messages", "url": "/messages", "icons": [{ "src": "/brand/app-icon-192.png", "sizes": "192x192" }] },
+    { "name": "Alerts", "url": "/alerts", "icons": [{ "src": "/brand/app-icon-192.png", "sizes": "192x192" }] }
+  ]
+}
